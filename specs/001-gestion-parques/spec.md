@@ -1,6 +1,6 @@
 # Spec 001 — Gestión de Parques Solares
 
-Estado: borrador
+Estado: aprobada
 
 ## Contexto y objetivo
 Permitir a los Administradores de SolarUY dar de alta, modificar, desactivar (baja lógica) y listar los parques solares fotovoltaicos gestionados por la plataforma. Cada parque solar agrupa nodos y paneles, y posee configuraciones operativas independientes necesarias para el cálculo de telemetría y monitoreo energético.
@@ -47,6 +47,6 @@ Permitir a los Administradores de SolarUY dar de alta, modificar, desactivar (ba
 - Cobertura completa de RF-1 a RF-6 con pruebas automatizadas en verde (`dotnet test`).
 - Pantalla de listado y formulario de parque en Blazor Server navegable y validada en escritorio y vista móvil.
 
-## Dudas abiertas
-- [NECESITA ACLARACIÓN] ¿Se permitirá a un usuario con rol Técnico ver parques dados de baja (inactivos) o solo los parques activos?
-- [NECESITA ACLARACIÓN] ¿Cuál es el formato exacto requerido para almacenar las 'configuraciones independientes' (columnas dedicadas en base de datos o documento JSON tipado)?
+## Dudas abiertas (Resueltas)
+- **Visibilidad para Técnicos**: Los usuarios con rol `Técnico` podrán ver **todos los parques** (activos e inactivos) en el listado.
+- **Formato de configuraciones independientes**: Se almacenarán como **columnas dedicadas en la base de datos** (capacidad instalada máxima en kW, umbrales de alerta de potencia, latitud, longitud, huso horario).

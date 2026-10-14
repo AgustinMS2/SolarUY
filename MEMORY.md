@@ -39,7 +39,7 @@
 
 | Código y Nombre | Estado | Fase Actual | Tareas Completadas | Siguiente Acción |
 | :--- | :--- | :--- | :--- | :--- |
-| `001-gestion-parques` | Borrador | Especificación | 0 / 0 | Ejecutar `/sdd-clarify 001-gestion-parques` |
+| `001-gestion-parques` | **Aprobada** | **Tareas listas** | 0 / 10 | Iniciar **T1** (entidad + EF Core) → `dotnet test` rojo → código → verde |
 
 ---
 
