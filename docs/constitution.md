@@ -1,0 +1,10 @@
+# Constitución — SolarUY
+
+Principios innegociables del proyecto. Toda especificación (`spec.md`), plan técnico (`plan.md`) y tarea (`tasks.md`) debe cumplirlos estrictamente.
+
+1. **Arquitectura y simplicidad guiada por Aspire**: Solución .NET 9 orquestada con .NET Aspire, compuesta por Blazor Server (tiempo real mediante SignalR para monitoreo), API REST (`SolarUY.ApiService`), simulador de inversor como servicio autónomo, PostgreSQL con Entity Framework Core y Keycloak en contenedor para autenticación OpenID Connect. Se evita fragmentar en microservicios innecesarios.
+2. **La spec manda**: Ninguna funcionalidad, entidad o endpoint se implementa si no está explicitado en la spec activa (`specs/NNN-*/`). Si falta una definición de negocio, caso límite o decisión técnica, se detiene el desarrollo y se consulta al usuario antes de escribir código.
+3. **Lógica de negocio desacoplada de la interfaz**: Los cálculos de generación energética, telemetría solar, estado de salud de paneles y reglas de negocio residen en servicios puros y testeables, aislados de controladores HTTP y del ciclo de vida del DOM o componentes Blazor.
+4. **Tests como puerta inquebrantable**: La lógica de negocio, cálculos energéticos, endpoints y simuladores se prueban con `dotnet test`. Prohibido avanzar a una nueva tarea o fase con tests en rojo. La interfaz Blazor se valida en navegador / DevTools.
+5. **Integridad de datos y telemetría en tiempo real**: Persistencia en PostgreSQL mediante EF Core con migraciones reproducibles y soporte para series de tiempo (TimescaleDB) en lecturas de sensores. Las marcas temporales se registran internamente en UTC y se presentan en hora local de Uruguay (UTC-3). Nunca se descartan lecturas válidas ni se pierden registros de mantenimiento o auditoría.
+6. **Idioma y convenciones**: Código fuente en C# (clases, métodos, interfaces, entidades y tests) en inglés idiomático; interfaz de usuario (Blazor UI), alertas al usuario, documentación técnica y especificaciones funcionales en español.
