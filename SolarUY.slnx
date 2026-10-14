@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SolarUY.ApiService/SolarUY.ApiService.csproj" />
+  <Project Path="SolarUY.AppHost/SolarUY.AppHost.csproj" />
+  <Project Path="SolarUY.ServiceDefaults/SolarUY.ServiceDefaults.csproj" />
+  <Project Path="SolarUY.Web/SolarUY.Web.csproj" />
+</Solution>
