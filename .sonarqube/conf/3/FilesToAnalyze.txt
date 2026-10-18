@@ -1,0 +1,5 @@
+﻿/app/SolarUY.AppHost/AppHost.cs
+/app/SolarUY.AppHost/appsettings.Development.json
+/app/SolarUY.AppHost/appsettings.json
+/app/SolarUY.AppHost/Properties/launchSettings.json
+/app/SolarUY.AppHost/obj/Debug/net10.0/apphost

@@ -1,0 +1,9 @@
+﻿/app/SolarUY.ApiService/Program.cs
+/app/SolarUY.ApiService/obj/Debug/net10.0/SolarUY.ApiService.GlobalUsings.g.cs
+/app/SolarUY.ApiService/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+/app/SolarUY.ApiService/obj/Debug/net10.0/SolarUY.ApiService.AssemblyInfo.cs
+/app/SolarUY.ApiService/obj/Debug/net10.0/SolarUY.ApiService.MvcApplicationPartsAssemblyInfo.cs
+/app/SolarUY.ApiService/appsettings.Development.json
+/app/SolarUY.ApiService/appsettings.json
+/app/SolarUY.ApiService/SolarUY.ApiService.http
+/app/SolarUY.ApiService/Properties/launchSettings.json

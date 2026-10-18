@@ -1,0 +1,10 @@
+﻿/app/Program.cs
+/app/obj/Debug/net10.0/SolarUY.ApiService.GlobalUsings.g.cs
+/app/obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+/app/obj/Debug/net10.0/SolarUY.ApiService.AssemblyInfo.cs
+/app/obj/Debug/net10.0/SolarUY.ApiService.MvcApplicationPartsAssemblyInfo.cs
+/app/appsettings.Development.json
+/app/appsettings.json
+/app/SolarUY.ApiService.http
+/app/Properties/launchSettings.json
+/app/obj/Debug/net10.0/apphost
