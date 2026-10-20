@@ -39,12 +39,15 @@
 
 | Código y Nombre | Estado | Fase Actual | Tareas Completadas | Siguiente Acción |
 | :--- | :--- | :--- | :--- | :--- |
-| `001-gestion-parques` | **Aprobada** | **Tareas listas** | 0 / 10 | Iniciar **T1** (entidad + EF Core) → `dotnet test` rojo → código → verde |
+| `001-gestion-parques` | **Aprobada** | **Tareas listas** | 0 / 6 | Iniciar **T1** (entidad `SolarPark`, enum, `SolarUyDbContext`) |
 
 ---
 
 ## Decisiones Técnicas y Convenciones Activas
 1. **Constitución**: Documentada y vigente en `docs/constitution.md`.
-2. **Metodología SDD**: Automatizada mediante la skill `.agents/skills/sdd/SKILL.md` y comandos en `.opencode/commands/`.
-3. **Flujo de desarrollo**: Spec-anchored (las specs se mantienen vivas y guían la evolución del código).
-4. **Validación**: `dotnet test` para tests unitarios/integración; Chrome DevTools / navegador para componentes Blazor Server y flujos en tiempo real.
+2. **Modelo Sincrónico**: Métodos normales sincrónicos en repositorios y servicios para mantener el control y simplicidad.
+3. **Controladores Tradicionales**: `[ApiController]` heredando de `ControllerBase` en `SolarUY.ApiService/Controllers/`.
+4. **Servicios y Observabilidad**: Servicios de dominio con soporte nativo para `ILogger<T>`.
+5. **Testing Pragmático**: Tests de arquitectura como base estructural + tests unitarios simples focalizados en reglas de negocio (sin sobreingeniería de `bUnit` ni Testcontainers por use-case).
+6. **Persistencia Estándar**: PostgreSQL con EF Core sin extensiones complejas (`citext` descartado; validaciones limpias en C#).
+7. **Verificación UI**: Blazor Server probado interactivamente en navegador / DevTools.
