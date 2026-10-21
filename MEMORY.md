@@ -2,7 +2,7 @@
 
 ## Estado General del Proyecto
 - **Proyecto**: SolarUY — Sistema de gestión, monitoreo en tiempo real y mantenimiento de parques fotovoltaicos.
-- **Arquitectura base**: Solución .NET 9 con .NET Aspire (`SolarUY.AppHost`), Web Frontend (`SolarUY.Web` - Blazor Server), API de negocio (`SolarUY.ApiService`), y librerías compartidas (`SolarUY.ServiceDefaults`).
+- **Arquitectura base**: Solución .NET 9 (todos los proyectos en `net9.0`; Aspire 13 igual necesita tener instalado el SDK de .NET 10 para compilar el AppHost) con .NET Aspire (`SolarUY.AppHost`), Web Frontend (`SolarUY.Web` - Blazor Server), API de negocio (`SolarUY.ApiService`), y librerías compartidas (`SolarUY.ServiceDefaults`).
 - **Persistencia**: PostgreSQL con EF Core (planificado soporte TimescaleDB para telemetría de series de tiempo).
 - **Autenticación**: Keycloak OIDC containerizado en Aspire (Roles: `Administrador`, `Técnico`).
 - **Fase actual**: Adopción de la metodología Spec-Driven Development (SDD), constitución aprobada y catálogo de backlog estructurado.
@@ -16,8 +16,10 @@
 | **Usuarios** | Iniciar Sesión / Cerrar Sesión | Todos | Pendiente |
 | | Gestionar Roles de Usuario | Administrador | Pendiente |
 | | Alta Técnico / Listar Técnicos | Administrador | Pendiente |
-| **Parques** | Alta Parque / Baja Parque / Modificar Parque | Administrador | En especificación (`001-gestion-parques`) |
-| | Listar Parques | Todos | En especificación (`001-gestion-parques`) |
+| **Parques** | Alta Parque | Administrador | Aprobada (`001-alta-parque`) |
+| | Listar Parques | Todos | Aprobada (`002-listar-parques`) |
+| | Modificar Parque | Administrador | Aprobada (`003-modificar-parque`) |
+| | Baja Parque | Administrador | Aprobada (`004-baja-parque`) |
 | **Nodos** | Alta / Baja / Modificar / Listar Nodos | Administrador / Todos | Pendiente |
 | | Asignar Inversor a Nodo | Administrador | Pendiente |
 | **Paneles** | Alta / Baja / Modificar / Listar Paneles | Administrador / Todos | Pendiente |
@@ -39,7 +41,10 @@
 
 | Código y Nombre | Estado | Fase Actual | Tareas Completadas | Siguiente Acción |
 | :--- | :--- | :--- | :--- | :--- |
-| `001-gestion-parques` | **Aprobada** | **Tareas listas** | 0 / 6 | Iniciar **T1** (entidad `SolarPark`, enum, `SolarUyDbContext`) |
+| `001-alta-parque` | **Aprobada** | Tareas listas | 0 / 6 | Iniciar **T1** (proyecto de tests + tests de arquitectura) |
+| `002-listar-parques` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 001 |
+| `003-modificar-parque` | **Aprobada** | Tareas listas | 0 / 4 | Implementar después de 002 |
+| `004-baja-parque` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 003 |
 
 ---
 
@@ -49,5 +54,8 @@
 3. **Controladores Tradicionales**: `[ApiController]` heredando de `ControllerBase` en `SolarUY.ApiService/Controllers/`.
 4. **Servicios y Observabilidad**: Servicios de dominio con soporte nativo para `ILogger<T>`.
 5. **Testing Pragmático**: Tests de arquitectura como base estructural + tests unitarios simples focalizados en reglas de negocio (sin sobreingeniería de `bUnit` ni Testcontainers por use-case).
-6. **Persistencia Estándar**: PostgreSQL con EF Core sin extensiones complejas (`citext` descartado; validaciones limpias en C#).
+6. **Persistencia Estándar**: PostgreSQL con EF Core sin extensiones (`citext` descartado). Nombre único sin distinguir mayúsculas mediante columna `NormalizedName` (minúsculas) con índice único.
 7. **Verificación UI**: Blazor Server probado interactivamente en navegador / DevTools.
+8. **Una spec por requerimiento funcional**: el antiguo `001-gestion-parques` se dividió en 001 Alta, 002 Listar, 003 Modificar y 004 Baja.
+9. **Roles**: el control de acceso por rol se resuelve en la spec de Usuarios; las specs de Parques no lo incluyen.
+10. **Errores de servicio**: `ServiceResult` con `Validation` → 400, `NotFound` → 404, `Conflict` → 409.

@@ -18,6 +18,7 @@ Constitución → Spec → Clarificación → Plan → Tareas → Implementació
 3. **Mantenimiento y cambios primero en la spec:** Todo cambio de requisitos se plasma primero en `spec.md`, luego se propaga a `plan.md` y `tasks.md`, y finalmente se refleja en el código y tests.
 4. **Estructura por carpeta:** Cada especificación vive en su propia carpeta bajo `specs/NNN-nombre/` conteniendo `spec.md`, `plan.md` y `tasks.md`.
 5. **Memoria viva:** Al terminar cada fase o iteración, actualiza de inmediato `MEMORY.md`.
+6. **Una spec por requerimiento funcional:** Nunca agrupes varias funcionalidades (ej. "gestión de X" o "CRUD de X") en una sola spec. Cada spec define con precisión: campos y sus reglas (obligatorio, tipo, rango, largo), mensajes exactos al usuario, comportamiento de la pantalla, casos límite y de qué specs depende.
 
 ---
 
@@ -27,6 +28,7 @@ Constitución → Spec → Clarificación → Plan → Tareas → Implementació
 # Spec NNN — <Nombre de la Funcionalidad>
 
 Estado: borrador | aprobada | implementada
+Depende de: <specs previas necesarias, o "ninguna">
 
 ## Contexto y objetivo
 <Qué problema resuelve y por qué aporta valor al sistema SolarUY. Un párrafo conciso.>
@@ -40,7 +42,12 @@ Estado: borrador | aprobada | implementada
 ## Definiciones
 <Glosario o términos específicos del dominio si admiten más de una interpretación (ej: Inversor, Nodo, String de paneles, Inyección a red).>
 
+## Datos
+| Campo | Obligatorio | Regla (tipo, rango, largo, unicidad) |
+| :--- | :--- | :--- |
+
 ## Requisitos funcionales (Criterios de aceptación en EARS)
+<Incluir el texto exacto de cada mensaje que ve el usuario (éxito y error).>
 - RF-1: CUANDO <evento o acción del usuario>, EL SISTEMA <respuesta esperada>.
 - RF-2: SI <condición no deseada, error o validación>, ENTONCES EL SISTEMA <respuesta o mitigación>.
 - RF-3: MIENTRAS <estado o condición continua>, EL SISTEMA <comportamiento continuo>.
@@ -56,7 +63,7 @@ Estado: borrador | aprobada | implementada
 <Lo que explícitamente NO se aborda en esta spec e iteración.>
 
 ## Criterios de finalización
-<Ej.: Todos los RF con test unitario/integración en verde con 'dotnet test' + verificación visual de la pantalla Blazor.>
+<Ej.: Reglas de negocio del servicio con tests unitarios en verde, tests de arquitectura en verde y verificación visual de la pantalla Blazor.>
 
 ## Dudas abiertas
 - [NECESITA ACLARACIÓN] <Pregunta o duda pendiente para el usuario>
@@ -72,10 +79,10 @@ Estado: borrador | aprobada | implementada
 # Plan Técnico: Spec NNN — <Nombre de la Funcionalidad>
 
 ## Proyectos y Archivos Afectados
-- `SolarUY.ApiService`: Entidades de dominio, DbContext, repositorios/servicios y endpoints mínimos.
+- `SolarUY.ApiService`: Entidades de dominio, DbContext, repositorios/servicios y controladores en `Controllers/` (no Minimal APIs).
 - `SolarUY.Web`: Páginas Blazor Server, componentes Razor, servicios cliente o hubs SignalR.
 - `SolarUY.AppHost`: Configuración de orquestación Aspire si requiere recursos nuevos (PostgreSQL, contenedores).
-- `SolarUY.Tests`: Proyectos de tests unitarios y de integración.
+- `SolarUY.Tests`: Tests de arquitectura (globales) y tests unitarios de las reglas de negocio.
 
 ## Modelo de Datos y Persistencia (EF Core & PostgreSQL)
 - Clases de entidad C# (propiedades, tipos y relaciones).
@@ -84,6 +91,8 @@ Estado: borrador | aprobada | implementada
 
 ## Servicios y Lógica de Dominio Pura
 - Interfaces y clases de servicio desacopladas de la interfaz y de frameworks HTTP.
+- Métodos sincrónicos (sin `Task`/`async`), salvo que la spec lo justifique y el equipo lo apruebe.
+- Los servicios pueden recibir `ILogger<T>` para registrar eventos y errores.
 - Cálculos o algoritmos en funciones puras (fechas pasadas como parámetro, sin DateTime.Now oculto).
 - Manejo explícito de excepciones y validaciones de negocio.
 
@@ -95,13 +104,16 @@ Estado: borrador | aprobada | implementada
 - Maquetación y componentes Razor a crear o modificar.
 - Flujo de interacción del usuario y feedback (errores, confirmaciones, spinners de carga).
 
-## Decisiones Técnicas y Alternativas Descartadas
-- **Decisión 1**: <Explicación y justificación>.
-  - *Alternativa descartada*: <Por qué no se adoptó>.
+## Decisiones específicas de esta spec (opcional)
+- Solo si algo se aparta de `docs/constitution.md` o es propio de este caso de uso. Una o dos líneas cada una, que el equipo pueda explicar y defender.
+- **No** armar una tabla de decisiones por caso de uso: las reglas generales (capas, async, logging, persistencia, nombres de BD) van en la constitución.
+- No mezclar niveles de abstracción (ej. una regla de la capa de Servicio junto a una regla de nombres de columnas en PostgreSQL).
 
-## Matriz de Cobertura y Estrategia de Tests
-- Mapeo de cada RF (RF-1, RF-2, ...) al test específico que lo validará en `dotnet test`.
-- Estrategia para tests unitarios y tests con base de datos en memoria o Testcontainers.
+## Estrategia de Tests
+- **Tests de arquitectura** (globales, basados en los del proyecto de ejemplo del curso): siempre deben quedar en verde.
+- **Tests unitarios**: solo para las reglas de negocio del servicio de esta spec (validaciones, duplicados, cambios de estado). Nada de tests para entidades, migraciones, controladores ni DTOs.
+- **UI Blazor**: verificación manual en navegador (sin bUnit).
+- **Sin tests de integración ni Testcontainers** salvo que el usuario los pida explícitamente para un caso de uso puntual.
 ```
 
 ---
@@ -129,11 +141,9 @@ Estado: borrador | aprobada | implementada
 
 ## 4. Reglas de Implementación (Paso a Paso)
 1. Toma **exclusivamente la siguiente tarea pendiente** (ej. T1).
-2. **Red-Green-Refactor (TDD):**
-   - Escribe primero los tests unitarios correspondientes.
-   - Ejecuta `dotnet test` y comprueba que fallan en rojo.
-   - Escribe el código mínimo necesario en el proyecto correspondiente.
-   - Ejecuta `dotnet test` y comprueba que pasan en verde.
+2. **Tests según el tipo de tarea:**
+   - **Tarea de servicio con reglas de negocio**: escribe primero los tests unitarios de esas reglas, comprueba que fallan con `dotnet test`, implementa lo mínimo y comprueba que pasan.
+   - **Resto de tareas** (entidades, migraciones, repositorios, controladores, DTOs): implementa, compila y verifica que los tests existentes (incluidos los de arquitectura) siguen en verde. No agregues tests nuevos.
 3. Para tareas de interfaz gráfica Blazor, verifica visualmente la pantalla en el navegador.
 4. Marca el checkbox de la tarea en `tasks.md` (`- [x] **T1...**`).
 5. **DETENTE INMEDIATAMENTE**. Muestra el resultado al usuario y no comiences la siguiente tarea hasta recibir su confirmación.

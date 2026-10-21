@@ -4,7 +4,7 @@ Este directorio contiene las especificaciones que guían todo el desarrollo de *
 
 ## Convención de Nomenclatura
 Cada funcionalidad o módulo especificado debe residir en su propia carpeta:
-`specs/NNN-nombre-funcionalidad/` (donde `NNN` es un número secuencial de tres dígitos, p. ej. `001-gestion-parques`).
+`specs/NNN-nombre-funcionalidad/` (donde `NNN` es un número secuencial de tres dígitos, p. ej. `001-alta-parque`). Una carpeta por requerimiento funcional.
 
 ## Estructura de cada Especificación
 Dentro de cada carpeta deben coexistir exactamente los tres artefactos del flujo:
