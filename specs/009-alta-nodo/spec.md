@@ -1,6 +1,6 @@
-# Spec 009 — Alta de Nodo
+﻿# Spec 009 — Alta de Nodo
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 001 (Alta de Parque), Spec 002 (Listar Parques)
 
 ## Contexto y objetivo

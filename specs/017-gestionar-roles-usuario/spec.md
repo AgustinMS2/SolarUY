@@ -1,6 +1,6 @@
-# Spec 017 — Gestionar Roles de Usuario
+﻿# Spec 017 — Gestionar Roles de Usuario
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 015 (Iniciar Sesión)
 
 ## Contexto y objetivo

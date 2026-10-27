@@ -1,6 +1,6 @@
-# Spec 013 — Asignar Inversor a Nodo
+﻿# Spec 013 — Asignar Inversor a Nodo
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 009 (Alta de Nodo), Spec 010 (Listar Nodos)
 
 ## Contexto y objetivo

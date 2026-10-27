@@ -1,6 +1,6 @@
-# Spec 014 — Asignar Panel a Nodo
+﻿# Spec 014 — Asignar Panel a Nodo
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 005 (Alta Panel), Spec 009 (Alta Nodo), Spec 010 (Listar Nodos)
 
 ## Contexto y objetivo

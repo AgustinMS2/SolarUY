@@ -1,6 +1,6 @@
-# Spec 005 — Alta de Panel Solar
+﻿# Spec 005 — Alta de Panel Solar
 
-Estado: pendiente
+Estado: aprobada
 
 ## Contexto y objetivo
 Registrar un panel solar nuevo en SolarUY. Cada panel pertenece a un parque solar existente. Es la primera funcionalidad del módulo Paneles y crea la base (datos y pantalla) sobre la que se apoyan Listar (006), Modificar (007) y Baja (008).

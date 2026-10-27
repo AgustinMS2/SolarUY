@@ -1,6 +1,6 @@
-# Spec 026 — Confirmar Mantenimiento
+﻿# Spec 026 — Confirmar Mantenimiento
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 025 (Mis Mantenimientos)
 
 ## Contexto y objetivo

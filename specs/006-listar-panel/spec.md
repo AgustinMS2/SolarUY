@@ -1,6 +1,6 @@
-# Spec 006 — Listar Paneles Solares
+﻿# Spec 006 — Listar Paneles Solares
 
-Estado: pendiente
+Estado: aprobada
 
 Depende de: Spec 005 (Alta de Panel Solar)
 

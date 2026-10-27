@@ -1,6 +1,6 @@
-# Spec 025 — Ver Mis Mantenimientos (Técnico)
+﻿# Spec 025 — Ver Mis Mantenimientos (Técnico)
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 015 (Login), Spec 021 (Reservar Mantenimiento)
 
 ## Contexto y objetivo

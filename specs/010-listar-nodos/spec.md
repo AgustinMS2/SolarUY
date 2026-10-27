@@ -1,6 +1,6 @@
 # Spec 010 — Listar Nodos
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 009 (Alta de Nodo)
 
 ## Contexto y objetivo

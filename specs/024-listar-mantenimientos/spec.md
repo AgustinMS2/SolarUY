@@ -1,6 +1,6 @@
-# Spec 024 — Listar Mantenimientos
+﻿# Spec 024 — Listar Mantenimientos
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 021 (Reservar Mantenimiento)
 
 ## Contexto y objetivo

@@ -1,6 +1,6 @@
-# Spec 018 — Alta de Técnico
+﻿# Spec 018 — Alta de Técnico
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 015 (Iniciar Sesión), Spec 017 (Roles)
 
 ## Contexto y objetivo

@@ -1,46 +1,34 @@
-# Plan Técnico: Spec 012 — Baja de Nodo Solar
+# Plan Técnico: Spec 012 — Baja de Nodo
 
-## Proyectos y archivos afectados
+## Proyectos y Archivos Afectados
 - `SolarUY.ApiService`:
-  - `Services/ISolarNodeService.cs`: agregar método `DeleteNode(Guid id)`.
-  - `Services/SolarNodeService.cs`: implementar `DeleteNode` con las validaciones RF-1 a RF-6.
+  - `Services/ISolarNodeService.cs` y `SolarNodeService.cs`: método `ServiceResult Deactivate(Guid id)`.
+  - `Controllers/SolarNodesController.cs`: endpoint `DELETE /api/solar-nodes/{id}`.
 - `SolarUY.Web`:
-  - `Services/SolarNodesApiClient.cs`: agregar método `DeleteNodeAsync(Guid id)`.
-  - `Components/Pages/SolarNodeDelete.razor` (ruta `/nodos/baja/{id}`): pantalla de confirmación de baja.
+  - `Services/SolarNodeApiClient.cs`: método `DeactivateAsync(Guid id)`.
+  - `Components/Pages/SolarNodeList.razor`: botón "Dar de baja" solo en nodos activos y modal de confirmación.
 - `SolarUY.Tests`:
-  - `Services/SolarNodeServiceDeleteTests.cs`: tests unitarios del servicio Delete.
+  - `Services/SolarNodeServiceDeactivateTests.cs`: tests unitarios de desactivación lógica.
 
-## Requisitos del servicio
+## Servicios y Lógica de Dominio Pura
+- `Deactivate(Guid id)`:
+  1. `GetById(id)` -> `null` ⇒ `Fail(NotFound, "El nodo solicitado no existe.")` (RF-6).
+  2. `Status == Inactive` ⇒ `Fail(Conflict, "El nodo ya está inactivo.")` (RF-5).
+  3. `Status = Inactive`, `UpdatedAtUtc = DateTime.UtcNow`, llamada a `Update(node)`, registro en log con `ILogger` (RF-2).
+  4. Retorna `ServiceResult.Ok()`.
 
-`DeleteNode` hace, en este orden:
-1. Validar que el nodo existe → si no, `Fail(NotFound, "El nodo solicitado no existe.")` (RF-6).
-2. Validar que el nodo no está já inactivo → si ya está inactivo, `Fail(Validation, "El nodo ya está inactivo.")` (RF-5).
-3. Si el nodo está activo, cambiar su estado a `Inactive` y registrar `UpdatedAtUtc = DateTime.UtcNow` (baja lógica) (RF-2).
-4. Mostrar "Nodo dado de baja correctamente." y retornar OK.
-5. Si el usuario cancelara (a través de la UI), no hacer cambios (RF-3).
-
-## API
-
-`SolarNodesController : ControllerBase`, `[ApiController]`, `[Route("api/solar-nodes")]`.
-
+## API y Comunicación
 - `DELETE /api/solar-nodes/{id}`
-  - 200 + mensaje "Nodo dado de baja correctamente."
-  - 404 si no existe.
-  - 400 con mensaje "El nodo ya está inactivo." si ya estaba inactivo.
+  - Respuestas: `204 No Content`, `404 Not Found`, `409 Conflict`.
 
-## UI (Blazor Server)
+## Interfaz de Usuario (Blazor Server)
+- En `SolarNodeList.razor`:
+  - Botón "Dar de baja" visible únicamente si el nodo está "Activo" (RF-4).
+  - Modal de confirmación: "¿Confirmás la baja del nodo \"<nombre>\"?" con "Confirmar" y "Cancelar".
+  - Tras confirmación exitosa, recarga la grilla y muestra banner de éxito: "Nodo dado de baja correctamente."
 
-- `SolarNodeDelete.razor`: página en `/nodos/baja/{id}` que:
-  - Muestra un diálogo de confirmación: "¿Confirmás la baja del nodo "<identificador>"?" con botones "Confirmar" y "Cancelar".
-  - Al presionar "Confirmar", llama a `SolarNodesApiClient.DeleteNodeAsync(id)`.
-  - Al presionar "Cancelar", cierra el diálogo sin hacer nada (RF-3).
-  - Muestra el mensaje "Nodo dado de baja correctamente." y recarga el listado.
-  - El botón "Dar de baja" no aparece si el nodo ya está inactivo (RF-4).
-
-## Estrategia de tests
-
-- **Unitarios** de `SolarNodeService.DeleteNode` usando `FakeSolarNodeRepository`:
-  - Nodo activo → cambia a inactivo, muestra mensaje correcto (RF-2).
-  - Nodo ya inactivo → no cambia, muestra "El nodo ya está inactivo." (RF-5).
-  - Nodo inexistente → NotFound (RF-6).
-  - Cancelar en la UI → no hacer cambios.
+## Estrategia de Tests
+- **Tests unitarios**:
+  - Nodo activo pasa a estado Inactivo con fecha `UpdatedAtUtc`.
+  - Nodo inexistente devuelve NotFound.
+  - Nodo ya inactivo devuelve Conflict.

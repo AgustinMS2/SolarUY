@@ -1,6 +1,6 @@
-# Spec 022 — Modificar Reserva de Mantenimiento
+﻿# Spec 022 — Modificar Reserva de Mantenimiento
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 021 (Reservar Fecha de Mantenimiento)
 
 ## Contexto y objetivo

@@ -1,27 +1,16 @@
-# Tareas: Spec 009 — Alta de Nodo Solar
+﻿# Tareas: Spec 009 — Alta de Nodo
 
-- [ ] **T1. Proyecto `SolarUY.Tests` + tests de arquitectura.**
-  - Hecho cuando: el proyecto xUnit está en `SolarUY.slnx`, referencia a `SolarUY.ApiService`, tiene los tests de arquitectura del plan y `dotnet test` pasa en verde.
+- [ ] **T1. Entidad SolarNode + SolarUyDbContext + migración.** RF-1
+  - Hecho cuando: la migración crea la tabla SolarNodes con índice único en (SolarParkId, NormalizedName) y la solución compila.
 
-- [ ] **T2. Entidad `SolarNode` + `SolarUyDbContext` + migración.**
-  - RF-1, RF-4
-  - Hecho cuando: la migración crea la tabla `SolarNodes` con índice único en `NormalizedIdentifier` y la solución compila.
+- [ ] **T2. Repositorio ISolarNodeRepository (ExistsByName, Add).** RF-1, RF-2
+  - Hecho cuando: compila, está registrado en DI y los tests existentes siguen en verde.
 
-- [ ] **T3. Repositorio `ISolarNodeRepository` / `SolarNodeRepository` (`ExistsByIdentifier`, `Add`).**
-  - RF-1, RF-4
-  - Hecho cuando: compila, está registrado y los tests existentes siguen en verde.
+- [ ] **T3. SolarNodeService.Create con tests unitarios (tests primero).** RF-1, RF-2, RF-4
+  - Hecho cuando: los tests de nombre vacío, longitud > 100, parque inexistente y nombre duplicado en el mismo parque fallaron antes de implementar y ahora pasan en verde.
 
-- [ ] **T4. `ServiceResult` + `SolarNodeService.Create` con tests unitarios (tests primero).**
-  - RF-1, RF-2, RF-4
-  - Hecho cuando: los tests unitarios del plan se escribieron antes, fallaron, y ahora pasan en verde junto con los de arquitectura.
+- [ ] **T4. SolarNodesController con POST /api/solar-nodes.** RF-1, RF-2
+  - Hecho cuando: responde 201/400/404/409 según el caso y dotnet test sigue en verde.
 
-- [ ] **T5. `SolarNodesController` con `POST /api/solar-nodes`.**
-  - RF-1, RF-2, RF-4
-  - Hecho cuando: el POST responde 201 / 400 / 409 según el caso (probado desde el archivo `.http` o el OpenAPI) y `dotnet test` sigue en verde.
-
-- [ ] **T6. `SolarNodesApiClient` + página `/nodos/nuevo`.**
-  - RF-1, RF-2, RF-4
-  - Hecho cuando: en el navegador se puede dar de alta un nodo, se ven los mensajes de error de RF-2 y RF-4, el formulario se limpia tras el alta y la pantalla se ve bien en celular.
-
-- [ ] **T7. Validación del catálogo de tipos (opcional, regla de negocio).**
-  - Hecho cuando: un test verifica que solo se admiten los tipos del catálogo definido, en verde.
+- [ ] **T5. SolarNodeApiClient + página /nodos/nuevo.** RF-1, RF-2, RF-3
+  - Hecho cuando: en el navegador se puede registrar un nodo con parque desplegable, se ven los errores inline, el formulario se limpia al guardar y la vista es responsive.

@@ -1,6 +1,6 @@
-# Spec 012 — Baja de Nodo
+﻿# Spec 012 — Baja de Nodo
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 009 (Alta), Spec 010 (Listar), Spec 011 (Modificar)
 
 ## Contexto y objetivo
