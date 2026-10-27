@@ -23,6 +23,7 @@
 | **Nodos** | Alta / Baja / Modificar / Listar Nodos | Administrador / Todos | Pendiente |
 | | Asignar Inversor a Nodo | Administrador | Pendiente |
 | **Paneles** | Alta / Baja / Modificar / Listar Paneles | Administrador / Todos | En especificación (`005-008`) |
+| **Nodos** | Alta / Baja / Modificar / Listar Nodos | Administrador / Todos | En especificación (`009-012`) |
 | | Asignar Panel a Nodo | Administrador | Pendiente |
 | **Mantenimiento** | Reservar Fecha / Asignar Técnico / Cancelar / Listar | Administrador | Pendiente |
 | | Ver Mis Mantenimientos / Confirmar Mantenimiento | Técnico | Pendiente |
@@ -49,6 +50,10 @@
 | `006-listar-panel` | Pendiente | Especificación | 0 / 3 | Crear servicio, API y UI |
 | `007-modificar-panel` | Pendiente | Especificación | 0 / 4 | Crear servicio, API y UI |
 | `008-baja-panel` | Pendiente | Especificación | 0 / 3 | Crear servicio, API y UI |
+| `009-alta-nodo` | Pendiente | Especificación | 0 / 3 | Crear entidad, servicio, API y UI |
+| `010-listar-nodo` | Pendiente | Especificación | 0 / 3 | Crear servicio, API y UI |
+| `011-modificar-nodo` | Pendiente | Especificación | 0 / 4 | Crear servicio, API y UI |
+| `012-baja-nodo` | Pendiente | Especificación | 0 / 3 | Crear servicio, API y UI |
 
 ---
 
