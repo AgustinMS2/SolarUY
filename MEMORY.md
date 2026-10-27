@@ -16,7 +16,7 @@
 | **Usuarios** | Iniciar Sesión / Cerrar Sesión | Todos | Pendiente |
 | | Gestionar Roles de Usuario | Administrador | Pendiente |
 | | Alta Técnico / Listar Técnicos | Administrador | Pendiente |
-| **Parques** | Alta Parque | Administrador | Aprobada (`001-alta-parque`) |
+| **Parques** | Alta Parque | Administrador | **Implementada** (`001-alta-parque`) |
 | | Listar Parques | Todos | Aprobada (`002-listar-parques`) |
 | | Modificar Parque | Administrador | Aprobada (`003-modificar-parque`) |
 | | Baja Parque | Administrador | Aprobada (`004-baja-parque`) |
@@ -41,7 +41,7 @@
 
 | Código y Nombre | Estado | Fase Actual | Tareas Completadas | Siguiente Acción |
 | :--- | :--- | :--- | :--- | :--- |
-| `001-alta-parque` | **Aprobada** | En implementación | 2 / 6 | Iniciar **T3** (Repositorio `ISolarParkRepository` / `SolarParkRepository`) |
+| `001-alta-parque` | **Implementada** | Completada | 6 / 6 | Spec 001 finalizada. Iniciar **Spec 002** (`002-listar-parques`) |
 | `002-listar-parques` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 001 |
 | `003-modificar-parque` | **Aprobada** | Tareas listas | 0 / 4 | Implementar después de 002 |
 | `004-baja-parque` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 003 |

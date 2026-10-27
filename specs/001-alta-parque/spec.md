@@ -1,6 +1,6 @@
 # Spec 001 — Alta de Parque Solar
 
-Estado: aprobada
+Estado: implementada
 
 ## Contexto y objetivo
 Registrar un parque solar nuevo en SolarUY. Es la primera funcionalidad del módulo Parques y crea la base (datos y pantalla) sobre la que se apoyan Listar (002), Modificar (003) y Baja (004).

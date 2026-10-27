@@ -1,6 +1,41 @@
 @ApiService_HostAddress = http://localhost:5514
 
+### GET weather forecast
 GET {{ApiService_HostAddress}}/weatherforecast/
 Accept: application/json
 
-###
+### POST Crear parque solar (201 Created)
+POST {{ApiService_HostAddress}}/api/solar-parks
+Content-Type: application/json
+
+{
+  "name": "Parque Solar Salto Grande",
+  "latitude": -31.23,
+  "longitude": -57.92,
+  "maxCapacityKw": 50000.0,
+  "powerAlertThresholdKw": 45000.0
+}
+
+### POST Crear parque solar con error de validación (400 Bad Request)
+POST {{ApiService_HostAddress}}/api/solar-parks
+Content-Type: application/json
+
+{
+  "name": "",
+  "latitude": -95.0,
+  "longitude": -57.92,
+  "maxCapacityKw": 0.0,
+  "powerAlertThresholdKw": 100.0
+}
+
+### POST Crear parque solar duplicado (409 Conflict)
+POST {{ApiService_HostAddress}}/api/solar-parks
+Content-Type: application/json
+
+{
+  "name": "parque solar salto grande",
+  "latitude": -31.23,
+  "longitude": -57.92,
+  "maxCapacityKw": 50000.0,
+  "powerAlertThresholdKw": 45000.0
+}
