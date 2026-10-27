@@ -1,4 +1,4 @@
-# Spec 031 — Recibir Alerta de Falla
+﻿# Spec 031 — Recibir Alerta de Falla
 
 Estado: borrador
 Depende de: Spec 027 (Monitoreo Parque), Spec 030 (Salud Paneles)
@@ -22,18 +22,22 @@ Alertar de forma reactiva e inmediata a los operadores y técnicos conectados cu
 
 ## Requisitos funcionales (EARS)
 
-- **RF-1**: CUANDO el sistema de telemetría o el simulador detecte una condición de falla, EL SISTEMA creará un registro de alerta con: Parque, Equipo (nodo o panel), Severidad, Descripción del fallo y Fecha/hora UTC.
-- **RF-2**: EL SISTEMA emitirá un evento SignalR a todos los clientes web conectados del parque, mostrando un aviso flotante (Toast) en pantalla con el texto exacto: "[<Severidad>] Falla detectada en <Equipo> (<Parque>): <Descripción>".
-- **RF-3**: EL SISTEMA incrementará el contador de alertas no leídas en el icono de campana de la barra de navegación.
-- **RF-4**: CUANDO el usuario haga clic en la notificación o en el centro de alertas, EL SISTEMA mostrará el detalle de la falla y un botón de acceso directo "Agendar Mantenimiento" (spec 021) con los datos del equipo pre-cargados.
-- **RF-5**: EL SISTEMA permitirá al operador marcar la alerta como "Reconocida" o "Descartada", cambiando su estado en el historial.
+- **RF-1**: CUANDO el sistema de telemetría o el simulador detecte una condición de falla, EL SISTEMA creará un registro de alerta con: Parque, Equipo (nodo o panel), Severidad, Descripción del fallo, Identificador Único (UUID) y Fecha/hora UTC.
+- **RF-2**: EL SISTEMA aplicará deduplicado de alertas: dentro de una ventana de 60 segundos, si se detecta otra alerta con la misma Severidad y Equipo, EL SISTEMA la descartará y no generará un nuevo evento SignalR.
+- **RF-3**: EL SISTEMA incrementará el contador de alertas no leídas en el icono de campana de la barra de navegación, solo si el estado de la alerta es  Pendiente y su edad es mayor a 5 minutos.
+- **RF-4**: CUANDO el usuario haga clic en la notificación o en el centro de alertas, EL SISTEMA marcará automáticamente la alerta como Reconocida y mostrará el detalle de la falla y un botón de acceso directo Agendar Mantenimiento (spec 021) con los datos del equipo pre‑cargados.
+- **RF-5**: EL SISTEMA purgará automáticamente las alertas con estado Descartada que tengan más de 24 horas y que sean nocturnas (entre las 00:00 y 06:00 hora local), liberando espacio en el historial.
+- **RF-6**: SI se detectan 3 o más alertas con la misma Severidad y Equipo dentro de una ventana de 5 minutos, EL SISTEMA las agrupará en una única alerta consolidada con el contador de instancias.
 
 ## Requisitos no funcionales
 - Emisión inmediata del evento SignalR tras la detección (< 300 ms).
 - Notificación no invasiva: el toast desaparece tras 8 segundos o al cerrarlo, pero permanece en el centro de notificaciones.
 
 ## Casos límite
-- Ráfaga masiva de fallas (ej. corte general de red): el sistema agrupa alertas similares para evitar saturación de toasts ("Se detectaron 15 fallas simultáneas en Parque X").
+- Ráfaga masiva de fallas (ej. corte general de red): el sistema agrupa alertas similares para evitar saturación de toasts (Se detectaron 15 fallas simultáneas en Parque X).
+- Alertas duplicadas dentro de la ventana de 60 s son suprimidas silenciosamente.
+- El contador de alertas no leídas no incluye alertas antiguas (>5 min) una vez que son marcadas o purgadas.
+- Todas las marcas de tiempo se almacenan y presentan en UTC (según la constitución del proyecto), con conversión a hora local solo para display.
 
 ## Fuera de alcance
 - Envío de SMS o emails automáticos (solo notificaciones in-app vía SignalR).
