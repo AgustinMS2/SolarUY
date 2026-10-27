@@ -22,7 +22,7 @@
 | | Baja Parque | Administrador | Aprobada (`004-baja-parque`) |
 | **Nodos** | Alta / Baja / Modificar / Listar Nodos | Administrador / Todos | Pendiente |
 | | Asignar Inversor a Nodo | Administrador | Pendiente |
-| **Paneles** | Alta / Baja / Modificar / Listar Paneles | Administrador / Todos | Pendiente |
+| **Paneles** | Alta / Baja / Modificar / Listar Paneles | Administrador / Todos | En especificación (`005-008`) |
 | | Asignar Panel a Nodo | Administrador | Pendiente |
 | **Mantenimiento** | Reservar Fecha / Asignar Técnico / Cancelar / Listar | Administrador | Pendiente |
 | | Ver Mis Mantenimientos / Confirmar Mantenimiento | Técnico | Pendiente |
@@ -45,6 +45,10 @@
 | `002-listar-parques` | **Implementada** | Completada | 3 / 3 | Spec 002 finalizada. Iniciar **Spec 003** (`003-modificar-parque`) |
 | `003-modificar-parque` | **Implementada** | Completada | 4 / 4 | Spec 003 finalizada. Iniciar **Spec 004** (`004-baja-parque`) |
 | `004-baja-parque` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 003 |
+| `005-alta-panel` | Pendiente | Especificación | 0 / 3 | Crear entidad, servicio, API y UI |
+| `006-listar-panel` | Pendiente | Especificación | 0 / 3 | Crear servicio, API y UI |
+| `007-modificar-panel` | Pendiente | Especificación | 0 / 4 | Crear servicio, API y UI |
+| `008-baja-panel` | Pendiente | Especificación | 0 / 3 | Crear servicio, API y UI |
 
 ---
 
