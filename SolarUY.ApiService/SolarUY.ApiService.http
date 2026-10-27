@@ -8,6 +8,23 @@ Accept: application/json
 GET {{ApiService_HostAddress}}/api/solar-parks
 Accept: application/json
 
+### GET Parque solar por ID (200 OK / 404 Not Found)
+GET {{ApiService_HostAddress}}/api/solar-parks/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+### PUT Modificar parque solar (204 No Content / 400 / 404 / 409)
+PUT {{ApiService_HostAddress}}/api/solar-parks/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "name": "Parque Solar Actualizado",
+  "latitude": -31.25,
+  "longitude": -57.90,
+  "maxCapacityKw": 60000.0,
+  "powerAlertThresholdKw": 50000.0
+}
+
+
 
 ### POST Crear parque solar (201 Created)
 POST {{ApiService_HostAddress}}/api/solar-parks

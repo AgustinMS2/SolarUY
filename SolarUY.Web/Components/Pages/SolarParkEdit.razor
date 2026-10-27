@@ -1,0 +1,237 @@
+@page "/parques/{Id:guid}/editar"
+@rendermode InteractiveServer
+@inject SolarParkApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Modificar Parque Solar — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            @if (_isLoading)
+            {
+                <div class="d-flex justify-content-center align-items-center py-5">
+                    <div class="spinner-border text-primary me-2" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <span class="text-muted">Cargando datos del parque...</span>
+                </div>
+            }
+            else if (_notFound)
+            {
+                <div class="card border-0 shadow-sm text-center py-5">
+                    <div class="card-body">
+                        <div class="mb-3 text-warning">
+                            <span class="bi bi-exclamation-circle fs-1" aria-hidden="true"></span>
+                        </div>
+                        <h5 class="card-title text-secondary">El parque solicitado no existe.</h5>
+                        <p class="card-text text-muted mb-4">El identificador proporcionado no corresponde a ningún parque registrado.</p>
+                        <a href="/parques" class="btn btn-outline-primary">
+                            <span class="bi bi-arrow-left me-1"></span> Volver al listado
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+                        <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                            <span class="bi bi-pencil-square me-2" aria-hidden="true"></span>
+                            Modificar Parque Solar
+                        </h3>
+                        @if (_currentStatus != null)
+                        {
+                            <span class="badge @(_currentStatus == "Activo" ? "bg-success" : "bg-secondary")">
+                                Estado: @_currentStatus
+                            </span>
+                        }
+                    </div>
+                    <div class="card-body p-4">
+                        @if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                                <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                                <div>@_errorMessage</div>
+                                <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                            </div>
+                        }
+
+                        <EditForm Model="@_formModel" OnValidSubmit="HandleSubmitAsync">
+                            <DataAnnotationsValidator />
+
+                            <div class="mb-3">
+                                <label for="parkName" class="form-label fw-semibold">Nombre del Parque <span class="text-danger">*</span></label>
+                                <InputText id="parkName" class="form-control" placeholder="Ej: Parque Solar Salto Grande" @bind-Value="_formModel.Name" />
+                                <ValidationMessage For="@(() => _formModel.Name)" class="text-danger small mt-1" />
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label for="latitude" class="form-label fw-semibold">Latitud <span class="text-danger">*</span></label>
+                                    <InputNumber id="latitude" class="form-control" placeholder="-31.23" @bind-Value="_formModel.Latitude" step="any" />
+                                    <ValidationMessage For="@(() => _formModel.Latitude)" class="text-danger small mt-1" />
+                                    <div class="form-text small">Rango válido: -90 a 90</div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="longitude" class="form-label fw-semibold">Longitud <span class="text-danger">*</span></label>
+                                    <InputNumber id="longitude" class="form-control" placeholder="-57.92" @bind-Value="_formModel.Longitude" step="any" />
+                                    <ValidationMessage For="@(() => _formModel.Longitude)" class="text-danger small mt-1" />
+                                    <div class="form-text small">Rango válido: -180 a 180</div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-12 col-md-6">
+                                    <label for="maxCapacity" class="form-label fw-semibold">Capacidad Máxima (kW) <span class="text-danger">*</span></label>
+                                    <InputNumber id="maxCapacity" class="form-control" placeholder="50000" @bind-Value="_formModel.MaxCapacityKw" step="any" />
+                                    <ValidationMessage For="@(() => _formModel.MaxCapacityKw)" class="text-danger small mt-1" />
+                                    <div class="form-text small">Debe ser mayor a 0</div>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="powerThreshold" class="form-label fw-semibold">Umbral de Alerta de Potencia (kW) <span class="text-danger">*</span></label>
+                                    <InputNumber id="powerThreshold" class="form-control" placeholder="45000" @bind-Value="_formModel.PowerAlertThresholdKw" step="any" />
+                                    <ValidationMessage For="@(() => _formModel.PowerAlertThresholdKw)" class="text-danger small mt-1" />
+                                    <div class="form-text small">Mayor a 0 y ≤ capacidad máxima</div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="/parques" class="btn btn-outline-secondary px-3">
+                                    Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-primary px-4 d-flex align-items-center" disabled="@_isSubmitting">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                        <span>Guardando...</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bi bi-save me-1" aria-hidden="true"></span>
+                                        <span>Guardar Cambios</span>
+                                    }
+                                </button>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private SolarParkEditFormModel _formModel = new();
+    private bool _isLoading = true;
+    private bool _notFound;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private string? _currentStatus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _isLoading = true;
+        _notFound = false;
+        _errorMessage = null;
+
+        try
+        {
+            var park = await ApiClient.GetByIdAsync(Id);
+            if (park == null)
+            {
+                _notFound = true;
+            }
+            else
+            {
+                _formModel = new SolarParkEditFormModel
+                {
+                    Name = park.Name,
+                    Latitude = park.Latitude,
+                    Longitude = park.Longitude,
+                    MaxCapacityKw = park.MaxCapacityKw,
+                    PowerAlertThresholdKw = park.PowerAlertThresholdKw
+                };
+                _currentStatus = park.Status;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar el parque: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _errorMessage = null;
+
+        if (_formModel.PowerAlertThresholdKw.HasValue &&
+            _formModel.MaxCapacityKw.HasValue &&
+            _formModel.PowerAlertThresholdKw.Value > _formModel.MaxCapacityKw.Value)
+        {
+            _errorMessage = "El umbral de alerta debe ser mayor a 0 y no puede superar la capacidad máxima.";
+            return;
+        }
+
+        _isSubmitting = true;
+        try
+        {
+            var dto = new UpdateSolarParkDto(
+                _formModel.Name,
+                _formModel.Latitude ?? 0,
+                _formModel.Longitude ?? 0,
+                _formModel.MaxCapacityKw ?? 0,
+                _formModel.PowerAlertThresholdKw ?? 0
+            );
+
+            var result = await ApiClient.UpdateAsync(Id, dto);
+
+            if (result.Success)
+            {
+                Navigation.NavigateTo($"/parques?mensaje={Uri.EscapeDataString("Parque actualizado correctamente.")}");
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    public class SolarParkEditFormModel
+    {
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [StringLength(100, ErrorMessage = "El nombre no puede superar los 100 caracteres.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La latitud debe estar entre -90 y 90.")]
+        [Range(-90.0, 90.0, ErrorMessage = "La latitud debe estar entre -90 y 90.")]
+        public double? Latitude { get; set; }
+
+        [Required(ErrorMessage = "La longitud debe estar entre -180 y 180.")]
+        [Range(-180.0, 180.0, ErrorMessage = "La longitud debe estar entre -180 y 180.")]
+        public double? Longitude { get; set; }
+
+        [Required(ErrorMessage = "La capacidad máxima debe ser mayor a 0.")]
+        [Range(0.000001, double.MaxValue, ErrorMessage = "La capacidad máxima debe ser mayor a 0.")]
+        public double? MaxCapacityKw { get; set; }
+
+        [Required(ErrorMessage = "El umbral de alerta debe ser mayor a 0 y no puede superar la capacidad máxima.")]
+        [Range(0.000001, double.MaxValue, ErrorMessage = "El umbral de alerta debe ser mayor a 0 y no puede superar la capacidad máxima.")]
+        public double? PowerAlertThresholdKw { get; set; }
+    }
+}

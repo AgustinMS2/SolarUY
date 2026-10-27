@@ -1,6 +1,6 @@
 # Spec 003 — Modificar Parque Solar
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 001 (Alta) y Spec 002 (Listar)
 
 ## Contexto y objetivo

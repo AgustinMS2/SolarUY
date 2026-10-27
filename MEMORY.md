@@ -18,7 +18,7 @@
 | | Alta Técnico / Listar Técnicos | Administrador | Pendiente |
 | **Parques** | Alta Parque | Administrador | **Implementada** (`001-alta-parque`) |
 | | Listar Parques | Todos | **Implementada** (`002-listar-parques`) |
-| | Modificar Parque | Administrador | Aprobada (`003-modificar-parque`) |
+| | Modificar Parque | Administrador | **Implementada** (`003-modificar-parque`) |
 | | Baja Parque | Administrador | Aprobada (`004-baja-parque`) |
 | **Nodos** | Alta / Baja / Modificar / Listar Nodos | Administrador / Todos | Pendiente |
 | | Asignar Inversor a Nodo | Administrador | Pendiente |
@@ -43,7 +43,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `001-alta-parque` | **Implementada** | Completada | 6 / 6 | Spec 001 finalizada. Iniciar **Spec 002** (`002-listar-parques`) |
 | `002-listar-parques` | **Implementada** | Completada | 3 / 3 | Spec 002 finalizada. Iniciar **Spec 003** (`003-modificar-parque`) |
-| `003-modificar-parque` | **Aprobada** | Tareas listas | 0 / 4 | Implementar después de 002 |
+| `003-modificar-parque` | **Implementada** | Completada | 4 / 4 | Spec 003 finalizada. Iniciar **Spec 004** (`004-baja-parque`) |
 | `004-baja-parque` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 003 |
 
 ---

@@ -12,6 +12,11 @@ public class FakeSolarParkRepository : ISolarParkRepository
         return Parks.Any(p => p.NormalizedName == normalizedName);
     }
 
+    public bool ExistsByNormalizedName(string normalizedName, Guid excludeId)
+    {
+        return Parks.Any(p => p.NormalizedName == normalizedName && p.Id != excludeId);
+    }
+
     public void Add(SolarPark park)
     {
         Parks.Add(park);
@@ -20,5 +25,23 @@ public class FakeSolarParkRepository : ISolarParkRepository
     public IReadOnlyList<SolarPark> GetAll()
     {
         return Parks;
+    }
+
+    public SolarPark? GetById(Guid id)
+    {
+        return Parks.FirstOrDefault(p => p.Id == id);
+    }
+
+    public void Update(SolarPark park)
+    {
+        var index = Parks.FindIndex(p => p.Id == park.Id);
+        if (index >= 0)
+        {
+            Parks[index] = park;
+        }
+        else
+        {
+            Parks.Add(park);
+        }
     }
 }

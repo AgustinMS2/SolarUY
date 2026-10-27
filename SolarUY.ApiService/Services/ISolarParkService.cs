@@ -6,4 +6,6 @@ public interface ISolarParkService
 {
     ServiceResult<Guid> Create(CreateSolarParkRequest request);
     IReadOnlyList<SolarParkDto> GetAll();
+    ServiceResult<SolarParkDto> GetById(Guid id);
+    ServiceResult Update(Guid id, UpdateSolarParkRequest request);
 }

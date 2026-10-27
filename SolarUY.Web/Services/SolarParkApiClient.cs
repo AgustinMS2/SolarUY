@@ -20,6 +20,14 @@ public record SolarParkDto(
     string Status
 );
 
+public record UpdateSolarParkDto(
+    string Name,
+    double Latitude,
+    double Longitude,
+    double MaxCapacityKw,
+    double PowerAlertThresholdKw
+);
+
 public class SolarParkApiResponse
 {
     public bool Success { get; set; }
@@ -48,6 +56,39 @@ public class SolarParkApiClient(HttpClient httpClient)
         catch (Exception ex)
         {
             return new SolarParkApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
+    public async Task<SolarParkApiResponse> UpdateAsync(Guid id, UpdateSolarParkDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PutAsJsonAsync($"/api/solar-parks/{id}", request, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new SolarParkApiResponse { Success = true, Id = id };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"Error al actualizar el parque ({response.StatusCode}).";
+            return new SolarParkApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new SolarParkApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
+    public async Task<SolarParkDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await httpClient.GetFromJsonAsync<SolarParkDto>($"/api/solar-parks/{id}", cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
         }
     }
 
