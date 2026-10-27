@@ -41,7 +41,7 @@
 
 | Código y Nombre | Estado | Fase Actual | Tareas Completadas | Siguiente Acción |
 | :--- | :--- | :--- | :--- | :--- |
-| `001-alta-parque` | **Aprobada** | Tareas listas | 0 / 6 | Iniciar **T1** (proyecto de tests + tests de arquitectura) |
+| `001-alta-parque` | **Aprobada** | En implementación | 2 / 6 | Iniciar **T3** (Repositorio `ISolarParkRepository` / `SolarParkRepository`) |
 | `002-listar-parques` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 001 |
 | `003-modificar-parque` | **Aprobada** | Tareas listas | 0 / 4 | Implementar después de 002 |
 | `004-baja-parque` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 003 |

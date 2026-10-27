@@ -7,7 +7,12 @@
     <Nullable>enable</Nullable>
     <AspireUseCliBundle>true</AspireUseCliBundle>
     <UserSecretsId>09a217a0-875b-4962-8e90-fe63a5bf4c4e</UserSecretsId>
+    <RollForward>LatestMajor</RollForward>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.6.1" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SolarUY.ApiService\SolarUY.ApiService.csproj" />

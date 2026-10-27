@@ -1,9 +1,9 @@
 # Tareas: Spec 001 — Alta de Parque Solar
 
-- [ ] **T1. Proyecto `SolarUY.Tests` + tests de arquitectura.**
+- [x] **T1. Proyecto `SolarUY.Tests` + tests de arquitectura.**
   - Hecho cuando: el proyecto xUnit está en `SolarUY.slnx`, referencia a `SolarUY.ApiService`, tiene los 3 tests de arquitectura del plan y `dotnet test` pasa en verde.
 
-- [ ] **T2. PostgreSQL en Aspire + entidad `SolarPark` + `SolarUyDbContext` + migración.** RF-1, RF-3
+- [x] **T2. PostgreSQL en Aspire + entidad `SolarPark` + `SolarUyDbContext` + migración.** RF-1, RF-3
   - Hecho cuando: `AppHost` levanta PostgreSQL, la migración `InitialSolarPark` crea la tabla `SolarParks` con índice único en `NormalizedName` y la solución compila.
 
 - [ ] **T3. Repositorio `ISolarParkRepository` / `SolarParkRepository` (`ExistsByNormalizedName`, `Add`).** RF-1, RF-3
