@@ -182,4 +182,26 @@ public class SolarParkService : ISolarParkService
 
         return ServiceResult.Ok();
     }
+
+    public ServiceResult Deactivate(Guid id)
+    {
+        var park = _repository.GetById(id);
+        if (park == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El parque solicitado no existe.");
+        }
+
+        if (park.Status == SolarParkStatus.Inactive)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "El parque ya está inactivo.");
+        }
+
+        park.Status = SolarParkStatus.Inactive;
+        park.UpdatedAtUtc = DateTime.UtcNow;
+
+        _repository.Update(park);
+        _logger.LogInformation("Solar park deactivated successfully with ID {ParkId}", park.Id);
+
+        return ServiceResult.Ok();
+    }
 }

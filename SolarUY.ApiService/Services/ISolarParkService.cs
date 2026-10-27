@@ -8,4 +8,5 @@ public interface ISolarParkService
     IReadOnlyList<SolarParkDto> GetAll();
     ServiceResult<SolarParkDto> GetById(Guid id);
     ServiceResult Update(Guid id, UpdateSolarParkRequest request);
+    ServiceResult Deactivate(Guid id);
 }

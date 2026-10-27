@@ -1,6 +1,6 @@
 # Tareas: Spec 004 — Baja de Parque Solar
 
-- [ ] **T1. `SolarParkService.Deactivate` con tests unitarios (tests primero).** RF-2, RF-5, RF-6
+- [x] **T1. `SolarParkService.Deactivate` con tests unitarios (tests primero).** RF-2, RF-5, RF-6
   - Hecho cuando: los 3 tests del plan fallaron antes de implementar y ahora pasan en verde junto con el resto.
 
 - [ ] **T2. `DELETE /api/solar-parks/{id}` en el controlador.** RF-2, RF-5, RF-6
