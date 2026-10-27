@@ -4,6 +4,11 @@
 GET {{ApiService_HostAddress}}/weatherforecast/
 Accept: application/json
 
+### GET Listar parques solares (200 OK)
+GET {{ApiService_HostAddress}}/api/solar-parks
+Accept: application/json
+
+
 ### POST Crear parque solar (201 Created)
 POST {{ApiService_HostAddress}}/api/solar-parks
 Content-Type: application/json

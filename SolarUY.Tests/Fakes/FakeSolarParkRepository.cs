@@ -16,4 +16,9 @@ public class FakeSolarParkRepository : ISolarParkRepository
     {
         Parks.Add(park);
     }
+
+    public IReadOnlyList<SolarPark> GetAll()
+    {
+        return Parks;
+    }
 }

@@ -22,4 +22,9 @@ public class SolarParkRepository : ISolarParkRepository
         _context.SolarParks.Add(park);
         _context.SaveChanges();
     }
+
+    public IReadOnlyList<SolarPark> GetAll()
+    {
+        return _context.SolarParks.ToList();
+    }
 }

@@ -33,4 +33,11 @@ public class SolarParksController : ControllerBase
 
         return StatusCode(StatusCodes.Status201Created, new { id = result.Value });
     }
+
+    [HttpGet]
+    public ActionResult<IReadOnlyList<SolarParkDto>> GetAll()
+    {
+        var parks = _service.GetAll();
+        return Ok(parks);
+    }
 }

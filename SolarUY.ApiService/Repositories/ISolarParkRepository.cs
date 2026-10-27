@@ -6,4 +6,5 @@ public interface ISolarParkRepository
 {
     bool ExistsByNormalizedName(string normalizedName);
     void Add(SolarPark park);
+    IReadOnlyList<SolarPark> GetAll();
 }

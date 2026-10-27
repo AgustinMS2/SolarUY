@@ -76,4 +76,22 @@ public class SolarParkService : ISolarParkService
 
         return ServiceResult<Guid>.Ok(park.Id);
     }
+
+    public IReadOnlyList<SolarParkDto> GetAll()
+    {
+        var parks = _repository.GetAll();
+
+        return parks
+            .OrderBy(p => p.NormalizedName, StringComparer.OrdinalIgnoreCase)
+            .Select(p => new SolarParkDto(
+                p.Id,
+                p.Name,
+                p.Latitude,
+                p.Longitude,
+                p.MaxCapacityKw,
+                p.PowerAlertThresholdKw,
+                p.Status == SolarParkStatus.Active ? "Activo" : "Inactivo"
+            ))
+            .ToList();
+    }
 }

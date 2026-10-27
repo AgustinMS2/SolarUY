@@ -10,6 +10,16 @@ public record CreateSolarParkDto(
     double PowerAlertThresholdKw
 );
 
+public record SolarParkDto(
+    Guid Id,
+    string Name,
+    double Latitude,
+    double Longitude,
+    double MaxCapacityKw,
+    double PowerAlertThresholdKw,
+    string Status
+);
+
 public class SolarParkApiResponse
 {
     public bool Success { get; set; }
@@ -43,4 +53,10 @@ public class SolarParkApiClient(HttpClient httpClient)
 
     private sealed record CreateSolarParkSuccessResponse(Guid Id);
     private sealed record ErrorResponse(string? Message);
+
+    public async Task<IReadOnlyList<SolarParkDto>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var result = await httpClient.GetFromJsonAsync<List<SolarParkDto>>("/api/solar-parks", cancellationToken);
+        return result ?? [];
+    }
 }

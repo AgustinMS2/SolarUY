@@ -1,6 +1,6 @@
 # Spec 002 — Listar Parques Solares
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 001 (Alta de Parque Solar)
 
 ## Contexto y objetivo

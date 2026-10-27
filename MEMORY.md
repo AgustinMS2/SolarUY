@@ -17,7 +17,7 @@
 | | Gestionar Roles de Usuario | Administrador | Pendiente |
 | | Alta Técnico / Listar Técnicos | Administrador | Pendiente |
 | **Parques** | Alta Parque | Administrador | **Implementada** (`001-alta-parque`) |
-| | Listar Parques | Todos | Aprobada (`002-listar-parques`) |
+| | Listar Parques | Todos | **Implementada** (`002-listar-parques`) |
 | | Modificar Parque | Administrador | Aprobada (`003-modificar-parque`) |
 | | Baja Parque | Administrador | Aprobada (`004-baja-parque`) |
 | **Nodos** | Alta / Baja / Modificar / Listar Nodos | Administrador / Todos | Pendiente |
@@ -42,7 +42,7 @@
 | Código y Nombre | Estado | Fase Actual | Tareas Completadas | Siguiente Acción |
 | :--- | :--- | :--- | :--- | :--- |
 | `001-alta-parque` | **Implementada** | Completada | 6 / 6 | Spec 001 finalizada. Iniciar **Spec 002** (`002-listar-parques`) |
-| `002-listar-parques` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 001 |
+| `002-listar-parques` | **Implementada** | Completada | 3 / 3 | Spec 002 finalizada. Iniciar **Spec 003** (`003-modificar-parque`) |
 | `003-modificar-parque` | **Aprobada** | Tareas listas | 0 / 4 | Implementar después de 002 |
 | `004-baja-parque` | **Aprobada** | Tareas listas | 0 / 3 | Implementar después de 003 |
 
