@@ -1,6 +1,7 @@
 @page "/paneles/editar/{Id:guid}"
 @page "/paneles/{Id:guid}/editar"
 @rendermode InteractiveServer
+@attribute [Authorize]
 @using System.ComponentModel.DataAnnotations
 @using SolarUY.Web.Services
 @inject PanelsApiClient PanelsClient

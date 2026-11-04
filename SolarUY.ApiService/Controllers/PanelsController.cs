@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Services;
 
 namespace SolarUY.ApiService.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/panels")]
 public class PanelsController : ControllerBase

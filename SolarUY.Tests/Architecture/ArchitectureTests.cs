@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NetArchTest.Rules;
 using Xunit;
@@ -37,6 +38,24 @@ public class ArchitectureTests
             .GetResult();
 
         Assert.True(result.IsSuccessful, string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
+    public void Controllers_Should_BeProtectedWithAuthorize()
+    {
+        var controllers = Types.InAssembly(ApiAssembly)
+            .That()
+            .ResideInNamespace("SolarUY.ApiService.Controllers")
+            .And()
+            .AreClasses()
+            .GetTypes();
+
+        var unprotected = controllers
+            .Where(t => !t.IsDefined(typeof(AuthorizeAttribute), inherit: true))
+            .Select(t => t.Name)
+            .ToList();
+
+        Assert.True(unprotected.Count == 0, string.Join(", ", unprotected));
     }
 
     [Fact]

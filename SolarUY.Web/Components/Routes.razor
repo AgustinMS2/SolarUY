@@ -1,6 +1,14 @@
 ﻿<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                @* Spec 015 RF-1: no session -> login. The "authenticated but not allowed" case belongs to spec 017. *@
+                @if (context.User.Identity?.IsAuthenticated != true)
+                {
+                    <RedirectToLogin />
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
 </Router>
