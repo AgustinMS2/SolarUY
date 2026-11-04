@@ -38,6 +38,32 @@ public class FakeSolarPanelRepository : ISolarPanelRepository
         return Panels.FirstOrDefault(p => p.Id == id);
     }
 
+    public IReadOnlyList<SolarPanel> GetByIds(IReadOnlyCollection<Guid> ids)
+    {
+        return Panels.Where(p => ids.Contains(p.Id)).ToList();
+    }
+
+    public IReadOnlyList<SolarPanel> GetByNodeId(Guid nodeId)
+    {
+        return Panels.Where(p => p.SolarNodeId == nodeId).ToList();
+    }
+
+    public IReadOnlyDictionary<Guid, int> CountByNodeIds(IReadOnlyCollection<Guid> nodeIds)
+    {
+        return Panels
+            .Where(p => p.SolarNodeId != null && nodeIds.Contains(p.SolarNodeId.Value))
+            .GroupBy(p => p.SolarNodeId!.Value)
+            .ToDictionary(g => g.Key, g => g.Count());
+    }
+
+    public void UpdateRange(IReadOnlyList<SolarPanel> panels)
+    {
+        foreach (var panel in panels)
+        {
+            Update(panel);
+        }
+    }
+
     public void Update(SolarPanel panel)
     {
         var index = Panels.FindIndex(p => p.Id == panel.Id);

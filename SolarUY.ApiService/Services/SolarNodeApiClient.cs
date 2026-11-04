@@ -213,6 +213,65 @@ public class SolarNodeApiClient
         }
     }
 
+    public async Task<ServiceResult> AssignPanelsAsync(Guid nodeId, AssignPanelsRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync($"/api/solar-nodes/{nodeId}/panels", request, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, requiresConfirmation) = await ReadErrorAsync(response, "Error al asignar los paneles", cancellationToken);
+
+            // A 409 flagged with requiresConfirmation carries warnings (reassignment / power) the user must confirm.
+            var errorType = requiresConfirmation
+                ? ServiceErrorType.ConfirmationRequired
+                : response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                    System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                    _ => ServiceErrorType.Validation
+                };
+
+            return ServiceResult.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
+    public async Task<ServiceResult> UnassignPanelsAsync(Guid nodeId, UnassignPanelsRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var message = new HttpRequestMessage(HttpMethod.Delete, $"/api/solar-nodes/{nodeId}/panels")
+            {
+                Content = JsonContent.Create(request)
+            };
+            var response = await _http.SendAsync(message, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (errorMessage, _) = await ReadErrorAsync(response, "Error al desasociar los paneles", cancellationToken);
+            var errorType = response.StatusCode == System.Net.HttpStatusCode.NotFound
+                ? ServiceErrorType.NotFound
+                : ServiceErrorType.Validation;
+
+            return ServiceResult.Fail(errorType, errorMessage);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     private static async Task<(string Message, bool RequiresConfirmation)> ReadErrorAsync(
         HttpResponseMessage response,
         string fallback,

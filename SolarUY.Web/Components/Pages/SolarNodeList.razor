@@ -138,6 +138,9 @@
                                                                 Desvincular
                                                             </button>
                                                         }
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-1" @onclick="() => OpenPanelsModal(node)">
+                                                            Paneles
+                                                        </button>
                                                     </AuthorizeView>
                                                 </td>
                                             </tr>
@@ -156,6 +159,11 @@
 @if (_nodeForInverter != null)
 {
     <SolarNodeInverterModal Node="_nodeForInverter" OnClose="CloseInverterModal" OnSaved="OnInverterSaved" />
+}
+
+@if (_nodeForPanels != null)
+{
+    <SolarNodePanelsModal Node="_nodeForPanels" OnClose="ClosePanelsModal" OnChanged="OnPanelsChanged" />
 }
 
 @if (_nodeToUnassign != null)
@@ -192,6 +200,7 @@
     private string? _successMessage;
     private string? _actionErrorMessage;
     private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeForInverter;
+    private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeForPanels;
     private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeToUnassign;
     private bool _isUnassigning;
 
@@ -205,6 +214,26 @@
     private void CloseInverterModal()
     {
         _nodeForInverter = null;
+    }
+
+    private void OpenPanelsModal(SolarUY.ApiService.Dtos.SolarNodeDto node)
+    {
+        _successMessage = null;
+        _actionErrorMessage = null;
+        _nodeForPanels = node;
+    }
+
+    private void ClosePanelsModal()
+    {
+        _nodeForPanels = null;
+    }
+
+    // Reload the list so the panel counter reflects the change.
+    private async Task OnPanelsChanged(string message)
+    {
+        _nodeForPanels = null;
+        _successMessage = message;
+        await CargarDatosAsync();
     }
 
     private async Task OnInverterSaved(string message)

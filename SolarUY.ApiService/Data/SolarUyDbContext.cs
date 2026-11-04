@@ -42,6 +42,12 @@ public class SolarUyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.SolarParkId)
                 .OnDelete(DeleteBehavior.Restrict);
+            // A panel is optionally connected to a node (null = "Sin asignar").
+            entity.HasOne(e => e.SolarNode)
+                .WithMany()
+                .HasForeignKey(e => e.SolarNodeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.SolarNodeId);
         });
 
         modelBuilder.Entity<SolarNode>(entity =>

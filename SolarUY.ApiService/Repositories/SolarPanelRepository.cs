@@ -38,6 +38,7 @@ public class SolarPanelRepository : ISolarPanelRepository
     {
         return _context.SolarPanels
             .Include(p => p.SolarPark)
+            .Include(p => p.SolarNode)
             .ToList();
     }
 
@@ -45,12 +46,39 @@ public class SolarPanelRepository : ISolarPanelRepository
     {
         return _context.SolarPanels
             .Include(p => p.SolarPark)
+            .Include(p => p.SolarNode)
             .FirstOrDefault(p => p.Id == id);
     }
 
     public void Update(SolarPanel panel)
     {
         _context.SolarPanels.Update(panel);
+        _context.SaveChanges();
+    }
+
+    public IReadOnlyList<SolarPanel> GetByIds(IReadOnlyCollection<Guid> ids)
+    {
+        return _context.SolarPanels.Where(p => ids.Contains(p.Id)).ToList();
+    }
+
+    public IReadOnlyList<SolarPanel> GetByNodeId(Guid nodeId)
+    {
+        return _context.SolarPanels.Where(p => p.SolarNodeId == nodeId).ToList();
+    }
+
+    public IReadOnlyDictionary<Guid, int> CountByNodeIds(IReadOnlyCollection<Guid> nodeIds)
+    {
+        return _context.SolarPanels
+            .Where(p => p.SolarNodeId != null && nodeIds.Contains(p.SolarNodeId.Value))
+            .GroupBy(p => p.SolarNodeId!.Value)
+            .Select(g => new { NodeId = g.Key, Count = g.Count() })
+            .ToDictionary(x => x.NodeId, x => x.Count);
+    }
+
+    // One SaveChanges for the whole batch, so a node assignment is all-or-nothing.
+    public void UpdateRange(IReadOnlyList<SolarPanel> panels)
+    {
+        _context.SolarPanels.UpdateRange(panels);
         _context.SaveChanges();
     }
 }

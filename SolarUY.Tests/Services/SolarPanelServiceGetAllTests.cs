@@ -13,7 +13,7 @@ public class SolarPanelServiceGetAllTests
 
     public SolarPanelServiceGetAllTests()
     {
-        _service = new SolarPanelService(_repository, NullLogger<SolarPanelService>.Instance);
+        _service = new SolarPanelService(_repository, new FakeSolarNodeRepository(), new FakeInverterRepository(), NullLogger<SolarPanelService>.Instance);
     }
 
     [Fact]

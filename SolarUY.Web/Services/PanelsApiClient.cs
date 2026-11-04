@@ -30,7 +30,9 @@ public record SolarPanelDto(
     double Efficiency,
     string SolarParkName,
     string Status,
-    Guid SolarParkId = default
+    Guid SolarParkId = default,
+    string? SolarNodeName = null,
+    Guid? SolarNodeId = null
 );
 
 public class PanelsApiClient(HttpClient httpClient)

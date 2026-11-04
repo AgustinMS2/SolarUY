@@ -18,7 +18,7 @@ public class PanelServiceUpdateTests
 
     public PanelServiceUpdateTests()
     {
-        _service = new SolarPanelService(_repository, NullLogger<SolarPanelService>.Instance);
+        _service = new SolarPanelService(_repository, new FakeSolarNodeRepository(), new FakeInverterRepository(), NullLogger<SolarPanelService>.Instance);
 
         _repository.Parks.Add(new SolarPark
         {

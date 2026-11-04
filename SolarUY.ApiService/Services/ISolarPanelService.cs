@@ -9,4 +9,6 @@ public interface ISolarPanelService
     ServiceResult<SolarPanelDto> GetById(Guid id);
     ServiceResult Update(Guid id, UpdateSolarPanelRequest request);
     ServiceResult DeletePanel(Guid id);
+    ServiceResult AssignPanelsToNode(Guid nodeId, AssignPanelsRequest request);
+    ServiceResult UnassignPanelsFromNode(Guid nodeId, UnassignPanelsRequest request);
 }

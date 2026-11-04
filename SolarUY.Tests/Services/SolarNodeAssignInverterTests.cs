@@ -20,7 +20,7 @@ public class SolarNodeAssignInverterTests
 
     public SolarNodeAssignInverterTests()
     {
-        _service = new SolarNodeService(_nodeRepository, _parkRepository, _inverterRepository, NullLogger<SolarNodeService>.Instance);
+        _service = new SolarNodeService(_nodeRepository, _parkRepository, _inverterRepository, new FakeSolarPanelRepository(), NullLogger<SolarNodeService>.Instance);
 
         _park = new SolarPark
         {

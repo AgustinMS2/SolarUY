@@ -1,0 +1,266 @@
+@using SolarUY.ApiService.Services
+@inject SolarNodeApiClient NodeApiClient
+@inject PanelsApiClient PanelsClient
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content shadow">
+            <div class="modal-header">
+                <h5 class="modal-title">Paneles del nodo — @Node.Name</h5>
+                <button type="button" class="btn-close" aria-label="Cerrar" @onclick="Close" disabled="@_isBusy"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                }
+
+                @if (_confirmationMessage != null)
+                {
+                    <div class="alert alert-warning" role="alert">
+                        @foreach (var line in _confirmationMessage.Split('\n'))
+                        {
+                            <p class="mb-2">@line</p>
+                        }
+                        <button type="button" class="btn btn-warning btn-sm me-2" @onclick="() => AssociateAsync(true)" disabled="@_isBusy">
+                            @if (_isBusy)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Confirmar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CancelConfirmation" disabled="@_isBusy">Cancelar</button>
+                    </div>
+                }
+
+                @if (_isLoading)
+                {
+                    <div class="d-flex justify-content-center align-items-center py-4">
+                        <div class="spinner-border text-primary me-2" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <span class="text-muted">Cargando paneles...</span>
+                    </div>
+                }
+                else
+                {
+                    <h6 class="mb-2">Paneles del nodo (@_nodePanels.Count)</h6>
+                    @if (_nodePanels.Count == 0)
+                    {
+                        <p class="text-muted">Este nodo no tiene paneles asociados.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group mb-2">
+                            @foreach (var panel in _nodePanels)
+                            {
+                                <li class="list-group-item d-flex align-items-center">
+                                    <input class="form-check-input me-3" type="checkbox"
+                                           aria-label="Seleccionar panel @panel.SerieNumber"
+                                           checked="@_selectedOwn.Contains(panel.Id)"
+                                           @onchange="e => Toggle(_selectedOwn, panel.Id, e.Value)"
+                                           disabled="@(_isBusy || _confirmationMessage != null)" />
+                                    <span class="fw-semibold me-2">@panel.SerieNumber</span>
+                                    <span class="text-muted small">@($"{panel.PowerW} W")</span>
+                                    @if (panel.Status != "Activo")
+                                    {
+                                        <span class="badge bg-secondary ms-2">Inactivo</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="UnassignAsync"
+                                disabled="@(_isBusy || _confirmationMessage != null || _selectedOwn.Count == 0)">
+                            Desasociar seleccionados (@_selectedOwn.Count)
+                        </button>
+                    }
+
+                    <hr />
+
+                    <h6 class="mb-2">Paneles del parque</h6>
+                    @if (Node.Status != "Activo")
+                    {
+                        <p class="text-muted mb-0">No se pueden asociar paneles inactivos o a nodos inactivos.</p>
+                    }
+                    else if (_parkPanels.Count == 0)
+                    {
+                        <p class="text-muted mb-0">No hay otros paneles activos en el parque.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group mb-2">
+                            @foreach (var panel in _parkPanels)
+                            {
+                                <li class="list-group-item d-flex align-items-center flex-wrap">
+                                    <input class="form-check-input me-3" type="checkbox"
+                                           aria-label="Seleccionar panel @panel.SerieNumber"
+                                           checked="@_selectedAvailable.Contains(panel.Id)"
+                                           @onchange="e => Toggle(_selectedAvailable, panel.Id, e.Value)"
+                                           disabled="@(_isBusy || _confirmationMessage != null)" />
+                                    <span class="fw-semibold me-2">@panel.SerieNumber</span>
+                                    <span class="text-muted small me-2">@($"{panel.PowerW} W")</span>
+                                    @if (string.IsNullOrEmpty(panel.SolarNodeName))
+                                    {
+                                        <span class="badge bg-success">Sin asignar</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">En nodo @panel.SolarNodeName</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => AssociateAsync(false)"
+                                disabled="@(_isBusy || _confirmationMessage != null || _selectedAvailable.Count == 0)">
+                            Asociar seleccionados (@_selectedAvailable.Count)
+                        </button>
+                    }
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close" disabled="@_isBusy">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SolarUY.ApiService.Dtos.SolarNodeDto Node { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnChanged { get; set; }
+
+    private List<SolarPanelDto> _nodePanels = new();
+    private List<SolarPanelDto> _parkPanels = new();
+    private readonly HashSet<Guid> _selectedOwn = new();
+    private readonly HashSet<Guid> _selectedAvailable = new();
+    private bool _isLoading = true;
+    private bool _isBusy;
+    private string? _errorMessage;
+    private string? _confirmationMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var all = (await PanelsClient.GetAllAsync()).Where(p => p.SolarParkId == Node.SolarParkId).ToList();
+
+            _nodePanels = all
+                .Where(p => p.SolarNodeId == Node.Id)
+                .OrderBy(p => p.SerieNumber, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            _parkPanels = all
+                .Where(p => p.SolarNodeId != Node.Id && p.Status == "Activo")
+                .OrderBy(p => p.SerieNumber, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cargar el listado de paneles. Intentá nuevamente.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static void Toggle(HashSet<Guid> selection, Guid id, object? isChecked)
+    {
+        if (isChecked is true)
+        {
+            selection.Add(id);
+        }
+        else
+        {
+            selection.Remove(id);
+        }
+    }
+
+    // RF-3 / RF-6: cancelling the confirmation changes nothing; the selection stays so the user can adjust it.
+    private void CancelConfirmation()
+    {
+        _confirmationMessage = null;
+    }
+
+    private async Task AssociateAsync(bool confirm)
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _errorMessage = null;
+
+        try
+        {
+            var request = new SolarUY.ApiService.Dtos.AssignPanelsRequest(_selectedAvailable.ToList(), confirm);
+            var result = await NodeApiClient.AssignPanelsAsync(Node.Id, request);
+
+            if (result.Success)
+            {
+                await OnChanged.InvokeAsync("Paneles asignados correctamente al nodo.");
+            }
+            else if (result.ErrorType == ServiceErrorType.ConfirmationRequired)
+            {
+                _confirmationMessage = result.ErrorMessage;
+            }
+            else
+            {
+                _confirmationMessage = null;
+                _errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task UnassignAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _errorMessage = null;
+
+        try
+        {
+            var request = new SolarUY.ApiService.Dtos.UnassignPanelsRequest(_selectedOwn.ToList());
+            var result = await NodeApiClient.UnassignPanelsAsync(Node.Id, request);
+
+            if (result.Success)
+            {
+                await OnChanged.InvokeAsync("Paneles desasociados correctamente del nodo.");
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+}

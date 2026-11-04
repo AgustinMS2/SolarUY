@@ -12,10 +12,12 @@ namespace SolarUY.ApiService.Controllers;
 public class SolarNodesController : ControllerBase
 {
     private readonly ISolarNodeService _service;
+    private readonly ISolarPanelService _panelService;
 
-    public SolarNodesController(ISolarNodeService service)
+    public SolarNodesController(ISolarNodeService service, ISolarPanelService panelService)
     {
         _service = service;
+        _panelService = panelService;
     }
 
     [Authorize(Roles = Roles.Administrator)]
@@ -126,5 +128,46 @@ public class SolarNodesController : ControllerBase
         }
 
         return NoContent();
+    }
+
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPost("{id:guid}/panels")]
+    public IActionResult AssignPanels(Guid id, [FromBody] AssignPanelsRequest request)
+    {
+        var result = _panelService.AssignPanelsToNode(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                // 409 flagged so the screen can ask the Administrator to confirm the warnings (reassignment / power).
+                ServiceErrorType.ConfirmationRequired => Conflict(new { message = result.ErrorMessage, requiresConfirmation = true }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(new { message = "Paneles asignados correctamente al nodo." });
+    }
+
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpDelete("{id:guid}/panels")]
+    public IActionResult UnassignPanels(Guid id, [FromBody] UnassignPanelsRequest request)
+    {
+        var result = _panelService.UnassignPanelsFromNode(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(new { message = "Paneles desasociados correctamente del nodo." });
     }
 }

@@ -10,17 +10,20 @@ public class SolarNodeService : ISolarNodeService
     private readonly ISolarNodeRepository _repository;
     private readonly ISolarParkRepository _parkRepository;
     private readonly IInverterRepository _inverterRepository;
+    private readonly ISolarPanelRepository _panelRepository;
     private readonly ILogger<SolarNodeService> _logger;
 
     public SolarNodeService(
         ISolarNodeRepository repository,
         ISolarParkRepository parkRepository,
         IInverterRepository inverterRepository,
+        ISolarPanelRepository panelRepository,
         ILogger<SolarNodeService> logger)
     {
         _repository = repository;
         _parkRepository = parkRepository;
         _inverterRepository = inverterRepository;
+        _panelRepository = panelRepository;
         _logger = logger;
     }
 
@@ -75,12 +78,14 @@ public class SolarNodeService : ISolarNodeService
         var nodes = _repository.GetAll(parkId);
 
         // One query for every node's inverter instead of one per row.
+        var nodeIds = nodes.Select(n => n.Id).ToList();
         var serieByNode = _inverterRepository
-            .GetByNodeIds(nodes.Select(n => n.Id).ToList())
+            .GetByNodeIds(nodeIds)
             .ToDictionary(i => i.SolarNodeId, i => i.SerieNumber);
+        var panelCountByNode = _panelRepository.CountByNodeIds(nodeIds);
 
         return nodes
-            .Select(n => ToDto(n, serieByNode.GetValueOrDefault(n.Id)))
+            .Select(n => ToDto(n, serieByNode.GetValueOrDefault(n.Id), panelCountByNode.GetValueOrDefault(n.Id)))
             .ToList()
             .AsReadOnly();
     }
@@ -93,7 +98,8 @@ public class SolarNodeService : ISolarNodeService
             return ServiceResult<SolarNodeDto>.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
         }
 
-        return ServiceResult<SolarNodeDto>.Ok(ToDto(node, _inverterRepository.GetByNodeId(node.Id)?.SerieNumber));
+        var panelsCount = _panelRepository.CountByNodeIds([node.Id]).GetValueOrDefault(node.Id);
+        return ServiceResult<SolarNodeDto>.Ok(ToDto(node, _inverterRepository.GetByNodeId(node.Id)?.SerieNumber, panelsCount));
     }
 
     public ServiceResult Update(Guid id, UpdateSolarNodeRequest request)
@@ -132,15 +138,14 @@ public class SolarNodeService : ISolarNodeService
         return ServiceResult.Ok();
     }
 
-    private static SolarNodeDto ToDto(SolarNode node, string? inverterSerie)
+    private static SolarNodeDto ToDto(SolarNode node, string? inverterSerie, int panelsCount)
     {
         return new SolarNodeDto(
             node.Id,
             node.Name,
             node.SolarParkId,
             node.SolarPark?.Name ?? string.Empty,
-            // Contar paneles relacionados - subconsulta simplificada
-            0, // TODO: Implementar conteo de paneles cuando haya datos
+            panelsCount,
             inverterSerie,
             node.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo"
         );

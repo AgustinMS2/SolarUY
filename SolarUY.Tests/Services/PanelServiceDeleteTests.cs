@@ -30,7 +30,7 @@ public class PanelServiceDeleteTests
                 }
             }
         };
-        var service = new SolarPanelService(repo, NullLogger<SolarPanelService>.Instance);
+        var service = new SolarPanelService(repo, new FakeSolarNodeRepository(), new FakeInverterRepository(), NullLogger<SolarPanelService>.Instance);
 
         // Act
         var result = service.DeletePanel(panelId);
@@ -64,7 +64,7 @@ public class PanelServiceDeleteTests
                 }
             }
         };
-        var service = new SolarPanelService(repo, NullLogger<SolarPanelService>.Instance);
+        var service = new SolarPanelService(repo, new FakeSolarNodeRepository(), new FakeInverterRepository(), NullLogger<SolarPanelService>.Instance);
 
         // Act
         var result = service.DeletePanel(panelId);
@@ -81,7 +81,7 @@ public class PanelServiceDeleteTests
     {
         // Arrange
         var repo = new FakeSolarPanelRepository();
-        var service = new SolarPanelService(repo, NullLogger<SolarPanelService>.Instance);
+        var service = new SolarPanelService(repo, new FakeSolarNodeRepository(), new FakeInverterRepository(), NullLogger<SolarPanelService>.Instance);
 
         // Act
         var result = service.DeletePanel(Guid.NewGuid());
@@ -96,7 +96,7 @@ public class PanelServiceDeleteTests
     {
         // Arrange
         var repo = new FakeSolarPanelRepository();
-        var service = new SolarPanelService(repo, NullLogger<SolarPanelService>.Instance);
+        var service = new SolarPanelService(repo, new FakeSolarNodeRepository(), new FakeInverterRepository(), NullLogger<SolarPanelService>.Instance);
 
         // Act - Probar con panel inexistente (simula cancelación)
         var result = service.DeletePanel(Guid.NewGuid());

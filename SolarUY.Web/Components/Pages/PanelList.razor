@@ -84,6 +84,7 @@
                             <th scope="col">Potencia (W)</th>
                             <th scope="col">Eficiencia (%)</th>
                             <th scope="col">Parque solar</th>
+                            <th scope="col">Nodo</th>
                             <th scope="col" class="text-center">Estado</th>
                             <th scope="col" class="pe-3 text-end">Acciones</th>
                         </tr>
@@ -96,6 +97,7 @@
                                 <td>@($"{panel.PowerW} W")</td>
                                 <td>@($"{panel.Efficiency:0.##}%")</td>
                                 <td>@panel.SolarParkName</td>
+                                <td>@(string.IsNullOrEmpty(panel.SolarNodeName) ? "Sin asignar" : panel.SolarNodeName)</td>
                                 <td class="text-center">
                                     @if (panel.Status == "Activo")
                                     {

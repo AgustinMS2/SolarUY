@@ -14,7 +14,7 @@ public class SolarNodeListInverterTests
 
     public SolarNodeListInverterTests()
     {
-        _service = new SolarNodeService(_nodeRepository, new FakeSolarParkRepository(), _inverterRepository, NullLogger<SolarNodeService>.Instance);
+        _service = new SolarNodeService(_nodeRepository, new FakeSolarParkRepository(), _inverterRepository, new FakeSolarPanelRepository(), NullLogger<SolarNodeService>.Instance);
     }
 
     private SolarNode AddNode(string name)

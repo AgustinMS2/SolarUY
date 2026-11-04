@@ -128,6 +128,9 @@ namespace SolarUY.ApiService.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("SolarNodeId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("SolarParkId")
                         .HasColumnType("uuid");
 
@@ -141,6 +144,8 @@ namespace SolarUY.ApiService.Migrations
 
                     b.HasIndex("NormalizedSerieNumber")
                         .IsUnique();
+
+                    b.HasIndex("SolarNodeId");
 
                     b.HasIndex("SolarParkId");
 
@@ -216,11 +221,18 @@ namespace SolarUY.ApiService.Migrations
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPanel", b =>
                 {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarNode", "SolarNode")
+                        .WithMany()
+                        .HasForeignKey("SolarNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
                         .WithMany()
                         .HasForeignKey("SolarParkId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("SolarNode");
 
                     b.Navigation("SolarPark");
                 });
