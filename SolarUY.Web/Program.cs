@@ -29,6 +29,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseAuthentication();
+app.UseSessionEndedRedirect();
 app.UseAuthorization();
 
 app.UseAntiforgery();

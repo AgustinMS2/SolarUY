@@ -9,6 +9,8 @@ namespace SolarUY.Web.Security;
 public static class KeycloakAuthenticationExtensions
 {
     public const string CookieName = "SolarUY.Cookie";
+    public const string SessionEndedItemKey = "SolarUY.SessionEnded";
+    public const string SessionEndedUrl = "/?sesion=finalizada";
 
     public static WebApplicationBuilder AddKeycloakAuthentication(this WebApplicationBuilder builder)
     {
@@ -36,6 +38,9 @@ public static class KeycloakAuthenticationExtensions
                     {
                         context.RejectPrincipal();
                         await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                        // Spec 016 RF-4: flag it so the pipeline can redirect to the public home with a notice.
+                        context.HttpContext.Items[SessionEndedItemKey] = true;
                     }
                 };
             })
@@ -97,6 +102,33 @@ public static class KeycloakAuthenticationExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Spec 016 RF-4: when the session was ended elsewhere, page navigations are redirected to the public home with a notice.
+    /// </summary>
+    public static WebApplication UseSessionEndedRedirect(this WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path;
+            var isAccountFlow = path.StartsWithSegments("/account")
+                || path.StartsWithSegments("/signin-oidc")
+                || path.StartsWithSegments("/signout-callback-oidc");
+
+            var isPageNavigation = HttpMethods.IsGet(context.Request.Method)
+                && context.Request.Headers.Accept.ToString().Contains("text/html", StringComparison.OrdinalIgnoreCase);
+
+            if (context.Items.ContainsKey(SessionEndedItemKey) && isPageNavigation && !isAccountFlow)
+            {
+                context.Response.Redirect(SessionEndedUrl);
+                return;
+            }
+
+            await next();
+        });
+
+        return app;
+    }
+
     public static WebApplication MapAccountEndpoints(this WebApplication app)
     {
         app.MapGet("/account/login", (string? returnUrl) =>
@@ -105,6 +137,33 @@ public static class KeycloakAuthenticationExtensions
             return Results.Challenge(
                 new AuthenticationProperties { RedirectUri = redirectUri },
                 [OpenIdConnectDefaults.AuthenticationScheme]);
+        }).AllowAnonymous();
+
+        // Spec 016 RF-2: destroys the local cookie and ends the Keycloak session (Single Sign-Out).
+        app.MapGet("/account/logout", (HttpContext httpContext, UserTokenStore tokenStore) =>
+        {
+            if (httpContext.User.Identity?.IsAuthenticated != true)
+            {
+                return Results.Redirect("/");
+            }
+
+            var key = UserTokenStore.GetKey(httpContext.User);
+            if (key != null)
+            {
+                tokenStore.Remove(key);
+            }
+
+            // The OIDC handler sends id_token_hint and uses RedirectUri as post_logout_redirect_uri.
+            return Results.SignOut(
+                new AuthenticationProperties { RedirectUri = "/" },
+                [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]);
+        }).AllowAnonymous();
+
+        // Spec 016 RF-4: used when the Keycloak session no longer exists, so only the local cookie is cleared.
+        app.MapGet("/account/session-ended", async (HttpContext httpContext) =>
+        {
+            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return Results.Redirect(SessionEndedUrl);
         }).AllowAnonymous();
 
         return app;
