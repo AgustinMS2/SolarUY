@@ -21,4 +21,19 @@ public class FakeSolarNodeRepository : ISolarNodeRepository
     {
         return PersistedNodes.FirstOrDefault(n => n.Id == id);
     }
+
+    public IReadOnlyList<SolarNode> GetAll(Guid? parkId = null)
+    {
+        var query = PersistedNodes.AsQueryable();
+
+        if (parkId.HasValue)
+        {
+            query = query.Where(n => n.SolarParkId == parkId.Value);
+        }
+
+        return query
+            .OrderBy(n => n.NormalizedName, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            .AsReadOnly();
+    }
 }

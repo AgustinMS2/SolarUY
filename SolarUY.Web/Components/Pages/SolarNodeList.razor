@@ -1,0 +1,169 @@
+@page "/nodos"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@inject SolarNodeApiClient NodeApiClient
+@inject SolarParkApiClient ParkApiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Listado de Nodos — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-node-meet me-2" aria-hidden="true"></span>
+                        Listado de Nodos
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <select class="form-select" @bind="_selectedParkId">
+                            <option value="">-- Todos los parques --</option>
+                            @foreach (var park in _activeParks)
+                            {
+                                <option value="@park.Id">@park.Name</option>
+                            }
+                        </select>
+                        <button type="button" class="btn btn-outline-primary" @onclick="IrAAlta">
+                            <span class="bi bi-plus me-1"></span> Nuevo nodo
+                        </button>
+                    </div>
+
+                    @if (_isLoading)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-5">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <span class="text-muted">Cargando listado de nodos...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <span>@_errorMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+                    else if (_nodes == null || _nodes.Count == 0)
+                    {
+                        <div class="card border-0 shadow-sm text-center py-5">
+                            <div class="card-body">
+                                <div class="mb-3 text-muted">
+                                    <span class="bi bi-inbox fs-1" aria-hidden="true"></span>
+                                </div>
+                                <h5 class="card-title text-secondary">No hay nodos registrados.</h5>
+                                <p class="card-text text-muted mb-4">Comienza registrando un nodo solar al sistema.</p>
+                                <a href="/nodos/nuevo" class="btn btn-outline-primary">
+                                    <span class="bi bi-plus-circle me-1"></span> Registrar Nodo
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card border-0 shadow-sm">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th scope="col" class="ps-3">Nombre</th>
+                                            <th scope="col">Parque solar</th>
+                                            <th scope="col">Inversor</th>
+                                            <th scope="col">Paneles asociados</th>
+                                            <th scope="col">Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var node in _nodes)
+                                        {
+                                            <tr>
+                                                <td class="ps-3">@node.Name</td>
+                                                <td>@node.SolarParkName</td>
+                                                <td>@(string.IsNullOrEmpty(node.InverterSerie) ? "Sin inversor asignado" : node.InverterSerie)</td>
+                                                <td>@node.PanelsCount paneles</td>
+                                                <td>
+                                                    <span class="badge bg-@(node.Status == "Activo" ? "success" : "danger") fs-sm">
+                                                        @node.Status
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid? SelectedParkId { get; set; }
+
+    private List<SolarUY.ApiService.Dtos.SolarNodeDto> _nodes = new();
+    private Guid? _selectedParkId;
+    private List<SolarUY.Web.Services.SolarParkDto> _activeParks = new();
+    private bool _isLoading;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarDatosAsync();
+    }
+
+    private async Task CargarDatosAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await NodeApiClient.GetAllAsync(_selectedParkId);
+
+            if (result.Success && result.Value != null)
+            {
+                _nodes = result.Value.ToList();
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Error desconocido al cargar los nodos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+
+        await CargarParquesAsync();
+    }
+
+    private async Task CargarParquesAsync()
+    {
+        try
+        {
+            _activeParks = (await ParkApiClient.GetAllAsync()).Where(p => p.Status == "Activo").ToList();
+        }
+        catch
+        {
+            // Ignorar errores al cargar parques, el listado de nodos aún se mostrará
+        }
+    }
+
+    private void IrAAlta()
+    {
+        NavManager.NavigateTo("/nodos/nuevo", forceLoad: true);
+    }
+}

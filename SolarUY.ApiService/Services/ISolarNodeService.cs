@@ -6,4 +6,5 @@ namespace SolarUY.ApiService.Services;
 public interface ISolarNodeService
 {
     ServiceResult<Guid> Create(CreateSolarNodeRequest request);
+    IReadOnlyList<SolarNodeDto> GetAll(Guid? parkId = null);
 }
