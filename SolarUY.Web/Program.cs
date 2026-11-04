@@ -18,6 +18,8 @@ builder.AddKeycloakAuthentication();
 builder.Services.AddHttpClient<WeatherApiClient>(client => client.BaseAddress = new("http://apiservice"));
 builder.Services.AddHttpClient<SolarUY.Web.Services.SolarParkApiClient>(client => client.BaseAddress = new("http://apiservice"))
     .AddHttpMessageHandler<BearerTokenHandler>();
+builder.Services.AddHttpClient<SolarUY.Web.Services.PanelsApiClient>(client => client.BaseAddress = new("http://apiservice"))
+    .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
 

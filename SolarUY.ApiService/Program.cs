@@ -7,7 +7,9 @@ builder.AddServiceDefaults();
 builder.Services.AddProblemDetails();
 builder.AddNpgsqlDbContext<SolarUY.ApiService.Data.SolarUyDbContext>("solaruydb");
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarParkRepository, SolarUY.ApiService.Repositories.SolarParkRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarPanelRepository, SolarUY.ApiService.Repositories.SolarPanelRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarParkService, SolarUY.ApiService.Services.SolarParkService>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarPanelService, SolarUY.ApiService.Services.SolarPanelService>();
 
 // JWT Bearer authentication against Keycloak (spec 015). Aspire injects the Keycloak URL through WithReference.
 var keycloakUrl = builder.Configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
