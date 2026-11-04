@@ -80,6 +80,27 @@ public class SolarParkApiClient(HttpClient httpClient)
         }
     }
 
+    public async Task<SolarParkApiResponse> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.DeleteAsync($"/api/solar-parks/{id}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new SolarParkApiResponse { Success = true, Id = id };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"Error al dar de baja el parque ({response.StatusCode}).";
+            return new SolarParkApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new SolarParkApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
     public async Task<SolarParkDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         try

@@ -1,6 +1,6 @@
 # Spec 004 — Baja de Parque Solar
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 001 (Alta), Spec 002 (Listar) y Spec 003 (usa `GetById`)
 
 ## Contexto y objetivo

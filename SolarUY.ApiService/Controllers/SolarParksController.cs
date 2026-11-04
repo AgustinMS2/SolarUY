@@ -72,4 +72,23 @@ public class SolarParksController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpDelete("{id:guid}")]
+    public IActionResult Deactivate(Guid id)
+    {
+        var result = _service.Deactivate(id);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return NoContent();
+    }
 }

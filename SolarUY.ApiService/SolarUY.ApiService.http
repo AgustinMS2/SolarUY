@@ -24,6 +24,11 @@ Content-Type: application/json
   "powerAlertThresholdKw": 50000.0
 }
 
+### DELETE Baja lógica parque solar (204 No Content / 404 / 409)
+DELETE {{ApiService_HostAddress}}/api/solar-parks/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+
 
 
 ### POST Crear parque solar (201 Created)

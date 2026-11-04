@@ -31,6 +31,15 @@
         </div>
     }
 
+    @if (!string.IsNullOrEmpty(_actionErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+            <div>@_actionErrorMessage</div>
+            <button type="button" class="btn-close" @onclick="() => _actionErrorMessage = null" aria-label="Cerrar"></button>
+        </div>
+    }
+
     @if (_isLoading)
     {
         <div class="d-flex justify-content-center align-items-center py-5">
@@ -106,11 +115,46 @@
                                     <a href="/parques/@park.Id/editar" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
                                         <span class="bi bi-pencil me-1"></span> Editar
                                     </a>
+                                    @if (park.Status == "Activo")
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center ms-1" @onclick="() => RequestDeactivate(park)">
+                                            <span class="bi bi-trash me-1"></span> Dar de baja
+                                        </button>
+                                    }
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+            </div>
+        </div>
+    }
+
+    @if (_parkToDeactivate != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar baja</h5>
+                        <button type="button" class="btn-close" aria-label="Cerrar" @onclick="CancelDeactivate"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">¿Confirmás la baja del parque "@_parkToDeactivate.Name"?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CancelDeactivate" disabled="@_isDeactivating">
+                            Cancelar
+                        </button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDeactivateAsync" disabled="@_isDeactivating">
+                            @if (_isDeactivating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Confirmar
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     }
@@ -123,10 +167,62 @@
     private IReadOnlyList<SolarParkDto>? _parks;
     private bool _isLoading = true;
     private string? _errorMessage;
+    private string? _actionErrorMessage;
+
+    private SolarParkDto? _parkToDeactivate;
+    private bool _isDeactivating;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadParksAsync();
+    }
+
+    private void RequestDeactivate(SolarParkDto park)
+    {
+        _parkToDeactivate = park;
+        _actionErrorMessage = null;
+    }
+
+    private void CancelDeactivate()
+    {
+        _parkToDeactivate = null;
+    }
+
+    private async Task ConfirmDeactivateAsync()
+    {
+        if (_parkToDeactivate == null || _isDeactivating)
+        {
+            return;
+        }
+
+        _isDeactivating = true;
+        _actionErrorMessage = null;
+
+        try
+        {
+            var response = await ApiClient.DeactivateAsync(_parkToDeactivate.Id);
+            if (response.Success)
+            {
+                Mensaje = "Parque dado de baja correctamente.";
+                _parkToDeactivate = null;
+                await LoadParksAsync();
+            }
+            else
+            {
+                _actionErrorMessage = response.ErrorMessage;
+                _parkToDeactivate = null;
+                await LoadParksAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _actionErrorMessage = $"Error inesperado: {ex.Message}";
+            _parkToDeactivate = null;
+        }
+        finally
+        {
+            _isDeactivating = false;
+        }
     }
 
     private async Task LoadParksAsync()
