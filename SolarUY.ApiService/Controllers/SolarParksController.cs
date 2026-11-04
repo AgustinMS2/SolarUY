@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SolarUY.ApiService.Dtos;
+using SolarUY.ApiService.Security;
 using SolarUY.ApiService.Services;
 
 namespace SolarUY.ApiService.Controllers;
 
-[Authorize]
+[Authorize(Roles = Roles.Any)]
 [ApiController]
 [Route("api/solar-parks")]
 public class SolarParksController : ControllerBase
@@ -17,6 +18,7 @@ public class SolarParksController : ControllerBase
         _service = service;
     }
 
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPost]
     public IActionResult Create([FromBody] CreateSolarParkRequest request)
     {
@@ -56,6 +58,7 @@ public class SolarParksController : ControllerBase
         return Ok(result.Value);
     }
 
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, [FromBody] UpdateSolarParkRequest request)
     {
@@ -75,6 +78,7 @@ public class SolarParksController : ControllerBase
         return NoContent();
     }
 
+    [Authorize(Roles = Roles.Administrator)]
     [HttpDelete("{id:guid}")]
     public IActionResult Deactivate(Guid id)
     {

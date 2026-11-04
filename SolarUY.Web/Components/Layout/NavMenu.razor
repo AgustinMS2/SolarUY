@@ -34,11 +34,13 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="parques/nuevo">
-                <span class="bi bi-sun-fill" aria-hidden="true"></span> Nuevo Parque
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="@AppRoles.Administrator">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="parques/nuevo">
+                    <span class="bi bi-sun-fill" aria-hidden="true"></span> Nuevo Parque
+                </NavLink>
+            </div>
+        </AuthorizeView>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="paneles" Match="NavLinkMatch.All">
@@ -46,10 +48,20 @@
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="paneles/nuevo">
-                <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Nuevo Panel
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="@AppRoles.Administrator">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="paneles/nuevo">
+                    <span class="bi bi-grid-3x3-gap-fill" aria-hidden="true"></span> Nuevo Panel
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <AuthorizeView Roles="@AppRoles.Administrator">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="usuarios">
+                    <span class="bi bi-people-fill" aria-hidden="true"></span> Usuarios
+                </NavLink>
+            </div>
+        </AuthorizeView>
     </nav>
 </div>

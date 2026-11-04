@@ -1,6 +1,6 @@
 @page "/nodos/nuevo"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Administrator)]
 @using SolarUY.ApiService.Services
 @using SolarUY.Web.Services
 @inject SolarNodeApiClient NodeApiClient

@@ -27,6 +27,7 @@ public static class KeycloakAuthenticationExtensions
             .AddCookie(options =>
             {
                 options.Cookie.Name = CookieName;
+                options.AccessDeniedPath = "/access-denied";
                 options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
                 options.SlidingExpiration = true;
                 options.Events.OnValidatePrincipal = async context =>

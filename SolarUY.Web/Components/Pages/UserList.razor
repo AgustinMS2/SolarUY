@@ -1,0 +1,222 @@
+@page "/usuarios"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Administrator)]
+@inject UsersApiClient ApiClient
+
+<PageTitle>Usuarios — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="mb-4">
+        <h1 class="h3 mb-1 text-primary">Usuarios</h1>
+        <p class="text-muted mb-0">Gestión de roles de acceso al sistema.</p>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <div>@_successMessage</div>
+            @if (!string.IsNullOrEmpty(_ownRoleNotice))
+            {
+                <div class="small mt-1">@_ownRoleNotice</div>
+            }
+            <button type="button" class="btn-close" @onclick="DismissMessages" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_actionErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <div>@_actionErrorMessage</div>
+            <button type="button" class="btn-close" @onclick="DismissMessages" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span class="text-muted">Cargando usuarios...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_loadErrorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center justify-content-between" role="alert">
+            <div>@_loadErrorMessage</div>
+            <button class="btn btn-outline-danger btn-sm" @onclick="LoadUsersAsync">Reintentar</button>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="ps-3">Usuario</th>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">Correo</th>
+                            <th scope="col" class="text-center">Estado</th>
+                            <th scope="col">Rol</th>
+                            <th scope="col" class="pe-3 text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in _users)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-semibold text-dark">@user.Username</td>
+                                <td>@user.FullName</td>
+                                <td>@user.Email</td>
+                                <td class="text-center">
+                                    @if (user.Enabled)
+                                    {
+                                        <span class="badge bg-success px-2 py-1">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary px-2 py-1">Deshabilitado</span>
+                                    }
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" aria-label="Rol de @user.Username"
+                                            value="@SelectedRole(user)"
+                                            @onchange="e => SelectRole(user, e.Value?.ToString())"
+                                            disabled="@(_savingUserId == user.Id)">
+                                        @if (string.IsNullOrEmpty(user.Role))
+                                        {
+                                            <option value="" disabled>Sin rol</option>
+                                        }
+                                        <option value="@AppRoles.Administrator">@AppRoles.Administrator</option>
+                                        <option value="@AppRoles.Technician">@AppRoles.Technician</option>
+                                    </select>
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <button type="button" class="btn btn-sm btn-primary"
+                                            @onclick="() => SaveAsync(user)"
+                                            disabled="@(!HasChanged(user) || _savingUserId != null)">
+                                        @if (_savingUserId == user.Id)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                        }
+                                        Guardar
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private IReadOnlyList<UserDto> _users = [];
+    private readonly Dictionary<string, string> _selectedRoles = new();
+    private bool _isLoading = true;
+    private string? _loadErrorMessage;
+    private string? _actionErrorMessage;
+    private string? _successMessage;
+    private string? _ownRoleNotice;
+    private string? _savingUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        _isLoading = true;
+        _loadErrorMessage = null;
+
+        var result = await ApiClient.GetAllAsync();
+        if (result.Success)
+        {
+            _users = result.Users;
+            _selectedRoles.Clear();
+        }
+        else
+        {
+            _loadErrorMessage = result.ErrorMessage;
+        }
+
+        _isLoading = false;
+    }
+
+    private string SelectedRole(UserDto user)
+    {
+        return _selectedRoles.TryGetValue(user.Id, out var role) ? role : user.Role;
+    }
+
+    private bool HasChanged(UserDto user)
+    {
+        return _selectedRoles.TryGetValue(user.Id, out var role) && role != user.Role;
+    }
+
+    private void SelectRole(UserDto user, string? role)
+    {
+        if (!string.IsNullOrEmpty(role))
+        {
+            _selectedRoles[user.Id] = role;
+        }
+    }
+
+    private void DismissMessages()
+    {
+        _successMessage = null;
+        _ownRoleNotice = null;
+        _actionErrorMessage = null;
+    }
+
+    private async Task SaveAsync(UserDto user)
+    {
+        if (_savingUserId != null || !_selectedRoles.TryGetValue(user.Id, out var role))
+        {
+            return;
+        }
+
+        DismissMessages();
+        _savingUserId = user.Id;
+
+        try
+        {
+            var result = await ApiClient.ChangeRoleAsync(user.Id, role);
+            if (result.Success)
+            {
+                _successMessage = "Rol de usuario actualizado correctamente.";
+                if (await IsCurrentUserAsync(user))
+                {
+                    _ownRoleNotice = "El cambio sobre tu propia cuenta se aplica al renovar el token o en tu próximo inicio de sesión.";
+                }
+            }
+            else
+            {
+                _actionErrorMessage = result.ErrorMessage;
+            }
+
+            // Reload either way so the table always shows what Keycloak really has.
+            await LoadUsersAsync();
+        }
+        finally
+        {
+            _savingUserId = null;
+        }
+    }
+
+    private async Task<bool> IsCurrentUserAsync(UserDto user)
+    {
+        if (AuthenticationStateTask == null)
+        {
+            return false;
+        }
+
+        var state = await AuthenticationStateTask;
+        return string.Equals(state.User.Identity?.Name, user.Username, StringComparison.OrdinalIgnoreCase);
+    }
+}

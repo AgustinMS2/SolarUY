@@ -1,6 +1,6 @@
 @page "/parques/{Id:guid}/editar"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Administrator)]
 @inject SolarParkApiClient ApiClient
 @inject NavigationManager Navigation
 
