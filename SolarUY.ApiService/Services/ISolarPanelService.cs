@@ -8,4 +8,5 @@ public interface ISolarPanelService
     IReadOnlyList<SolarPanelDto> GetAll();
     ServiceResult<SolarPanelDto> GetById(Guid id);
     ServiceResult Update(Guid id, UpdateSolarPanelRequest request);
+    ServiceResult DeletePanel(Guid id);
 }

@@ -1,0 +1,128 @@
+@page "/paneles/baja/{id}"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using SolarUY.Web.Services
+@inject PanelsApiClient PanelsClient
+@inject NavigationManager NavManager
+
+<PageTitle>Baja de Panel Solar — SolarUY</PageTitle>
+
+<div class="container py-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-exclamation-triangle me-2" aria-hidden="true"></span>
+                        Confirmar Baja de Panel
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (_panel == null)
+                    {
+                        <div class="alert alert-info">
+                            Cargando panel...
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <span>¿Confirmás la baja del panel "<b>@_panel.SerieNumber"</b>?</span>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-3">
+                            <button type="button" class="btn btn-secondary" @onclick="Cancelar">
+                                <span class="bi bi-x me-1"></span>
+                                Cancelar
+                            </button>
+                            <button type="button" class="btn btn-danger" @onclick="ConfirmarBaja" disabled="@_isSubmitting">
+                                <span class="bi bi-check me-1"></span>
+                                Confirmar
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Guardando...</span>
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private SolarPanelDto _panel = null!;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarPanelAsync();
+    }
+
+    private async Task CargarPanelAsync()
+    {
+        var panelDto = await PanelsClient.GetByIdAsync(Id);
+        if (panelDto == null)
+        {
+            _errorMessage = "El panel solicitado no existe.";
+            NavManager.NavigateTo("/paneles");
+            return;
+        }
+
+        // Verificar si ya está inactivo (RF-4)
+        if (panelDto.Status == "Inactivo")
+        {
+            _errorMessage = "El panel ya está inactivo. No se puede dar de baja nuevamente.";
+            NavManager.NavigateTo("/paneles");
+            return;
+        }
+
+        _panel = panelDto;
+        _errorMessage = null;
+    }
+
+    private async Task ConfirmarBaja()
+    {
+        _errorMessage = null;
+        _isSubmitting = true;
+
+        try
+        {
+            var result = await PanelsClient.DeletePanelAsync(Id);
+
+            if (result.Success)
+            {
+                _errorMessage = "Panel dado de baja correctamente.";
+                await Task.Delay(1500);
+                NavManager.NavigateTo("/paneles", forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Error desconocido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private void Cancelar()
+    {
+        // RF-3: Al cancelar, no hacer ningún cambio
+        _errorMessage = null;
+        NavManager.NavigateTo("/paneles", forceLoad: true);
+    }
+}
