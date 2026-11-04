@@ -12,6 +12,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<SolarPark> SolarParks => Set<SolarPark>();
     public DbSet<SolarPanel> SolarPanels => Set<SolarPanel>();
     public DbSet<SolarNode> SolarNodes => Set<SolarNode>();
+    public DbSet<Inverter> Inverters => Set<Inverter>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,22 @@ public class SolarUyDbContext : DbContext
             entity.Property(e => e.NormalizedName).IsRequired().HasMaxLength(100);
             entity.HasIndex(e => new { e.SolarParkId, e.NormalizedName }).IsUnique();
             entity.HasOne(e => e.SolarPark).WithMany().HasForeignKey(e => e.SolarParkId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Inverter>(entity =>
+        {
+            entity.ToTable("Inverters");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SerieNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.NormalizedSerieNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.BrandAndModel).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.NominalCapacityKw).IsRequired();
+            entity.Property(e => e.Endpoint).HasMaxLength(100);
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.HasIndex(e => e.NormalizedSerieNumber).IsUnique();
+            // At most one inverter per node.
+            entity.HasIndex(e => e.SolarNodeId).IsUnique();
+            entity.HasOne(e => e.SolarNode).WithMany().HasForeignKey(e => e.SolarNodeId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

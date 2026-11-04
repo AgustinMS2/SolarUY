@@ -9,4 +9,6 @@ public interface ISolarNodeService
     IReadOnlyList<SolarNodeDto> GetAll(Guid? parkId = null);
     ServiceResult<SolarNodeDto> GetById(Guid id);
     ServiceResult Update(Guid id, UpdateSolarNodeRequest request);
+    ServiceResult AssignInverter(Guid nodeId, AssignInverterRequest request);
+    ServiceResult UnassignInverter(Guid nodeId);
 }

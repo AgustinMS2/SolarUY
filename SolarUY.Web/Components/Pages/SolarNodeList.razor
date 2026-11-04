@@ -1,6 +1,6 @@
 @page "/nodos"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Any)]
 @using SolarUY.ApiService.Services
 @using SolarUY.ApiService.Dtos
 @inject SolarNodeApiClient NodeApiClient
@@ -36,10 +36,28 @@
                                 <option value="@park.Id">@park.Name</option>
                             }
                         </select>
-                        <button type="button" class="btn btn-outline-primary" @onclick="IrAAlta">
-                            <span class="bi bi-plus me-1"></span> Nuevo nodo
-                        </button>
+                        <AuthorizeView Roles="@AppRoles.Administrator">
+                            <button type="button" class="btn btn-outline-primary" @onclick="IrAAlta">
+                                <span class="bi bi-plus me-1"></span> Nuevo nodo
+                            </button>
+                        </AuthorizeView>
                     </div>
+
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <span>@_successMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_actionErrorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <span>@_actionErrorMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _actionErrorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
 
                     @if (_isLoading)
                     {
@@ -67,9 +85,11 @@
                                 </div>
                                 <h5 class="card-title text-secondary">No hay nodos registrados.</h5>
                                 <p class="card-text text-muted mb-4">Comienza registrando un nodo solar al sistema.</p>
-                                <a href="/nodos/nuevo" class="btn btn-outline-primary">
-                                    <span class="bi bi-plus-circle me-1"></span> Registrar Nodo
-                                </a>
+                                <AuthorizeView Roles="@AppRoles.Administrator">
+                                    <a href="/nodos/nuevo" class="btn btn-outline-primary">
+                                        <span class="bi bi-plus-circle me-1"></span> Registrar Nodo
+                                    </a>
+                                </AuthorizeView>
                             </div>
                         </div>
                     }
@@ -101,10 +121,24 @@
                                                         @node.Status
                                                     </span>
                                                 </td>
-                                                <td class="pe-3 text-end">
-                                                    <a href="/nodos/@node.Id/editar" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
-                                                        <span class="bi bi-pencil me-1"></span> Editar
-                                                    </a>
+                                                <td class="pe-3 text-end text-nowrap">
+                                                    <AuthorizeView Roles="@AppRoles.Administrator">
+                                                        <a href="/nodos/@node.Id/editar" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+                                                            <span class="bi bi-pencil me-1"></span> Editar
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary ms-1"
+                                                                @onclick="() => OpenInverterModal(node)"
+                                                                disabled="@(node.Status != "Activo")"
+                                                                title="@(node.Status != "Activo" ? "No se puede asignar un inversor a un nodo inactivo." : null)">
+                                                            @(string.IsNullOrEmpty(node.InverterSerie) ? "Asignar inversor" : "Cambiar inversor")
+                                                        </button>
+                                                        @if (!string.IsNullOrEmpty(node.InverterSerie))
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-outline-danger ms-1" @onclick="() => RequestUnassign(node)">
+                                                                Desvincular
+                                                            </button>
+                                                        }
+                                                    </AuthorizeView>
                                                 </td>
                                             </tr>
                                         }
@@ -119,9 +153,113 @@
     </div>
 </div>
 
+@if (_nodeForInverter != null)
+{
+    <SolarNodeInverterModal Node="_nodeForInverter" OnClose="CloseInverterModal" OnSaved="OnInverterSaved" />
+}
+
+@if (_nodeToUnassign != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Desvincular inversor</h5>
+                    <button type="button" class="btn-close" aria-label="Cerrar" @onclick="CancelUnassign" disabled="@_isUnassigning"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">¿Confirmás desvincular el inversor "@_nodeToUnassign.InverterSerie" del nodo "@_nodeToUnassign.Name"?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelUnassign" disabled="@_isUnassigning">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmUnassignAsync" disabled="@_isUnassigning">
+                        @if (_isUnassigning)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public Guid? SelectedParkId { get; set; }
+
+    private string? _successMessage;
+    private string? _actionErrorMessage;
+    private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeForInverter;
+    private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeToUnassign;
+    private bool _isUnassigning;
+
+    private void OpenInverterModal(SolarUY.ApiService.Dtos.SolarNodeDto node)
+    {
+        _successMessage = null;
+        _actionErrorMessage = null;
+        _nodeForInverter = node;
+    }
+
+    private void CloseInverterModal()
+    {
+        _nodeForInverter = null;
+    }
+
+    private async Task OnInverterSaved(string message)
+    {
+        _nodeForInverter = null;
+        _successMessage = message;
+        await CargarDatosAsync();
+    }
+
+    private void RequestUnassign(SolarUY.ApiService.Dtos.SolarNodeDto node)
+    {
+        _successMessage = null;
+        _actionErrorMessage = null;
+        _nodeToUnassign = node;
+    }
+
+    private void CancelUnassign()
+    {
+        _nodeToUnassign = null;
+    }
+
+    private async Task ConfirmUnassignAsync()
+    {
+        if (_nodeToUnassign == null || _isUnassigning)
+        {
+            return;
+        }
+
+        _isUnassigning = true;
+
+        try
+        {
+            var result = await NodeApiClient.UnassignInverterAsync(_nodeToUnassign.Id);
+            if (result.Success)
+            {
+                _successMessage = "Inversor desvinculado correctamente del nodo.";
+            }
+            else
+            {
+                _actionErrorMessage = result.ErrorMessage;
+            }
+
+            _nodeToUnassign = null;
+            await CargarDatosAsync();
+        }
+        catch (Exception ex)
+        {
+            _actionErrorMessage = $"Error inesperado: {ex.Message}";
+            _nodeToUnassign = null;
+        }
+        finally
+        {
+            _isUnassigning = false;
+        }
+    }
 
     [SupplyParameterFromQuery(Name = "mensaje")]
     public string? Mensaje { get; set; }

@@ -56,7 +56,7 @@
 | `010-listar-nodos` | **Implementada** | Completada | 3 / 3 | Finalizada. |
 | `011-modificar-nodo` | **Código completo** | Validación | 3 / 4 | T1–T3 en verde; T4 (página `/nodos/{id}/editar` + botón "Editar") escrita pero sin marcar ni validar en navegador. **Regresión**: el `PUT /api/solar-nodes/{id}` no tiene `[Authorize(Roles = Roles.Administrator)]` y rompe el test de arquitectura de seguridad. |
 | `012-baja-nodo` | Pendiente | Spec aprobada | 0 / 3 | Implementar T1 (servicio `Deactivate` + tests), T2 (`DELETE`) y T3 (modal en `/nodos`). |
-| `013-asignar-inversor-nodo` | Pendiente | Spec aprobada | 0 / 4 | T1–T3 viables; T4 (modal UI) depende del listado de nodos ya implementado. |
+| `013-asignar-inversor-nodo` | **Código completo** | Validación | 4 / 5 | Spec/plan/tareas ampliados (desvincular, RF-7 a RF-10; 5 tareas). Verificadas T1–T4 (migración, `AssignInverter`/`UnassignInverter` con 31 tests, endpoints `POST`/`DELETE`). La lista de nodos muestra la serie del inversor. **Falta probar en navegador la T5**: abrir el modal, asignar, reemplazar con confirmación, desvincular y vista en celular. |
 | `014-asignar-panel-nodo` | Pendiente | Spec aprobada | 0 / 4 | Implementar T1–T4. |
 | `015-iniciar-sesion-keycloak` | En implementación | Validación | 0 / 4 verificadas | Código de T1–T4 escrito. **Ninguna tarea se marca hasta cumplir su "Hecho cuando"**: falta probar con Docker (Keycloak + login en navegador). El botón "Cerrar sesión" apunta a `/account/logout` (Spec 016 T1). |
 | `016-cerrar-sesion-keycloak` | En implementación | Validación | 0 / 3 verificadas | Código de T1 (`/account/logout`), T2 (modal) y T3 (RF-4: aviso "La sesión ha finalizado.", opción A) escrito. Falta probar con Keycloak real. Spec/plan/tasks actualizados con RF-4. |
@@ -86,12 +86,12 @@
 
 ## Estado Actual de Verificación (2026-11-04)
 
-- **Rama**: `master`, árbol de trabajo limpio y sincronizado con `origin/master` (último commit `2a0b56b`).
+- **Rama**: `master` (estado al integrar la spec 013 sobre las specs 011 y 017).
 - **Compilación**: la solución compila.
-- **Tests**: `dotnet test` → **118 en verde, 1 en rojo (119 total)**.
-  - En rojo: `SolarUY.Tests.Architecture.SecurityArchitectureTests.MutatingEndpoints_Should_BeRestrictedToAdministrator` — `SolarNodesController.Update` no exige el rol `Administrador`. Falta `[Authorize(Roles = Roles.Administrator)]` en `PUT /api/solar-nodes/{id}` (spec 011).
+- **Tests**: `dotnet test` → **152 en verde, 0 en rojo**.
+  - Corregido: `SolarNodesController.Update` (spec 011) ahora exige `[Authorize(Roles = Roles.Administrator)]`, igual que su página de edición.
 - **Deuda inmediata**:
-  1. Corregir el `[Authorize]` de `SolarNodesController.Update` y dejar `dotnet test` nuevamente en verde.
+  1. ~~Corregir el `[Authorize]` de `SolarNodesController.Update`~~ — hecho, `dotnet test` en verde.
   2. Validar en navegador la T4 de la spec 011 (editar nodo, parque bloqueado, "Cancelar" sin guardar y listado actualizado) y marcarla.
   3. Probar las specs 015/016/017 con Keycloak real (Docker) y navegador antes de marcar sus tareas como verificadas.
   4. Continuar con las specs 012–014 (baja de nodo y asignaciones) o con las 018–026 según prioridad del usuario.
@@ -109,7 +109,7 @@
 7. **Verificación UI**: Blazor Server probado interactivamente en navegador / DevTools.
 8. **Una spec por requerimiento funcional**: el antiguo `001-gestion-parques` se dividió en 001 Alta, 002 Listar, 003 Modificar y 004 Baja.
 9. **Roles**: el control de acceso por rol se resuelve en la spec de Usuarios; las specs de Parques no lo incluyen.
-10. **Errores de servicio**: `ServiceResult` con `Validation` → 400, `NotFound` → 404, `Conflict` → 409.
+10. **Errores de servicio**: `ServiceResult` con `Validation` → 400, `NotFound` → 404, `Conflict` → 409, `Unavailable` → 503 y `ConfirmationRequired` → 409 con `requiresConfirmation: true` (la pantalla pide confirmar antes de repetir el pedido).
 11. **Tokens en Blazor Server (spec 015)**: los circuitos de SignalR no tienen `HttpContext`; los tokens de Keycloak se guardan en `UserTokenStore` (memoria del servidor, clave `sid`) y `BearerTokenHandler` los adjunta a las llamadas a la API, renovándolos con el refresh token. Si el servidor se reinicia, la cookie se rechaza y se pide login de nuevo.
 12. **Keycloak local**: puerto fijo 8080, realm `SolarUY` importado desde `SolarUY.AppHost/Realms/SolarUY-realm.json`, usuario de prueba `admin` / `admin123` (rol Administrador).
 13. **Roles en Keycloak (spec 017)**: realm roles `Administrador` y `Técnico`, expuestos en el claim `roles`; el realm define el cliente de servicio `solaruy-api-admin` (secreto de desarrollo `solaruy-api-admin-dev-secret`) con permisos de `realm-management` sobre `realmRoles` para listar usuarios y reemplazar su rol.

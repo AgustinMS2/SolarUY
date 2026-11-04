@@ -1,0 +1,151 @@
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Services
+@inject SolarNodeApiClient NodeApiClient
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content shadow">
+            <EditForm Model="_form" OnValidSubmit="() => SubmitAsync(false)">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(string.IsNullOrEmpty(Node.InverterSerie) ? "Asignar inversor" : "Cambiar inversor") — @Node.Name
+                    </h5>
+                    <button type="button" class="btn-close" aria-label="Cerrar" @onclick="Close" disabled="@_isSaving"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(Node.InverterSerie))
+                    {
+                        <p class="text-muted small">Inversor actual: <strong>@Node.InverterSerie</strong></p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_confirmationMessage))
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            <p class="mb-3">@_confirmationMessage</p>
+                            <button type="button" class="btn btn-warning btn-sm me-2" @onclick="() => SubmitAsync(true)" disabled="@_isSaving">
+                                @if (_isSaving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                }
+                                Confirmar reemplazo
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CancelReplacement" disabled="@_isSaving">Cancelar</button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label for="inverter-serie" class="form-label">Número de serie</label>
+                        <InputText id="inverter-serie" class="form-control" @bind-Value="_form.SerieNumber" maxlength="60" disabled="@(_confirmationMessage != null)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="inverter-brand" class="form-label">Marca y modelo</label>
+                        <InputText id="inverter-brand" class="form-control" @bind-Value="_form.BrandAndModel" maxlength="110" disabled="@(_confirmationMessage != null)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="inverter-capacity" class="form-label">Capacidad nominal (kW)</label>
+                        <InputNumber id="inverter-capacity" class="form-control" @bind-Value="_form.NominalCapacityKw" step="any" disabled="@(_confirmationMessage != null)" />
+                    </div>
+                    <div class="mb-0">
+                        <label for="inverter-endpoint" class="form-label">Dirección IP / Endpoint <span class="text-muted">(opcional)</span></label>
+                        <InputText id="inverter-endpoint" class="form-control" @bind-Value="_form.Endpoint" maxlength="110" disabled="@(_confirmationMessage != null)" />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Close" disabled="@_isSaving">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(_isSaving || _confirmationMessage != null)">
+                        @if (_isSaving && _confirmationMessage == null)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Guardar
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public SolarNodeDto Node { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnSaved { get; set; }
+
+    private readonly InverterForm _form = new();
+    private bool _isSaving;
+    private string? _errorMessage;
+    private string? _confirmationMessage;
+
+    private async Task SubmitAsync(bool confirmReplace)
+    {
+        if (_isSaving)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+
+        try
+        {
+            var request = new AssignInverterRequest(
+                _form.SerieNumber,
+                _form.BrandAndModel,
+                _form.NominalCapacityKw ?? 0,
+                _form.Endpoint,
+                confirmReplace);
+
+            var result = await NodeApiClient.AssignInverterAsync(Node.Id, request);
+
+            if (result.Success)
+            {
+                await OnSaved.InvokeAsync("Inversor asignado correctamente al nodo.");
+            }
+            else if (result.ErrorType == ServiceErrorType.ConfirmationRequired)
+            {
+                // RF-2: nothing was changed; ask the Administrator before replacing the current inverter.
+                _confirmationMessage = result.ErrorMessage;
+            }
+            else
+            {
+                _confirmationMessage = null;
+                _errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // RF-2: cancelling the confirmation changes nothing; the form stays open for editing.
+    private void CancelReplacement()
+    {
+        _confirmationMessage = null;
+    }
+
+    private Task Close() => OnClose.InvokeAsync();
+
+    private sealed class InverterForm
+    {
+        public string? SerieNumber { get; set; }
+        public string? BrandAndModel { get; set; }
+        public double? NominalCapacityKw { get; set; }
+        public string? Endpoint { get; set; }
+    }
+}

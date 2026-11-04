@@ -19,7 +19,7 @@ public class SolarNodeServiceUpdateTests
 
     public SolarNodeServiceUpdateTests()
     {
-        _service = new SolarNodeService(_nodeRepository, _parkRepository, NullLogger<SolarNodeService>.Instance);
+        _service = new SolarNodeService(_nodeRepository, _parkRepository, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
 
         var park = new SolarPark
         {

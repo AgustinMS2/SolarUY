@@ -68,6 +68,7 @@ public class SolarNodesController : ControllerBase
         return Ok(result.Value);
     }
 
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPut("{id:guid}")]
     public IActionResult Update(Guid id, [FromBody] UpdateSolarNodeRequest request)
     {
@@ -80,6 +81,46 @@ public class SolarNodesController : ControllerBase
                 ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
                 ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
                 ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return NoContent();
+    }
+
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPost("{id:guid}/inverter")]
+    public IActionResult AssignInverter(Guid id, [FromBody] AssignInverterRequest request)
+    {
+        var result = _service.AssignInverter(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                // 409 as well, but flagged so the screen can ask the user to confirm the replacement.
+                ServiceErrorType.ConfirmationRequired => Conflict(new { message = result.ErrorMessage, requiresConfirmation = true }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(new { message = "Inversor asignado correctamente al nodo." });
+    }
+
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpDelete("{id:guid}/inverter")]
+    public IActionResult UnassignInverter(Guid id)
+    {
+        var result = _service.UnassignInverter(id);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
                 _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
             };
         }

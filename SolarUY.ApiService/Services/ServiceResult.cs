@@ -6,7 +6,8 @@ public enum ServiceErrorType
     Validation,
     NotFound,
     Conflict,
-    Unavailable
+    Unavailable,
+    ConfirmationRequired
 }
 
 public class ServiceResult

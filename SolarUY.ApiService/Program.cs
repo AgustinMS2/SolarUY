@@ -13,6 +13,7 @@ builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarPanelRepository
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarParkService, SolarUY.ApiService.Services.SolarParkService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarPanelService, SolarUY.ApiService.Services.SolarPanelService>();
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarNodeRepository, SolarUY.ApiService.Repositories.SolarNodeRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IInverterRepository, SolarUY.ApiService.Repositories.InverterRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarUY.ApiService.Services.SolarNodeService>();
 
 // Access to the Keycloak Admin API for user role management (spec 017).

@@ -22,7 +22,7 @@ public class SolarNodeServiceCreateTests
             }
         };
         var nodeRepo = new FakeSolarNodeRepository();
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
         var request = new CreateSolarNodeRequest("Nodo Test", parkId);
 
         // Act
@@ -54,7 +54,7 @@ public class SolarNodeServiceCreateTests
             }
         };
         var nodeRepo = new FakeSolarNodeRepository();
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
         var request = new CreateSolarNodeRequest("  Nodo Norte  ", parkId);
 
         // Act
@@ -82,7 +82,7 @@ public class SolarNodeServiceCreateTests
             }
         };
         var nodeRepo = new FakeSolarNodeRepository();
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
         var request = new CreateSolarNodeRequest(name!, parkId);
 
         // Act
@@ -108,7 +108,7 @@ public class SolarNodeServiceCreateTests
             }
         };
         var nodeRepo = new FakeSolarNodeRepository();
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
         var longName = new string('A', 101);
         var request = new CreateSolarNodeRequest(longName, parkId);
 
@@ -129,7 +129,7 @@ public class SolarNodeServiceCreateTests
         // Arrange: Sin parques en el repositorio (park inexistente)
         var parkRepo = new FakeSolarParkRepository(); // Sin parques añadidos
         var nodeRepo = new FakeSolarNodeRepository();
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
         var request = new CreateSolarNodeRequest("Nodo Fantasma", Guid.NewGuid());
 
         // Act
@@ -165,7 +165,7 @@ public class SolarNodeServiceCreateTests
             Status = SolarNodeStatus.Active,
             CreatedAtUtc = DateTime.UtcNow
         });
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
         var request = new CreateSolarNodeRequest("Nodo Duplicado", parkId);
 
         // Act
@@ -193,7 +193,7 @@ public class SolarNodeServiceCreateTests
             }
         };
         var nodeRepo = new FakeSolarNodeRepository();
-        var service = new SolarNodeService(nodeRepo, parkRepo, NullLogger<SolarNodeService>.Instance);
+        var service = new SolarNodeService(nodeRepo, parkRepo, new FakeInverterRepository(), NullLogger<SolarNodeService>.Instance);
 
         // Act & Assert 1: Crear un nodo en el primer parque
         var request1 = new CreateSolarNodeRequest("Nodo Común", park1Id);

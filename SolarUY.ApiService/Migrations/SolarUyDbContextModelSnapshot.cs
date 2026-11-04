@@ -22,6 +22,87 @@ namespace SolarUY.ApiService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BrandAndModel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Endpoint")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<double>("NominalCapacityKw")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("NormalizedSerieNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("SerieNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("SolarNodeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedSerieNumber")
+                        .IsUnique();
+
+                    b.HasIndex("SolarNodeId")
+                        .IsUnique();
+
+                    b.ToTable("Inverters", (string)null);
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SolarParkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolarParkId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("SolarNodes", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPanel", b =>
                 {
                     b.Property<Guid>("Id")
@@ -64,42 +145,6 @@ namespace SolarUY.ApiService.Migrations
                     b.HasIndex("SolarParkId");
 
                     b.ToTable("SolarPanels", (string)null);
-                });
-
-            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("NormalizedName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid>("SolarParkId")
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SolarParkId", "NormalizedName")
-                        .IsUnique();
-
-                    b.ToTable("SolarNodes", (string)null);
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPark", b =>
@@ -147,7 +192,18 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("SolarParks", (string)null);
                 });
 
-            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPanel", b =>
+            modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarNode", "SolarNode")
+                        .WithMany()
+                        .HasForeignKey("SolarNodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SolarNode");
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
                 {
                     b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
                         .WithMany()
@@ -158,7 +214,7 @@ namespace SolarUY.ApiService.Migrations
                     b.Navigation("SolarPark");
                 });
 
-            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
+            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPanel", b =>
                 {
                     b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
                         .WithMany()

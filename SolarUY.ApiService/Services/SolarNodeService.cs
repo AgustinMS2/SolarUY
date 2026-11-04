@@ -9,12 +9,18 @@ public class SolarNodeService : ISolarNodeService
 {
     private readonly ISolarNodeRepository _repository;
     private readonly ISolarParkRepository _parkRepository;
+    private readonly IInverterRepository _inverterRepository;
     private readonly ILogger<SolarNodeService> _logger;
 
-    public SolarNodeService(ISolarNodeRepository repository, ISolarParkRepository parkRepository, ILogger<SolarNodeService> logger)
+    public SolarNodeService(
+        ISolarNodeRepository repository,
+        ISolarParkRepository parkRepository,
+        IInverterRepository inverterRepository,
+        ILogger<SolarNodeService> logger)
     {
         _repository = repository;
         _parkRepository = parkRepository;
+        _inverterRepository = inverterRepository;
         _logger = logger;
     }
 
@@ -68,7 +74,15 @@ public class SolarNodeService : ISolarNodeService
     {
         var nodes = _repository.GetAll(parkId);
 
-        return nodes.Select(ToDto).ToList().AsReadOnly();
+        // One query for every node's inverter instead of one per row.
+        var serieByNode = _inverterRepository
+            .GetByNodeIds(nodes.Select(n => n.Id).ToList())
+            .ToDictionary(i => i.SolarNodeId, i => i.SerieNumber);
+
+        return nodes
+            .Select(n => ToDto(n, serieByNode.GetValueOrDefault(n.Id)))
+            .ToList()
+            .AsReadOnly();
     }
 
     public ServiceResult<SolarNodeDto> GetById(Guid id)
@@ -79,7 +93,7 @@ public class SolarNodeService : ISolarNodeService
             return ServiceResult<SolarNodeDto>.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
         }
 
-        return ServiceResult<SolarNodeDto>.Ok(ToDto(node));
+        return ServiceResult<SolarNodeDto>.Ok(ToDto(node, _inverterRepository.GetByNodeId(node.Id)?.SerieNumber));
     }
 
     public ServiceResult Update(Guid id, UpdateSolarNodeRequest request)
@@ -118,7 +132,7 @@ public class SolarNodeService : ISolarNodeService
         return ServiceResult.Ok();
     }
 
-    private static SolarNodeDto ToDto(SolarNode node)
+    private static SolarNodeDto ToDto(SolarNode node, string? inverterSerie)
     {
         return new SolarNodeDto(
             node.Id,
@@ -127,8 +141,141 @@ public class SolarNodeService : ISolarNodeService
             node.SolarPark?.Name ?? string.Empty,
             // Contar paneles relacionados - subconsulta simplificada
             0, // TODO: Implementar conteo de paneles cuando haya datos
-            null, // InverterSerie - TODO: Cuándo haya inversores asignados
+            inverterSerie,
             node.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo"
         );
+    }
+
+    public ServiceResult AssignInverter(Guid nodeId, AssignInverterRequest request)
+    {
+        var node = _repository.GetById(nodeId);
+        if (node == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
+        }
+
+        if (node.Status == SolarNodeStatus.Inactive)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "No se puede asignar un inversor a un nodo inactivo.");
+        }
+
+        var serie = request.SerieNumber?.Trim() ?? string.Empty;
+        var brandAndModel = request.BrandAndModel?.Trim() ?? string.Empty;
+        var endpoint = string.IsNullOrWhiteSpace(request.Endpoint) ? null : request.Endpoint.Trim();
+
+        if (serie.Length == 0)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "El número de serie es obligatorio.");
+        }
+
+        if (serie.Length > 50)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "El número de serie no puede superar los 50 caracteres.");
+        }
+
+        if (brandAndModel.Length == 0)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "La marca y modelo son obligatorios.");
+        }
+
+        if (brandAndModel.Length > 100)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "La marca y modelo no pueden superar los 100 caracteres.");
+        }
+
+        if (endpoint != null && endpoint.Length > 100)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "La dirección o endpoint no puede superar los 100 caracteres.");
+        }
+
+        if (request.NominalCapacityKw <= 0)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "La capacidad nominal del inversor debe ser mayor a 0.");
+        }
+
+        var park = _parkRepository.GetById(node.SolarParkId);
+        if (park == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El parque solar del nodo no existe.");
+        }
+
+        if (request.NominalCapacityKw > park.MaxCapacityKw)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "La capacidad nominal del inversor no puede superar la capacidad máxima del parque solar.");
+        }
+
+        var normalizedSerie = serie.ToLowerInvariant();
+
+        var inverterWithSameSerie = _inverterRepository.GetBySerie(normalizedSerie);
+        if (inverterWithSameSerie != null && inverterWithSameSerie.SolarNodeId != node.Id)
+        {
+            var otherNodeName = _repository.GetById(inverterWithSameSerie.SolarNodeId)?.Name ?? string.Empty;
+            return ServiceResult.Fail(
+                ServiceErrorType.Conflict,
+                $"El inversor con número de serie \"{serie}\" ya se encuentra asignado al nodo \"{otherNodeName}\".");
+        }
+
+        var currentInverter = _inverterRepository.GetByNodeId(node.Id);
+        if (currentInverter != null && currentInverter.NormalizedSerieNumber != normalizedSerie && !request.ConfirmReplace)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.ConfirmationRequired,
+                $"El nodo ya tiene el inversor \"{currentInverter.SerieNumber}\". ¿Deseás reemplazarlo por \"{serie}\"?");
+        }
+
+        if (currentInverter != null)
+        {
+            // Replacing or updating reuses the node's record: the previous inverter stops existing and no history is kept.
+            currentInverter.SerieNumber = serie;
+            currentInverter.NormalizedSerieNumber = normalizedSerie;
+            currentInverter.BrandAndModel = brandAndModel;
+            currentInverter.NominalCapacityKw = request.NominalCapacityKw;
+            currentInverter.Endpoint = endpoint;
+            _inverterRepository.Update(currentInverter);
+        }
+        else
+        {
+            _inverterRepository.Add(new Inverter
+            {
+                Id = Guid.NewGuid(),
+                SerieNumber = serie,
+                NormalizedSerieNumber = normalizedSerie,
+                BrandAndModel = brandAndModel,
+                NominalCapacityKw = request.NominalCapacityKw,
+                Endpoint = endpoint,
+                SolarNodeId = node.Id,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        node.UpdatedAtUtc = DateTime.UtcNow;
+        _repository.Update(node);
+        _logger.LogInformation("Inverter {Serie} assigned to solar node {NodeId}", serie, node.Id);
+
+        return ServiceResult.Ok();
+    }
+
+    public ServiceResult UnassignInverter(Guid nodeId)
+    {
+        var node = _repository.GetById(nodeId);
+        if (node == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
+        }
+
+        var inverter = _inverterRepository.GetByNodeId(node.Id);
+        if (inverter == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo no tiene un inversor asignado.");
+        }
+
+        // Unassigning is allowed on inactive nodes so the inverter can always be freed.
+        _inverterRepository.Remove(inverter);
+
+        node.UpdatedAtUtc = DateTime.UtcNow;
+        _repository.Update(node);
+        _logger.LogInformation("Inverter {Serie} unassigned from solar node {NodeId}", inverter.SerieNumber, node.Id);
+
+        return ServiceResult.Ok();
     }
 }
