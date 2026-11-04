@@ -8,6 +8,8 @@ builder.Services.AddProblemDetails();
 builder.AddNpgsqlDbContext<SolarUY.ApiService.Data.SolarUyDbContext>("solaruydb");
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarParkRepository, SolarUY.ApiService.Repositories.SolarParkRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarParkService, SolarUY.ApiService.Services.SolarParkService>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarNodeRepository, SolarUY.ApiService.Repositories.SolarNodeRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarUY.ApiService.Services.SolarNodeService>();
 
 builder.Services.AddControllers();
 
