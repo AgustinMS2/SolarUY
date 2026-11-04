@@ -6,5 +6,6 @@ public record SolarPanelDto(
     int PowerW,
     double Efficiency,
     string SolarParkName,
-    string Status
+    string Status,
+    Guid SolarParkId = default
 );

@@ -23,6 +23,15 @@
         </div>
     </div>
 
+    @if (!string.IsNullOrEmpty(Mensaje))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <span class="bi bi-check-circle-fill me-2"></span>
+            <div>@Mensaje</div>
+            <button type="button" class="btn-close" @onclick="() => Mensaje = null" aria-label="Cerrar"></button>
+        </div>
+    }
+
     @if (_isLoading)
     {
         <div class="d-flex justify-content-center align-items-center py-5">
@@ -70,7 +79,8 @@
                             <th scope="col">Potencia (W)</th>
                             <th scope="col">Eficiencia (%)</th>
                             <th scope="col">Parque solar</th>
-                            <th scope="col" class="text-center pe-3">Estado</th>
+                            <th scope="col" class="text-center">Estado</th>
+                            <th scope="col" class="pe-3 text-end">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -81,7 +91,7 @@
                                 <td>@($"{panel.PowerW} W")</td>
                                 <td>@($"{panel.Efficiency:0.##}%")</td>
                                 <td>@panel.SolarParkName</td>
-                                <td class="text-center pe-3">
+                                <td class="text-center">
                                     @if (panel.Status == "Activo")
                                     {
                                         <span class="badge bg-success px-2 py-1">Activo</span>
@@ -90,6 +100,11 @@
                                     {
                                         <span class="badge bg-secondary px-2 py-1">Inactivo</span>
                                     }
+                                </td>
+                                <td class="pe-3 text-end">
+                                    <a href="/paneles/editar/@panel.Id" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+                                        <span class="bi bi-pencil me-1"></span> Editar
+                                    </a>
                                 </td>
                             </tr>
                         }
@@ -101,6 +116,9 @@
 </div>
 
 @code {
+    [SupplyParameterFromQuery(Name = "mensaje")]
+    public string? Mensaje { get; set; }
+
     private IReadOnlyList<SolarPanelDto>? _panels;
     private bool _isLoading = true;
     private string? _errorMessage;

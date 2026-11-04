@@ -1,6 +1,6 @@
-﻿# Spec 007 — Modificar Panel Solar
+# Spec 007 — Modificar Panel Solar
 
-Estado: aprobada
+Estado: implementada
 
 Depende de: Spec 005 (Alta) y Spec 006 (Listar)
 

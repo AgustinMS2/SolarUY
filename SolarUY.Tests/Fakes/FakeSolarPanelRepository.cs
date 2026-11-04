@@ -13,6 +13,11 @@ public class FakeSolarPanelRepository : ISolarPanelRepository
         return Panels.Any(p => p.NormalizedSerieNumber == normalizedSerieNumber);
     }
 
+    public bool ExistsBySerieNumber(string normalizedSerieNumber, Guid excludeId)
+    {
+        return Panels.Any(p => p.NormalizedSerieNumber == normalizedSerieNumber && p.Id != excludeId);
+    }
+
     public void Add(SolarPanel panel)
     {
         Panels.Add(panel);
@@ -26,5 +31,23 @@ public class FakeSolarPanelRepository : ISolarPanelRepository
     public IReadOnlyList<SolarPanel> GetAll()
     {
         return Panels;
+    }
+
+    public SolarPanel? GetById(Guid id)
+    {
+        return Panels.FirstOrDefault(p => p.Id == id);
+    }
+
+    public void Update(SolarPanel panel)
+    {
+        var index = Panels.FindIndex(p => p.Id == panel.Id);
+        if (index >= 0)
+        {
+            Panels[index] = panel;
+        }
+        else
+        {
+            Panels.Add(panel);
+        }
     }
 }
