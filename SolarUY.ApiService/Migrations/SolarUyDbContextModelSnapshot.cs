@@ -66,6 +66,42 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("SolarPanels", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SolarParkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolarParkId", "NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("SolarNodes", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPark", b =>
                 {
                     b.Property<Guid>("Id")
@@ -112,6 +148,17 @@ namespace SolarUY.ApiService.Migrations
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarPanel", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
+                        .WithMany()
+                        .HasForeignKey("SolarParkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SolarPark");
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
                 {
                     b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
                         .WithMany()

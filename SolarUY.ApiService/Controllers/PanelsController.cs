@@ -42,4 +42,36 @@ public class PanelsController : ControllerBase
         var panels = _service.GetAll();
         return Ok(panels);
     }
+
+    [HttpGet("{id:guid}")]
+    public ActionResult<SolarPanelDto> GetById(Guid id)
+    {
+        var result = _service.GetById(id);
+
+        if (!result.Success)
+        {
+            return NotFound(new { message = result.ErrorMessage });
+        }
+
+        return Ok(result.Value);
+    }
+
+    [HttpPut("{id:guid}")]
+    public IActionResult Update(Guid id, [FromBody] UpdateSolarPanelRequest request)
+    {
+        var result = _service.Update(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(new { message = "Panel actualizado correctamente." });
+    }
 }

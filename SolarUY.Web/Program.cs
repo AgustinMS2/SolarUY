@@ -20,6 +20,8 @@ builder.Services.AddHttpClient<SolarUY.Web.Services.SolarParkApiClient>(client =
     .AddHttpMessageHandler<BearerTokenHandler>();
 builder.Services.AddHttpClient<SolarUY.Web.Services.PanelsApiClient>(client => client.BaseAddress = new("http://apiservice"))
     .AddHttpMessageHandler<BearerTokenHandler>();
+builder.Services.AddHttpClient<SolarUY.Web.Services.SolarParkApiClient>(client => client.BaseAddress = new("http://apiservice"));
+builder.Services.AddHttpClient<SolarUY.ApiService.Services.SolarNodeApiClient>(client => client.BaseAddress = new("http://apiservice"));
 
 var app = builder.Build();
 

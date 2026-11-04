@@ -9,6 +9,13 @@ public record CreateSolarPanelDto(
     Guid SolarParkId
 );
 
+public record UpdateSolarPanelDto(
+    string SerieNumber,
+    int PowerW,
+    double Efficiency,
+    Guid SolarParkId
+);
+
 public class PanelApiResponse
 {
     public bool Success { get; set; }
@@ -22,7 +29,8 @@ public record SolarPanelDto(
     int PowerW,
     double Efficiency,
     string SolarParkName,
-    string Status
+    string Status,
+    Guid SolarParkId = default
 );
 
 public class PanelsApiClient(HttpClient httpClient)
@@ -46,6 +54,39 @@ public class PanelsApiClient(HttpClient httpClient)
         catch (Exception ex)
         {
             return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
+    public async Task<PanelApiResponse> UpdateAsync(Guid id, UpdateSolarPanelDto request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PutAsJsonAsync($"/api/panels/{id}", request, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new PanelApiResponse { Success = true, Id = id };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"Error al actualizar el panel ({response.StatusCode}).";
+            return new PanelApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
+    public async Task<SolarPanelDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await httpClient.GetFromJsonAsync<SolarPanelDto>($"/api/panels/{id}", cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
         }
     }
 

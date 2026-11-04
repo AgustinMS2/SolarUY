@@ -18,6 +18,11 @@ public class SolarPanelRepository : ISolarPanelRepository
         return _context.SolarPanels.Any(p => p.NormalizedSerieNumber == normalizedSerieNumber);
     }
 
+    public bool ExistsBySerieNumber(string normalizedSerieNumber, Guid excludeId)
+    {
+        return _context.SolarPanels.Any(p => p.NormalizedSerieNumber == normalizedSerieNumber && p.Id != excludeId);
+    }
+
     public void Add(SolarPanel panel)
     {
         _context.SolarPanels.Add(panel);
@@ -34,5 +39,18 @@ public class SolarPanelRepository : ISolarPanelRepository
         return _context.SolarPanels
             .Include(p => p.SolarPark)
             .ToList();
+    }
+
+    public SolarPanel? GetById(Guid id)
+    {
+        return _context.SolarPanels
+            .Include(p => p.SolarPark)
+            .FirstOrDefault(p => p.Id == id);
+    }
+
+    public void Update(SolarPanel panel)
+    {
+        _context.SolarPanels.Update(panel);
+        _context.SaveChanges();
     }
 }
