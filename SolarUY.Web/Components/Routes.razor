@@ -1,11 +1,16 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@using SolarUY.Web.Components.Pages
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
             <NotAuthorized>
-                @* Spec 015 RF-1: no session -> login. The "authenticated but not allowed" case belongs to spec 017. *@
+                @* Spec 015 RF-1: no session -> login. Spec 017 RF-1: signed in without the role -> access denied. *@
                 @if (context.User.Identity?.IsAuthenticated != true)
                 {
                     <RedirectToLogin />
+                }
+                else
+                {
+                    <AccessDenied />
                 }
             </NotAuthorized>
         </AuthorizeRouteView>

@@ -97,9 +97,33 @@
       "publicClient": false,
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "solaruy-api-admin",
+      "name": "SolarUY API (Admin API access)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "solaruy-api-admin-dev-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
     }
   ],
   "users": [
+    {
+      "username": "service-account-solaruy-api-admin",
+      "enabled": true,
+      "serviceAccountClientId": "solaruy-api-admin",
+      "clientRoles": {
+        "realm-management": [
+          "view-users",
+          "manage-users",
+          "view-realm"
+        ]
+      }
+    },
     {
       "username": "admin",
       "enabled": true,
@@ -116,6 +140,24 @@
       ],
       "realmRoles": [
         "Administrador"
+      ]
+    },
+    {
+      "username": "tecnico",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "tecnico@solaruy.local",
+      "firstName": "Tecnico",
+      "lastName": "SolarUY",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tecnico123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Técnico"
       ]
     }
   ]

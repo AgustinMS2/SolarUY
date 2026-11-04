@@ -1,6 +1,6 @@
 @page "/paneles"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Any)]
 @using SolarUY.Web.Services
 @inject PanelsApiClient ApiClient
 @inject NavigationManager Navigation
@@ -16,12 +16,14 @@
             </h1>
             <p class="text-muted mb-0">Gestión y estado operativo de paneles fotovoltaicos.</p>
         </div>
-        <div>
-            <a href="/paneles/nuevo" class="btn btn-primary d-flex align-items-center">
-                <span class="bi bi-plus-circle me-1" aria-hidden="true"></span>
-                <span>Nuevo panel</span>
-            </a>
-        </div>
+        <AuthorizeView Roles="@AppRoles.Administrator">
+            <div>
+                <a href="/paneles/nuevo" class="btn btn-primary d-flex align-items-center">
+                    <span class="bi bi-plus-circle me-1" aria-hidden="true"></span>
+                    <span>Nuevo panel</span>
+                </a>
+            </div>
+        </AuthorizeView>
     </div>
 
     @if (!string.IsNullOrEmpty(Mensaje))
@@ -63,9 +65,11 @@
                 </div>
                 <h5 class="card-title text-secondary">No hay panels registrados.</h5>
                 <p class="card-text text-muted mb-4">Comienza registrando el primer panel solar al sistema.</p>
-                <a href="/paneles/nuevo" class="btn btn-outline-primary">
-                    <span class="bi bi-plus-circle me-1"></span> Registrar Panel
-                </a>
+                <AuthorizeView Roles="@AppRoles.Administrator">
+                    <a href="/paneles/nuevo" class="btn btn-outline-primary">
+                        <span class="bi bi-plus-circle me-1"></span> Registrar Panel
+                    </a>
+                </AuthorizeView>
             </div>
         </div>
     }
@@ -103,9 +107,11 @@
                                     }
                                 </td>
                                 <td class="pe-3 text-end">
-                                    <a href="/paneles/editar/@panel.Id" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
-                                        <span class="bi bi-pencil me-1"></span> Editar
-                                    </a>
+                                    <AuthorizeView Roles="@AppRoles.Administrator">
+                                        <a href="/paneles/editar/@panel.Id" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+                                            <span class="bi bi-pencil me-1"></span> Editar
+                                        </a>
+                                    </AuthorizeView>
                                 </td>
                             </tr>
                         }

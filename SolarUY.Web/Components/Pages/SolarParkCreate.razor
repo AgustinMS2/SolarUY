@@ -1,6 +1,6 @@
 @page "/parques/nuevo"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Administrator)]
 @inject SolarParkApiClient ApiClient
 
 <PageTitle>Alta de Parque Solar — SolarUY</PageTitle>

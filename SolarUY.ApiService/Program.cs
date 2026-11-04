@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add service defaults & Aspire client integrations.
@@ -13,6 +15,12 @@ builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarPanelService, Solar
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarNodeRepository, SolarUY.ApiService.Repositories.SolarNodeRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarUY.ApiService.Services.SolarNodeService>();
 
+// Access to the Keycloak Admin API for user role management (spec 017).
+builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddHttpClient("keycloak-admin");
+builder.Services.AddSingleton<SolarUY.ApiService.Repositories.IKeycloakUserRepository, SolarUY.ApiService.Repositories.KeycloakUserRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IUserRoleService, SolarUY.ApiService.Services.UserRoleService>();
+
 // JWT Bearer authentication against Keycloak (spec 015). Aspire injects the Keycloak URL through WithReference.
 var keycloakUrl = builder.Configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
 builder.Services
@@ -22,6 +30,21 @@ builder.Services
         options.Authority = $"{keycloakUrl}/realms/SolarUY";
         options.Audience = "solaruy-api";
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+
+        // Spec 017: Keycloak realm roles arrive in the flat "roles" claim (realm mapper "realm-roles-claim").
+        // Inbound claim mapping is disabled so the claim keeps the name "roles" instead of being renamed.
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters.RoleClaimType = "roles";
+
+        // Spec 017 RF-4: a valid token without the required role gets 403 with a JSON message.
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnForbidden = context =>
+            {
+                context.Response.ContentType = "application/json";
+                return context.Response.WriteAsJsonAsync(new { message = "Permisos insuficientes." });
+            }
+        };
     });
 builder.Services.AddAuthorization();
 

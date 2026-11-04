@@ -1,6 +1,6 @@
 @page "/paneles/baja/{id}"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Roles = AppRoles.Administrator)]
 @using System.ComponentModel.DataAnnotations
 @using SolarUY.Web.Services
 @inject PanelsApiClient PanelsClient

@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SolarUY.ApiService.Dtos;
+using SolarUY.ApiService.Security;
 using SolarUY.ApiService.Services;
 
 namespace SolarUY.ApiService.Controllers;
 
-[Authorize]
+[Authorize(Roles = Roles.Any)]
 [ApiController]
 [Route("api/solar-nodes")]
 public class SolarNodesController : ControllerBase
@@ -17,6 +18,7 @@ public class SolarNodesController : ControllerBase
         _service = service;
     }
 
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPost]
     public IActionResult Create([FromBody] CreateSolarNodeRequest request)
     {
