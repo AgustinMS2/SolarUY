@@ -2,6 +2,16 @@
 
 <PageTitle>Home</PageTitle>
 
+@if (Sesion == "finalizada")
+{
+    <div class="alert alert-warning" role="alert">La sesión ha finalizado.</div>
+}
+
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+@code {
+    [SupplyParameterFromQuery(Name = "sesion")]
+    public string? Sesion { get; set; }
+}

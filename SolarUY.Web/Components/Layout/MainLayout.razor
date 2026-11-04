@@ -1,4 +1,5 @@
-﻿@inherits LayoutComponentBase
+﻿@using SolarUY.Web.Components.Pages
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -16,7 +17,7 @@
                             <span class="badge bg-primary ms-2" data-testid="user-role">@role</span>
                         }
                     </span>
-                    <a href="account/logout" data-enhance-nav="false" class="btn btn-sm btn-outline-secondary ms-3">Cerrar sesión</a>
+                    <LogoutConfirmationModal @rendermode="InteractiveServer" />
                 </Authorized>
                 <NotAuthorized>
                     <a href="account/login" data-enhance-nav="false" class="btn btn-sm btn-primary">Iniciar sesión</a>

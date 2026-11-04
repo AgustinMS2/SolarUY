@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
 namespace SolarUY.Web.Security;
@@ -26,9 +27,20 @@ public class BearerTokenHandler(
             {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             }
+            else
+            {
+                RedirectToSessionEnded();
+            }
         }
 
         return await base.SendAsync(request, cancellationToken);
+    }
+
+    // Spec 016 RF-4: the user is signed in locally but the session no longer exists in Keycloak.
+    private void RedirectToSessionEnded()
+    {
+        var navigation = circuitServicesAccessor.Services?.GetService<NavigationManager>();
+        navigation?.NavigateTo("account/session-ended", forceLoad: true);
     }
 
     private async Task<ClaimsPrincipal?> GetCurrentUserAsync()

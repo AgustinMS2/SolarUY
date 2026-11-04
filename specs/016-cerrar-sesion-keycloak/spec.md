@@ -15,9 +15,9 @@ Permitir a los usuarios finalizar su sesión activa en SolarUY de manera segura,
 ## Requisitos funcionales (EARS)
 
 - **RF-1**: CUANDO el usuario presione el botón "Cerrar sesión" en la barra de navegación, EL SISTEMA solicitará confirmación rápida: "¿Deseás cerrar la sesión actual?".
-- **RF-2**: CUANDO el usuario confirme el cierre, EL SISTEMA destruirá la cookie de sesión local, notificará a Keycloak para invalidar la sesión OIDC (Single Sign-Out) y redirigirá al usuario a la pantalla de bienvenida pública o login.
+- **RF-2**: CUANDO el usuario confirme el cierre, EL SISTEMA destruirá la cookie de sesión local, notificará a Keycloak para invalidar la sesión OIDC (Single Sign-Out) y redirigirá al usuario a la pantalla de bienvenida pública.
 - **RF-3**: CUANDO el usuario cancele la confirmación, EL SISTEMA mantendrá la sesión activa en el estado actual sin recargar la página.
-- **RF-4**: SI la sesión ya fue invalidada desde otra pestaña o dispositivo, ENTONCES EL SISTEMA redirigirá de inmediato al login mostrando "La sesión ha finalizado."
+- **RF-4**: SI la sesión ya fue invalidada desde otra pestaña o dispositivo, ENTONCES EL SISTEMA redirigirá de inmediato a la pantalla de bienvenida pública mostrando el aviso "La sesión ha finalizado." y exigirá iniciar sesión nuevamente para acceder a rutas protegidas.
 
 ## Requisitos no funcionales
 - Cierre de sesión inmediato (latencia < 500 ms).
