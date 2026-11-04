@@ -68,16 +68,67 @@ public class SolarNodeService : ISolarNodeService
     {
         var nodes = _repository.GetAll(parkId);
 
-        return nodes.Select(n => new SolarNodeDto(
-            n.Id,
-            n.Name,
-            n.SolarParkId,
-            n.SolarPark?.Name ?? string.Empty,
+        return nodes.Select(ToDto).ToList().AsReadOnly();
+    }
+
+    public ServiceResult<SolarNodeDto> GetById(Guid id)
+    {
+        var node = _repository.GetById(id);
+        if (node == null)
+        {
+            return ServiceResult<SolarNodeDto>.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
+        }
+
+        return ServiceResult<SolarNodeDto>.Ok(ToDto(node));
+    }
+
+    public ServiceResult Update(Guid id, UpdateSolarNodeRequest request)
+    {
+        var node = _repository.GetById(id);
+        if (node == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "El nombre es obligatorio.");
+        }
+
+        var trimmedName = request.Name.Trim();
+        if (trimmedName.Length > 100)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "El nombre no puede superar los 100 caracteres.");
+        }
+
+        var normalizedName = trimmedName.ToLowerInvariant();
+
+        if (_repository.ExistsByName(node.SolarParkId, normalizedName, excludeId: id))
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, $"Ya existe un nodo con el nombre \"{trimmedName}\" en este parque solar.");
+        }
+
+        node.Name = trimmedName;
+        node.NormalizedName = normalizedName;
+        node.UpdatedAtUtc = DateTime.UtcNow;
+
+        _repository.Update(node);
+        _logger.LogInformation("Solar node updated successfully with ID {NodeId}", node.Id);
+
+        return ServiceResult.Ok();
+    }
+
+    private static SolarNodeDto ToDto(SolarNode node)
+    {
+        return new SolarNodeDto(
+            node.Id,
+            node.Name,
+            node.SolarParkId,
+            node.SolarPark?.Name ?? string.Empty,
             // Contar paneles relacionados - subconsulta simplificada
             0, // TODO: Implementar conteo de paneles cuando haya datos
             null, // InverterSerie - TODO: Cuándo haya inversores asignados
-            n.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo"
-        )).ToList()
-            .AsReadOnly();
+            node.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo"
+        );
     }
 }

@@ -18,15 +18,29 @@ public class SolarNodeRepository : ISolarNodeRepository
         return _context.SolarNodes.Any(n => n.SolarParkId == parkId && n.NormalizedName == normalizedName);
     }
 
+    public bool ExistsByName(Guid parkId, string normalizedName, Guid excludeId)
+    {
+        return _context.SolarNodes.Any(n =>
+            n.SolarParkId == parkId && n.NormalizedName == normalizedName && n.Id != excludeId);
+    }
+
     public void Add(SolarNode node)
     {
         _context.SolarNodes.Add(node);
         _context.SaveChanges();
     }
 
+    public void Update(SolarNode node)
+    {
+        _context.SolarNodes.Update(node);
+        _context.SaveChanges();
+    }
+
     public SolarNode? GetById(Guid id)
     {
-        return _context.SolarNodes.Find(id);
+        return _context.SolarNodes
+            .Include(n => n.SolarPark)
+            .FirstOrDefault(n => n.Id == id);
     }
 
     public IReadOnlyList<SolarNode> GetAll(Guid? parkId = null)
@@ -39,8 +53,8 @@ public class SolarNodeRepository : ISolarNodeRepository
         }
 
         return query
-            .OrderBy(n => n.SolarPark.NormalizedName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(n => n.NormalizedName, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n.SolarPark!.NormalizedName)
+            .ThenBy(n => n.NormalizedName)
             .ToList()
             .AsReadOnly();
     }

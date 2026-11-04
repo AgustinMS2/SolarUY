@@ -12,6 +12,14 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-lg-8 col-xl-7">
+            @if (!string.IsNullOrEmpty(Mensaje))
+            {
+                <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                    <span class="bi bi-check-circle-fill me-2"></span>
+                    <div>@Mensaje</div>
+                    <button type="button" class="btn-close" @onclick="() => Mensaje = null" aria-label="Cerrar"></button>
+                </div>
+            }
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white py-3">
                     <h3 class="card-title h5 mb-0 d-flex align-items-center">
@@ -77,6 +85,7 @@
                                             <th scope="col">Inversor</th>
                                             <th scope="col">Paneles asociados</th>
                                             <th scope="col">Estado</th>
+                                            <th scope="col" class="pe-3 text-end">Acciones</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -91,6 +100,11 @@
                                                     <span class="badge bg-@(node.Status == "Activo" ? "success" : "danger") fs-sm">
                                                         @node.Status
                                                     </span>
+                                                </td>
+                                                <td class="pe-3 text-end">
+                                                    <a href="/nodos/@node.Id/editar" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+                                                        <span class="bi bi-pencil me-1"></span> Editar
+                                                    </a>
                                                 </td>
                                             </tr>
                                         }
@@ -108,6 +122,9 @@
 @code {
     [Parameter]
     public Guid? SelectedParkId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "mensaje")]
+    public string? Mensaje { get; set; }
 
     private List<SolarUY.ApiService.Dtos.SolarNodeDto> _nodes = new();
     private Guid? _selectedParkId;
