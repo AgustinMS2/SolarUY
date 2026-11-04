@@ -7,4 +7,5 @@ public interface ISolarNodeRepository
     bool ExistsByName(Guid parkId, string normalizedName);
     void Add(SolarNode node);
     SolarNode? GetById(Guid id);
+    IReadOnlyList<SolarNode> GetAll(Guid? parkId = null);
 }

@@ -35,4 +35,17 @@ public class SolarNodesController : ControllerBase
 
         return StatusCode(StatusCodes.Status201Created, new { id = result.Value });
     }
+
+    [HttpGet]
+    public IActionResult GetAll(Guid? parkId = null)
+    {
+        var result = _service.GetAll(parkId);
+
+        if (result == null || result.Count == 0)
+        {
+            return Ok(new List<SolarNodeDto>());
+        }
+
+        return Ok(result);
+    }
 }

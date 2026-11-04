@@ -16,24 +16,24 @@ public class SolarNodeApiClient
         _http = http;
     }
 
-    public async Task<ServiceResult<Guid>> CreateAsync(CreateSolarNodeRequest request)
+    public async Task<ServiceResult<IReadOnlyList<SolarNodeDto>>> GetAllAsync(Guid? parkId = null, CancellationToken cancellationToken = default)
     {
-        var response = await _http.PostAsync("api/solar-nodes", new StringContent(
-                    System.Text.Json.JsonSerializer.Serialize(request),
-                    UnicodeEncoding.UTF8,
-                    "application/json"));
+        var url = "/api/solar-nodes";
+        if (parkId.HasValue)
+        {
+            url += $"?parkId={parkId.Value}";
+        }
+
+        var response = await _http.GetAsync(url, cancellationToken);
 
         if (response.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadAsStringAsync();
-            // Deserializar el ID del response 201 Created
-            var doc = System.Text.Json.JsonDocument.Parse(content);
-            var id = doc.RootElement.GetProperty("id").GetGuid();
-            return ServiceResult<Guid>.Ok(id);
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var dtoList = System.Text.Json.JsonSerializer.Deserialize<IReadOnlyList<SolarNodeDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return ServiceResult<IReadOnlyList<SolarNodeDto>>.Ok(dtoList ?? new List<SolarNodeDto>());
         }
 
-        // Manejar errores conocidos
-        var errorContent = await response.Content.ReadAsStringAsync();
+        var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
         var errorDoc = System.Text.Json.JsonDocument.Parse(errorContent);
         var errorMessage = errorDoc.RootElement.GetProperty("message").GetString() ?? "Error desconocido";
 
@@ -41,10 +41,9 @@ public class SolarNodeApiClient
         {
             System.Net.HttpStatusCode.BadRequest => ServiceErrorType.Validation,
             System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
-            System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
             _ => ServiceErrorType.Validation
         };
 
-        return ServiceResult<Guid>.Fail(errorType, errorMessage);
+        return ServiceResult<IReadOnlyList<SolarNodeDto>>.Fail(errorType, errorMessage);
     }
 }

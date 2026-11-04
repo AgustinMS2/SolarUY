@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using SolarUY.ApiService.Data;
 using SolarUY.ApiService.Domain;
 
@@ -26,5 +27,21 @@ public class SolarNodeRepository : ISolarNodeRepository
     public SolarNode? GetById(Guid id)
     {
         return _context.SolarNodes.Find(id);
+    }
+
+    public IReadOnlyList<SolarNode> GetAll(Guid? parkId = null)
+    {
+        var query = _context.SolarNodes.Include(n => n.SolarPark).AsQueryable();
+
+        if (parkId.HasValue)
+        {
+            query = query.Where(n => n.SolarParkId == parkId.Value);
+        }
+
+        return query
+            .OrderBy(n => n.SolarPark.NormalizedName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(n => n.NormalizedName, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            .AsReadOnly();
     }
 }

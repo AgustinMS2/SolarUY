@@ -63,4 +63,21 @@ public class SolarNodeService : ISolarNodeService
 
         return ServiceResult<Guid>.Ok(node.Id);
     }
+
+    public IReadOnlyList<SolarNodeDto> GetAll(Guid? parkId = null)
+    {
+        var nodes = _repository.GetAll(parkId);
+
+        return nodes.Select(n => new SolarNodeDto(
+            n.Id,
+            n.Name,
+            n.SolarParkId,
+            n.SolarPark?.Name ?? string.Empty,
+            // Contar paneles relacionados - subconsulta simplificada
+            0, // TODO: Implementar conteo de paneles cuando haya datos
+            null, // InverterSerie - TODO: Cuándo haya inversores asignados
+            n.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo"
+        )).ToList()
+            .AsReadOnly();
+    }
 }
