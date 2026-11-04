@@ -123,7 +123,16 @@ public static class KeycloakAuthenticationExtensions
                 return;
             }
 
-            await next();
+            try
+            {
+                await next();
+            }
+            catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+            {
+                // A browser navigation or disconnect can cancel the request while the rest
+                // of the pipeline is running. This is expected and must not be reported as
+                // an application failure; unrelated cancellations are still propagated.
+            }
         });
 
         return app;
