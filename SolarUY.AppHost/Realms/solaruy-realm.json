@@ -1,0 +1,122 @@
+{
+  "realm": "SolarUY",
+  "enabled": true,
+  "displayName": "SolarUY",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "ssoSessionIdleTimeout": 1800,
+  "accessTokenLifespan": 300,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "es"
+  ],
+  "defaultLocale": "es",
+  "localizationTexts": {
+    "es": {
+      "invalidUserMessage": "Usuario o contraseña inválidos.",
+      "accountDisabledMessage": "Tu cuenta se encuentra deshabilitada. Contacta al administrador."
+    }
+  },
+  "roles": {
+    "realm": [
+      {
+        "name": "Administrador",
+        "description": "Acceso total a la gestión de SolarUY."
+      },
+      {
+        "name": "Técnico",
+        "description": "Acceso restringido a consultas y mantenimiento asignado."
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "solaruy-web",
+      "name": "SolarUY Web (Blazor Server)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "solaruy-web-dev-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5205/signin-oidc"
+      ],
+      "webOrigins": [
+        "http://localhost:5205"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5205/*"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm-roles-claim",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "solaruy-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "solaruy-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "solaruy-api",
+      "name": "SolarUY API",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "bearerOnly": true,
+      "publicClient": false,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@solaruy.local",
+      "firstName": "Admin",
+      "lastName": "SolarUY",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Administrador"
+      ]
+    }
+  ]
+}

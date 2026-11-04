@@ -7,7 +7,21 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <AuthorizeView>
+                <Authorized>
+                    <span class="d-flex align-items-center text-nowrap">
+                        <span class="fw-semibold" data-testid="user-name">@context.User.Identity?.Name</span>
+                        @foreach (var role in GetRoles(context.User))
+                        {
+                            <span class="badge bg-primary ms-2" data-testid="user-role">@role</span>
+                        }
+                    </span>
+                    <a href="account/logout" data-enhance-nav="false" class="btn btn-sm btn-outline-secondary ms-3">Cerrar sesión</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="account/login" data-enhance-nav="false" class="btn btn-sm btn-primary">Iniciar sesión</a>
+                </NotAuthorized>
+            </AuthorizeView>
         </div>
 
         <article class="content px-4">
@@ -21,3 +35,16 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+@code {
+    private static readonly string[] SystemRoles = ["Administrador", "Técnico"];
+
+    // Keycloak also sends internal roles (offline_access, uma_authorization...): only the system roles are shown.
+    private static IEnumerable<string> GetRoles(System.Security.Claims.ClaimsPrincipal user)
+    {
+        return user.FindAll("roles")
+            .Select(c => c.Value)
+            .Where(r => SystemRoles.Contains(r))
+            .Distinct();
+    }
+}

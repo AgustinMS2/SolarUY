@@ -1,0 +1,199 @@
+@page "/paneles/nuevo"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using SolarUY.Web.Services
+@inject PanelsApiClient PanelsClient
+@inject SolarParkApiClient SolarParkClient
+
+<PageTitle>Alta de Panel Solar — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-grid-3x3-gap-fill me-2" aria-hidden="true"></span>
+                        Alta de Panel Solar
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-check-circle-fill me-2"></span>
+                            <div>@_successMessage</div>
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <div>@_errorMessage</div>
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="@_formModel" OnValidSubmit="HandleSubmitAsync">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label for="serieNumber" class="form-label fw-semibold">Número de Serie <span class="text-danger">*</span></label>
+                            <InputText id="serieNumber" class="form-control" placeholder="Ej: PNL-2026-001" @bind-Value="_formModel.SerieNumber" />
+                            <ValidationMessage For="@(() => _formModel.SerieNumber)" class="text-danger small mt-1" />
+                            <div class="form-text small">Hasta 50 caracteres, único en el sistema.</div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label for="powerW" class="form-label fw-semibold">Potencia (W) <span class="text-danger">*</span></label>
+                                <InputNumber id="powerW" class="form-control" placeholder="450" @bind-Value="_formModel.PowerW" />
+                                <ValidationMessage For="@(() => _formModel.PowerW)" class="text-danger small mt-1" />
+                                <div class="form-text small">Número entero mayor a 0</div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="efficiency" class="form-label fw-semibold">Eficiencia (%) <span class="text-danger">*</span></label>
+                                <InputNumber id="efficiency" class="form-control" placeholder="21.5" @bind-Value="_formModel.Efficiency" step="any" />
+                                <ValidationMessage For="@(() => _formModel.Efficiency)" class="text-danger small mt-1" />
+                                <div class="form-text small">Entre 0.1 y 100</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="solarParkId" class="form-label fw-semibold">Parque Solar <span class="text-danger">*</span></label>
+                            @if (_loadingParks)
+                            {
+                                <div class="d-flex align-items-center text-muted small py-2">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <span>Cargando parques activos...</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <InputSelect id="solarParkId" class="form-select" @bind-Value="_formModel.SolarParkId">
+                                    <option value="">Seleccioná un parque solar...</option>
+                                    @foreach (var park in _activeParks)
+                                    {
+                                        <option value="@park.Id">@park.Name</option>
+                                    }
+                                </InputSelect>
+                            }
+                            <ValidationMessage For="@(() => _formModel.SolarParkId)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="submit" class="btn btn-primary px-4 d-flex align-items-center" disabled="@_isSubmitting">
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Guardando...</span>
+                                }
+                                else
+                                {
+                                    <span class="bi bi-save me-1" aria-hidden="true"></span>
+                                    <span>Registrar Panel</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private PanelFormModel _formModel = new();
+    private List<SolarParkDto> _activeParks = [];
+    private bool _loadingParks = true;
+    private bool _isSubmitting;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActiveParksAsync();
+    }
+
+    private async Task LoadActiveParksAsync()
+    {
+        _loadingParks = true;
+        try
+        {
+            var parks = await SolarParkClient.GetAllAsync();
+            _activeParks = parks.Where(p => p.Status == "Activo").ToList();
+        }
+        catch (Exception)
+        {
+            _activeParks = [];
+        }
+        finally
+        {
+            _loadingParks = false;
+        }
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _successMessage = null;
+        _errorMessage = null;
+
+        if (!_formModel.SolarParkId.HasValue || _formModel.SolarParkId.Value == Guid.Empty)
+        {
+            _errorMessage = "El parque solar seleccionado no existe o no está activo.";
+            return;
+        }
+
+        _isSubmitting = true;
+        try
+        {
+            var dto = new CreateSolarPanelDto(
+                _formModel.SerieNumber ?? string.Empty,
+                _formModel.PowerW ?? 0,
+                _formModel.Efficiency ?? 0,
+                _formModel.SolarParkId.Value
+            );
+
+            var result = await PanelsClient.CreateAsync(dto);
+
+            if (result.Success)
+            {
+                _successMessage = "Panel creado correctamente.";
+                _formModel = new PanelFormModel(); // Limpiar formulario (RF-3)
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    public class PanelFormModel
+    {
+        [Required(ErrorMessage = "El número de serie es obligatorio.")]
+        [StringLength(50, ErrorMessage = "El número de serie no puede superar los 50 caracteres.")]
+        public string? SerieNumber { get; set; }
+
+        [Required(ErrorMessage = "La potencia debe ser mayor a 0.")]
+        [Range(1, int.MaxValue, ErrorMessage = "La potencia debe ser mayor a 0.")]
+        public int? PowerW { get; set; }
+
+        [Required(ErrorMessage = "La eficiencia debe ser mayor a 0.")]
+        [Range(0.1, 100.0, ErrorMessage = "La eficiencia debe ser mayor a 0 y no puede superar el 100.")]
+        public double? Efficiency { get; set; }
+
+        [Required(ErrorMessage = "El parque solar seleccionado no existe o no está activo.")]
+        public Guid? SolarParkId { get; set; }
+    }
+}

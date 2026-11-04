@@ -66,3 +66,44 @@ Content-Type: application/json
   "maxCapacityKw": 50000.0,
   "powerAlertThresholdKw": 45000.0
 }
+
+### GET Listar paneles solares (200 OK)
+GET {{ApiService_HostAddress}}/api/panels
+Accept: application/json
+
+### POST Crear panel solar (201 Created)
+POST {{ApiService_HostAddress}}/api/panels
+Content-Type: application/json
+
+{
+  "serieNumber": "PNL-2026-001",
+  "powerW": 450,
+  "efficiency": 21.5,
+  "solarParkId": "00000000-0000-0000-0000-000000000000"
+}
+
+### POST Crear panel solar con error de validación (400 Bad Request)
+POST {{ApiService_HostAddress}}/api/panels
+Content-Type: application/json
+
+{
+  "serieNumber": "",
+  "powerW": 0,
+  "efficiency": 105.0,
+  "solarParkId": "00000000-0000-0000-0000-000000000000"
+}
+
+### GET Panel solar por ID (200 OK / 404 Not Found)
+GET {{ApiService_HostAddress}}/api/panels/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+### PUT Modificar panel solar (200 OK / 400 / 404 / 409)
+PUT {{ApiService_HostAddress}}/api/panels/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "serieNumber": "PNL-2026-001-MOD",
+  "powerW": 500,
+  "efficiency": 22.0,
+  "solarParkId": "00000000-0000-0000-0000-000000000000"
+}

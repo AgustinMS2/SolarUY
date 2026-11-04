@@ -140,7 +140,7 @@ Depende de: <specs previas necesarias, o "ninguna">
 ---
 
 ## 4. Reglas de Implementación (Paso a Paso)
-1. Toma **exclusivamente la siguiente tarea pendiente** (ej. T1).
+1. Toma **hasta tres tareas pendientes a la vez** (ej. T1 a T3).
 2. **Tests según el tipo de tarea:**
    - **Tarea de servicio con reglas de negocio**: escribe primero los tests unitarios de esas reglas, comprueba que fallan con `dotnet test`, implementa lo mínimo y comprueba que pasan.
    - **Resto de tareas** (entidades, migraciones, repositorios, controladores, DTOs): implementa, compila y verifica que los tests existentes (incluidos los de arquitectura) siguen en verde. No agregues tests nuevos.

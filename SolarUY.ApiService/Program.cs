@@ -7,9 +7,23 @@ builder.AddServiceDefaults();
 builder.Services.AddProblemDetails();
 builder.AddNpgsqlDbContext<SolarUY.ApiService.Data.SolarUyDbContext>("solaruydb");
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarParkRepository, SolarUY.ApiService.Repositories.SolarParkRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarPanelRepository, SolarUY.ApiService.Repositories.SolarPanelRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarParkService, SolarUY.ApiService.Services.SolarParkService>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarPanelService, SolarUY.ApiService.Services.SolarPanelService>();
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarNodeRepository, SolarUY.ApiService.Repositories.SolarNodeRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarUY.ApiService.Services.SolarNodeService>();
+
+// JWT Bearer authentication against Keycloak (spec 015). Aspire injects the Keycloak URL through WithReference.
+var keycloakUrl = builder.Configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
+builder.Services
+    .AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = $"{keycloakUrl}/realms/SolarUY";
+        options.Audience = "solaruy-api";
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+    });
+builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
 
@@ -25,6 +39,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
