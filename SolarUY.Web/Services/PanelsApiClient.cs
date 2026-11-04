@@ -96,6 +96,27 @@ public class PanelsApiClient(HttpClient httpClient)
         return result ?? [];
     }
 
+    public async Task<PanelApiResponse> DeletePanelAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.DeleteAsync($"/api/panels/{id}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new PanelApiResponse { Success = true };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"Error al dar de baja el panel ({response.StatusCode}).";
+            return new PanelApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
     private sealed record CreatePanelSuccessResponse(Guid Id);
     private sealed record ErrorResponse(string? Message);
 }

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Services;
 
 namespace SolarUY.ApiService.Controllers;
@@ -17,61 +16,21 @@ public class PanelsController : ControllerBase
         _service = service;
     }
 
-    [HttpPost]
-    public IActionResult Create([FromBody] CreateSolarPanelRequest request)
+    [HttpDelete("{id:guid}")]
+    public IActionResult DeletePanel(Guid id)
     {
-        var result = _service.Create(request);
+        var result = _service.DeletePanel(id);
 
         if (!result.Success)
         {
             return result.ErrorType switch
             {
                 ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
-                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
                 ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
                 _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
             };
         }
 
-        return StatusCode(StatusCodes.Status201Created, new { id = result.Value });
-    }
-
-    [HttpGet]
-    public ActionResult<IReadOnlyList<SolarPanelDto>> GetAll()
-    {
-        var panels = _service.GetAll();
-        return Ok(panels);
-    }
-
-    [HttpGet("{id:guid}")]
-    public ActionResult<SolarPanelDto> GetById(Guid id)
-    {
-        var result = _service.GetById(id);
-
-        if (!result.Success)
-        {
-            return NotFound(new { message = result.ErrorMessage });
-        }
-
-        return Ok(result.Value);
-    }
-
-    [HttpPut("{id:guid}")]
-    public IActionResult Update(Guid id, [FromBody] UpdateSolarPanelRequest request)
-    {
-        var result = _service.Update(id, request);
-
-        if (!result.Success)
-        {
-            return result.ErrorType switch
-            {
-                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
-                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
-                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
-                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
-            };
-        }
-
-        return Ok(new { message = "Panel actualizado correctamente." });
+        return Ok(new { message = result.ErrorMessage });
     }
 }

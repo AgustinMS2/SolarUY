@@ -181,4 +181,30 @@ public class SolarPanelService : ISolarPanelService
 
         return ServiceResult.Ok();
     }
+
+    public ServiceResult DeletePanel(Guid id)
+    {
+        // 1. Validar que el panel existe
+        var panel = _repository.GetById(id);
+        if (panel == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El panel solicitado no existe.");
+        }
+
+        // 2. Validar que el panel no está ya inactivo
+        if (panel.Status == SolarPanelStatus.Inactive)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "El panel ya está inactivo.");
+        }
+
+        // 3. Cambiar estado a Inactivo (baja lógica)
+        panel.Status = SolarPanelStatus.Inactive;
+        panel.UpdatedAtUtc = DateTime.UtcNow;
+
+        _repository.Update(panel);
+        _logger.LogInformation("Solar panel deleted successfully with ID {PanelId}", panel.Id);
+
+        // 4. Retornar éxito
+        return ServiceResult.Ok();
+    }
 }
