@@ -3,7 +3,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 var postgres = builder.AddPostgres("postgres")
     .AddDatabase("solaruydb");
 
-// Fixed port so the token issuer (http://localhost:8080/realms/SolarUY) stays stable.
+// Fixed port so the token issuer (https://localhost:8080/realms/SolarUY) stays stable.
 var keycloak = builder.AddKeycloak("keycloak", 8080)
     .WithRealmImport("./Realms");
 

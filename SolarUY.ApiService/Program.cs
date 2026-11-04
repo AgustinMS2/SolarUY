@@ -18,12 +18,23 @@ builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarU
 
 // Access to the Keycloak Admin API for user role management (spec 017).
 builder.Services.TryAddSingleton(TimeProvider.System);
-builder.Services.AddHttpClient("keycloak-admin");
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddHttpClient("keycloak-admin")
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+}
+else
+{
+    builder.Services.AddHttpClient("keycloak-admin");
+}
 builder.Services.AddSingleton<SolarUY.ApiService.Repositories.IKeycloakUserRepository, SolarUY.ApiService.Repositories.KeycloakUserRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IUserRoleService, SolarUY.ApiService.Services.UserRoleService>();
 
 // JWT Bearer authentication against Keycloak (spec 015). Aspire injects the Keycloak URL through WithReference.
-var keycloakUrl = builder.Configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
+var keycloakUrl = builder.Configuration["services:keycloak:https:0"] ?? builder.Configuration["services:keycloak:http:0"] ?? "https://localhost:8080";
 builder.Services
     .AddAuthentication(Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -31,6 +42,13 @@ builder.Services
         options.Authority = $"{keycloakUrl}/realms/SolarUY";
         options.Audience = "solaruy-api";
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        if (builder.Environment.IsDevelopment())
+        {
+            options.BackchannelHttpHandler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            };
+        }
 
         // Spec 017: Keycloak realm roles arrive in the flat "roles" claim (realm mapper "realm-roles-claim").
         // Inbound claim mapping is disabled so the claim keeps the name "roles" instead of being renamed.

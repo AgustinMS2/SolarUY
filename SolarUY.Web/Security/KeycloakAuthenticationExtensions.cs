@@ -15,7 +15,7 @@ public static class KeycloakAuthenticationExtensions
     public static WebApplicationBuilder AddKeycloakAuthentication(this WebApplicationBuilder builder)
     {
         // Aspire injects the Keycloak URL through WithReference.
-        var keycloakUrl = builder.Configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
+        var keycloakUrl = builder.Configuration["services:keycloak:https:0"] ?? builder.Configuration["services:keycloak:http:0"] ?? "https://localhost:8080";
         var realm = builder.Configuration["Keycloak:Realm"];
 
         builder.Services
@@ -51,6 +51,13 @@ public static class KeycloakAuthenticationExtensions
                 options.ClientId = builder.Configuration["Keycloak:ClientId"];
                 options.ClientSecret = builder.Configuration["Keycloak:ClientSecret"];
                 options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+                if (builder.Environment.IsDevelopment())
+                {
+                    options.BackchannelHttpHandler = new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                    };
+                }
 
                 options.ResponseType = OpenIdConnectResponseType.Code;
                 options.UsePkce = true;
@@ -93,7 +100,18 @@ public static class KeycloakAuthenticationExtensions
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddSingleton<UserTokenStore>();
         builder.Services.AddSingleton<KeycloakTokenService>();
-        builder.Services.AddHttpClient("keycloak");
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddHttpClient("keycloak")
+                .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+                {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                });
+        }
+        else
+        {
+            builder.Services.AddHttpClient("keycloak");
+        }
         builder.Services.AddHttpContextAccessor();
 
         builder.Services.AddSingleton<CircuitServicesAccessor>();

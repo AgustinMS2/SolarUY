@@ -69,7 +69,7 @@ public class KeycloakTokenService(
             return null;
         }
 
-        var keycloakUrl = configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
+        var keycloakUrl = configuration["services:keycloak:https:0"] ?? configuration["services:keycloak:http:0"] ?? "https://localhost:8080";
         var realm = configuration["Keycloak:Realm"];
         var tokenEndpoint = $"{keycloakUrl}/realms/{realm}/protocol/openid-connect/token";
 

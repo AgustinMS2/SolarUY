@@ -45,7 +45,7 @@ public class KeycloakUserRepository : IKeycloakUserRepository
         _logger = logger;
     }
 
-    private string BaseUrl => _configuration["services:keycloak:http:0"] ?? "http://localhost:8080";
+    private string BaseUrl => _configuration["services:keycloak:https:0"] ?? _configuration["services:keycloak:http:0"] ?? "https://localhost:8080";
 
     private string Realm => _configuration["Keycloak:Realm"] ?? "SolarUY";
 
