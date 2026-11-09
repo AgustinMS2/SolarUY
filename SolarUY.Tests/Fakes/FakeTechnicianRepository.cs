@@ -21,4 +21,19 @@ public class FakeTechnicianRepository : ITacticianRepository
     {
         PersistedTechnicians.Add(technician);
     }
+
+    public IReadOnlyList<Technician> GetAll(TechnicianStatus? status = null)
+    {
+        var query = PersistedTechnicians.AsQueryable();
+
+        if (status.HasValue)
+        {
+            query = query.Where(t => t.Status == (TechnicianStatus)status.Value);
+        }
+
+        return query
+            .OrderBy(t => t.FullName)
+            .ToList()
+            .AsReadOnly();
+    }
 }

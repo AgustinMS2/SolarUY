@@ -1,0 +1,161 @@
+@page "/tecnicos"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Domain
+@using SolarUY.Web.Security
+@inject TechnicianApiClient TechnicianApiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Listado de Técnicos — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-9">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-person-badge me-2" aria-hidden="true"></span>
+                        Listado de Técnicos
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <select class="form-select" style="max-width: 220px;" @bind="_stateFilter" @bind:after="ApplyFilters">
+                            <option value="">-- Todos los técnicos --</option>
+                            <option value="Active">Activos</option>
+                            <option value="Inactive">Inactivos</option>
+                        </select>
+                        <input type="text" class="form-control flex-grow-1" placeholder="Buscar por nombre o documento..."
+                               aria-label="Buscar por nombre o documento"
+                               @bind="_searchTerm" @bind:after="ApplyFilters" />
+                        <AuthorizeView Roles="@AppRoles.Administrator">
+                            <button type="button" class="btn btn-outline-primary" @onclick="NavToCreate">
+                                <span class="bi bi-plus me-1"></span> Nuevo técnico
+                            </button>
+                        </AuthorizeView>
+                    </div>
+
+                    @if (_isLoading)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-5">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <span class="text-muted">Cargando listado de técnicos...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <span>@_errorMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+                    else if (!_filteredTechnicians.Any())
+                    {
+                        <div class="alert alert-info mb-0">
+                            <span>No se encontraron técnicos registrados.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col" class="ps-3">Nombre</th>
+                                        <th scope="col">Documento</th>
+                                        <th scope="col">Correo electrónico</th>
+                                        <th scope="col">Teléfono</th>
+                                        <th scope="col">Especialidad</th>
+                                        <th scope="col" class="text-end pe-3">Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var tech in _filteredTechnicians)
+                                    {
+                                        <tr>
+                                            <td class="ps-3">@tech.FullName</td>
+                                            <td>@tech.DocumentId</td>
+                                            <td>@tech.Email</td>
+                                            <td>@tech.PhoneNumber</td>
+                                            <td>@(string.IsNullOrWhiteSpace(tech.Specialty) ? "Sin especialidad" : tech.Specialty)</td>
+                                            <td class="text-end pe-3">
+                                                <span class="badge bg-@(tech.Status == TechnicianStatus.Active ? "success" : "secondary") fs-sm">
+                                                    @(tech.Status == TechnicianStatus.Active ? "Activo" : "Inactivo")
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<TechnicianDto> _technicians = new();
+    private string _searchTerm = "";
+    private string _stateFilter = "";
+    private bool _isLoading;
+    private string? _errorMessage;
+
+    private IEnumerable<TechnicianDto> _filteredTechnicians =>
+        _technicians.Where(t =>
+            (string.IsNullOrWhiteSpace(_searchTerm) ||
+             t.FullName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+             t.DocumentId.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(_stateFilter) ||
+             t.Status.ToString() == _stateFilter));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTechniciansAsync();
+    }
+
+    private async Task LoadTechniciansAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await TechnicianApiClient.GetAllAsync();
+
+            if (result.Success && result.Value != null)
+            {
+                _technicians = result.Value.ToList();
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Error al cargar la lista de técnicos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        _errorMessage = null;
+        await LoadTechniciansAsync();
+    }
+
+    private void NavToCreate()
+    {
+        NavManager.NavigateTo("/tecnicos/nuevo");
+    }
+}

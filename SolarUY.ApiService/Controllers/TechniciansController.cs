@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SolarUY.ApiService.Dtos;
+using SolarUY.ApiService.Security;
 using SolarUY.ApiService.Services;
 
 namespace SolarUY.ApiService.Controllers;
 
-[Authorize(Roles = "Administrador")]
+[Authorize(Roles = Roles.Any)]
 [ApiController]
 [Route("api/technicians")]
 public class TechniciansController : ControllerBase
@@ -17,6 +18,7 @@ public class TechniciansController : ControllerBase
         _technicianService = technicianService;
     }
 
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPost]
     public IActionResult Create([FromBody] CreateTechnicianRequest request)
     {
@@ -33,5 +35,23 @@ public class TechniciansController : ControllerBase
         }
 
         return CreatedAtAction(nameof(Create), new { id = result.Value }, new { id = result.Value });
+    }
+
+    [HttpGet]
+    public IActionResult GetAll()
+    {
+        var result = _technicianService.GetAll();
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(result.Value);
     }
 }

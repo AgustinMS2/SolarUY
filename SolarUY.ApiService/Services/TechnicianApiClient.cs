@@ -46,6 +46,34 @@ public class TechnicianApiClient
         }
     }
 
+    public async Task<ServiceResult<IReadOnlyList<TechnicianDto>>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _http.GetAsync("/api/technicians", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var technicians = await response.Content.ReadFromJsonAsync<List<TechnicianDto>>(cancellationToken: cancellationToken);
+                return ServiceResult<IReadOnlyList<TechnicianDto>>.Ok(technicians ?? []);
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al obtener la lista de técnicos", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.BadRequest => ServiceErrorType.Validation,
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                _ => ServiceErrorType.Unavailable
+            };
+
+            return ServiceResult<IReadOnlyList<TechnicianDto>>.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<IReadOnlyList<TechnicianDto>>.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     private static async Task<(string Message, bool RequiresConfirmation)> ReadErrorAsync(
         HttpResponseMessage response,
         string fallback,

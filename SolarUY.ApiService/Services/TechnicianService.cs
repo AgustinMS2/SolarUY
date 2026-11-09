@@ -106,4 +106,22 @@ public class TechnicianService : ITechnicianService
 
         return ServiceResult<Guid>.Ok(technician.Id);
     }
+
+    public ServiceResult<IReadOnlyList<TechnicianDto>> GetAll(TechnicianStatus? status = null)
+    {
+        var technicians = _technicianRepository.GetAll(status);
+
+        var dtoList = technicians.Select(t => new TechnicianDto
+        {
+            Id = t.Id,
+            FullName = t.FullName,
+            DocumentId = t.DocumentId,
+            Email = t.Email,
+            PhoneNumber = t.PhoneNumber,
+            Specialty = t.Specialty,
+            Status = t.Status
+        }).ToList();
+
+        return ServiceResult<IReadOnlyList<TechnicianDto>>.Ok(dtoList.AsReadOnly());
+    }
 }

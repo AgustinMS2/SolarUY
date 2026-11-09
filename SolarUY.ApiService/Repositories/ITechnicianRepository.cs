@@ -9,4 +9,6 @@ public interface ITacticianRepository
     bool ExistsByEmail(string email);
 
     void Add(Technician technician);
+
+    IReadOnlyList<Technician> GetAll(TechnicianStatus? status = null);
 }
