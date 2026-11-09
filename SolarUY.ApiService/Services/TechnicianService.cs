@@ -8,12 +8,12 @@ namespace SolarUY.ApiService.Services;
 
 public class TechnicianService : ITechnicianService
 {
-    private readonly ITacticianRepository _technicianRepository;
+    private readonly ITechnicianRepository _technicianRepository;
     private readonly IMaintenanceRepository _maintenanceRepository;
     private readonly ILogger<TechnicianService> _logger;
 
     public TechnicianService(
-        ITacticianRepository technicianRepository,
+        ITechnicianRepository technicianRepository,
         IMaintenanceRepository? maintenanceRepository = null,
         ILogger<TechnicianService>? logger = null)
     {

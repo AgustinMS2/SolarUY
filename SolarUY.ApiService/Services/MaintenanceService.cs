@@ -9,13 +9,13 @@ public class MaintenanceService : IMaintenanceService
 {
     private readonly IMaintenanceRepository _maintenanceRepository;
     private readonly ISolarPanelRepository _panelRepository;
-    private readonly ITacticianRepository _technicianRepository;
+    private readonly ITechnicianRepository _technicianRepository;
     private readonly ILogger<MaintenanceService> _logger;
 
     public MaintenanceService(
         IMaintenanceRepository maintenanceRepository,
         ISolarPanelRepository panelRepository,
-        ITacticianRepository technicianRepository,
+        ITechnicianRepository technicianRepository,
         ILogger<MaintenanceService> logger)
     {
         _maintenanceRepository = maintenanceRepository;

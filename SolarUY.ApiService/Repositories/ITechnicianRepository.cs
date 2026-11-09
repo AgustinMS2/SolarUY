@@ -2,7 +2,7 @@ using SolarUY.ApiService.Domain;
 
 namespace SolarUY.ApiService.Repositories;
 
-public interface ITacticianRepository
+public interface ITechnicianRepository
 {
     bool ExistsByDocument(string documentId);
 

@@ -4,11 +4,11 @@ using SolarUY.ApiService.Domain;
 
 namespace SolarUY.ApiService.Repositories;
 
-public class TacticianRepository : ITacticianRepository
+public class TechnicianRepository : ITechnicianRepository
 {
     private readonly SolarUyDbContext _context;
 
-    public TacticianRepository(SolarUyDbContext context)
+    public TechnicianRepository(SolarUyDbContext context)
     {
         _context = context;
     }

@@ -18,7 +18,7 @@ builder.Services.AddScoped<SolarUY.ApiService.Repositories.IInverterRepository, 
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarUY.ApiService.Services.SolarNodeService>();
 
 // Técnicos (specs 018-020).
-builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITacticianRepository, SolarUY.ApiService.Repositories.TacticianRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITechnicianRepository, SolarUY.ApiService.Repositories.TechnicianRepository>();
 // Mantenimientos (specs 020-021): repositorio real, reemplaza el placeholder EmptyMaintenanceRepository.
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.MaintenanceRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ITechnicianService, SolarUY.ApiService.Services.TechnicianService>();

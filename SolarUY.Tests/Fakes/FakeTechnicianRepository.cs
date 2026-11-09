@@ -3,7 +3,7 @@ using SolarUY.ApiService.Repositories;
 
 namespace SolarUY.Tests.Fakes;
 
-public class FakeTechnicianRepository : ITacticianRepository
+public class FakeTechnicianRepository : ITechnicianRepository
 {
     public List<Technician> PersistedTechnicians { get; } = [];
 
