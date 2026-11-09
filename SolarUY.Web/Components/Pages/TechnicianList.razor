@@ -37,6 +37,14 @@
                         </AuthorizeView>
                     </div>
 
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <span>@_successMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
                     @if (_isLoading)
                     {
                         <div class="d-flex justify-content-center align-items-center py-5">
@@ -72,6 +80,7 @@
                                         <th scope="col">Teléfono</th>
                                         <th scope="col">Especialidad</th>
                                         <th scope="col" class="text-end pe-3">Estado</th>
+                                        <th scope="col" class="text-end pe-3">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -88,6 +97,16 @@
                                                     @(tech.Status == TechnicianStatus.Active ? "Activo" : "Inactivo")
                                                 </span>
                                             </td>
+                                            <td class="pe-3 text-end text-nowrap">
+                                                <AuthorizeView Roles="@AppRoles.Administrator">
+                                                    @if (tech.Status == TechnicianStatus.Active)
+                                                    {
+                                                        <button type="button" class="btn btn-sm btn-outline-warning" @onclick="() => OpenDeactivateModal(tech)">
+                                                            Dar de baja
+                                                        </button>
+                                                    }
+                                                </AuthorizeView>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>
@@ -100,12 +119,42 @@
     </div>
 </div>
 
+@if (_technicianToDeactivate != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Dar de baja técnico</h5>
+                    <button type="button" class="btn-close" aria-label="Cerrar" @onclick="CloseDeactivateModal" disabled="@_isDeactivating"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">¿Confirmás la baja del técnico "@_technicianToDeactivate.FullName"?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeactivateModal" disabled="@_isDeactivating">Cancelar</button>
+                    <button type="button" class="btn btn-warning" @onclick="ConfirmDeactivateAsync" disabled="@_isDeactivating">
+                        @if (_isDeactivating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<TechnicianDto> _technicians = new();
     private string _searchTerm = "";
     private string _stateFilter = "";
     private bool _isLoading;
     private string? _errorMessage;
+    private string? _successMessage;
+    private TechnicianDto? _technicianToDeactivate;
+    private bool _isDeactivating;
 
     private IEnumerable<TechnicianDto> _filteredTechnicians =>
         _technicians.Where(t =>
@@ -152,6 +201,54 @@
     {
         _errorMessage = null;
         await LoadTechniciansAsync();
+    }
+
+    // RF-5: el botón "Dar de baja" solo aparece en técnicos Activos.
+
+    private void OpenDeactivateModal(TechnicianDto technician)
+    {
+        _successMessage = null;
+        _errorMessage = null;
+        _technicianToDeactivate = technician;
+    }
+
+    private void CloseDeactivateModal()
+    {
+        _technicianToDeactivate = null;
+    }
+
+    private async Task ConfirmDeactivateAsync()
+    {
+        if (_technicianToDeactivate == null || _isDeactivating)
+        {
+            return;
+        }
+
+        _isDeactivating = true;
+
+        try
+        {
+            var result = await TechnicianApiClient.DeactivateAsync(_technicianToDeactivate.Id);
+            if (result.Success)
+            {
+                _successMessage = "Técnico dado de baja correctamente.";
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage;
+            }
+
+            _technicianToDeactivate = null;
+            await LoadTechniciansAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isDeactivating = false;
+        }
     }
 
     private void NavToCreate()

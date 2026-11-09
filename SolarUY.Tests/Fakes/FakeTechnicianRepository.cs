@@ -36,4 +36,18 @@ public class FakeTechnicianRepository : ITacticianRepository
             .ToList()
             .AsReadOnly();
     }
+
+    public Technician? GetById(Guid id)
+    {
+        return PersistedTechnicians.FirstOrDefault(t => t.Id == id);
+    }
+
+    public void Update(Technician technician)
+    {
+        var index = PersistedTechnicians.FindIndex(t => t.Id == technician.Id);
+        if (index >= 0)
+        {
+            PersistedTechnicians[index] = technician;
+        }
+    }
 }

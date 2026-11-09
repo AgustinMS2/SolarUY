@@ -14,7 +14,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Juan Pérez",
@@ -48,7 +48,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = fullName!,
@@ -74,7 +74,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Juan Pérez",
@@ -100,7 +100,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Juan Pérez",
@@ -126,7 +126,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Juan Pérez",
@@ -168,7 +168,7 @@ public class TechnicianServiceCreateTests
             Status = TechnicianStatus.Active,
             CreatedAtUtc = DateTime.UtcNow
         });
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Nuevo Técnico",
@@ -209,7 +209,7 @@ public class TechnicianServiceCreateTests
             Status = TechnicianStatus.Active,
             CreatedAtUtc = DateTime.UtcNow
         });
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Nuevo Técnico",
@@ -236,7 +236,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var request = new CreateTechnicianRequest
         {
             FullName = "Juan Pérez",
@@ -264,7 +264,7 @@ public class TechnicianServiceCreateTests
     {
         // Arrange
         var techRepo = new FakeTechnicianRepository();
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
         var phoneLong = "+" + new string('1', 21); // 21 digits after +
         var request = new CreateTechnicianRequest
         {

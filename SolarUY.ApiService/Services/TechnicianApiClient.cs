@@ -74,6 +74,33 @@ public class TechnicianApiClient
         }
     }
 
+    public async Task<ServiceResult> DeactivateAsync(Guid technicianId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _http.DeleteAsync($"/api/technicians/{technicianId}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al dar de baja el técnico", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                _ => ServiceErrorType.Validation
+            };
+
+            return ServiceResult.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     private static async Task<(string Message, bool RequiresConfirmation)> ReadErrorAsync(
         HttpResponseMessage response,
         string fallback,

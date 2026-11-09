@@ -53,7 +53,7 @@ public class TechnicianServiceGetAllTests
             CreatedAtUtc = DateTime.UtcNow,
             Specialty = "Energía Solar"
         });
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
 
         // Act
         var result = service.GetAll();
@@ -98,7 +98,7 @@ public class TechnicianServiceGetAllTests
             CreatedAtUtc = DateTime.UtcNow,
             Specialty = "Fontanería"
         });
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
 
         // Act
         var result = service.GetAll(status: TechnicianStatus.Active);
@@ -141,7 +141,7 @@ public class TechnicianServiceGetAllTests
             CreatedAtUtc = DateTime.UtcNow,
             Specialty = "Fontanería"
         });
-        var service = new TechnicianService(techRepo, NullLogger<TechnicianService>.Instance);
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
 
         // Act
         var result = service.GetAll(status: TechnicianStatus.Inactive);

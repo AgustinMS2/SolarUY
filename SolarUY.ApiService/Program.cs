@@ -16,6 +16,12 @@ builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISolarNodeRepository,
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IInverterRepository, SolarUY.ApiService.Repositories.InverterRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarUY.ApiService.Services.SolarNodeService>();
 
+// Técnicos (specs 018-020).
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITacticianRepository, SolarUY.ApiService.Repositories.TacticianRepository>();
+// Placeholder de mantenimientos hasta la spec 021.
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.EmptyMaintenanceRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.ITechnicianService, SolarUY.ApiService.Services.TechnicianService>();
+
 // Access to the Keycloak Admin API for user role management (spec 017).
 builder.Services.TryAddSingleton(TimeProvider.System);
 if (builder.Environment.IsDevelopment())

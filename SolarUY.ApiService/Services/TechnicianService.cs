@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using SolarUY.ApiService.Domain;
 using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Repositories;
@@ -8,12 +9,17 @@ namespace SolarUY.ApiService.Services;
 public class TechnicianService : ITechnicianService
 {
     private readonly ITacticianRepository _technicianRepository;
+    private readonly IMaintenanceRepository _maintenanceRepository;
     private readonly ILogger<TechnicianService> _logger;
 
-    public TechnicianService(ITacticianRepository technicianRepository, ILogger<TechnicianService> logger)
+    public TechnicianService(
+        ITacticianRepository technicianRepository,
+        IMaintenanceRepository? maintenanceRepository = null,
+        ILogger<TechnicianService>? logger = null)
     {
         _technicianRepository = technicianRepository;
-        _logger = logger;
+        _maintenanceRepository = maintenanceRepository ?? new EmptyMaintenanceRepository();
+        _logger = logger ?? NullLogger<TechnicianService>.Instance;
     }
 
     public ServiceResult<Guid> Create(CreateTechnicianRequest request)
@@ -123,5 +129,33 @@ public class TechnicianService : ITechnicianService
         }).ToList();
 
         return ServiceResult<IReadOnlyList<TechnicianDto>>.Ok(dtoList.AsReadOnly());
+    }
+
+    public ServiceResult Deactivate(Guid id)
+    {
+        var technician = _technicianRepository.GetById(id);
+        if (technician == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El técnico solicitado no existe.");
+        }
+
+        if (technician.Status == TechnicianStatus.Inactive)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "El técnico ya está inactivo.");
+        }
+
+        var pendingCount = _maintenanceRepository.CountPendingByTechnician(id);
+        if (pendingCount > 0)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.Conflict,
+                $"No se puede dar de baja al técnico porque tiene {pendingCount} mantenimiento(s) pendiente(s) de resolución. Reasigna o cancela esos mantenimientos previamente.");
+        }
+
+        technician.Status = TechnicianStatus.Inactive;
+        _technicianRepository.Update(technician);
+        _logger.LogInformation("Technician {TechnicianId} deactivated successfully", id);
+
+        return ServiceResult.Ok();
     }
 }

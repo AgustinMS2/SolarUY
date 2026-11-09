@@ -11,4 +11,8 @@ public interface ITacticianRepository
     void Add(Technician technician);
 
     IReadOnlyList<Technician> GetAll(TechnicianStatus? status = null);
+
+    Technician? GetById(Guid id);
+
+    void Update(Technician technician);
 }

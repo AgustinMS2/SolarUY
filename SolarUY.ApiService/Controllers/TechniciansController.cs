@@ -54,4 +54,23 @@ public class TechniciansController : ControllerBase
 
         return Ok(result.Value);
     }
+
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpDelete("{id:guid}")]
+    public IActionResult Deactivate(Guid id)
+    {
+        var result = _technicianService.Deactivate(id);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return NoContent();
+    }
 }
