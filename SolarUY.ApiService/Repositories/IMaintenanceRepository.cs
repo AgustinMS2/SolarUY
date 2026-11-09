@@ -24,4 +24,14 @@ public interface IMaintenanceRepository
     /// dentro del día calendario uruguayo (UTC-3) de la fecha dada (spec 021, RF-3).
     /// </summary>
     bool HasPendingForPanel(Guid panelId, DateTime dateUtc);
+
+    /// <summary>
+    /// Recupera una orden por su identificador (spec 022).
+    /// </summary>
+    MaintenanceOrder? GetById(Guid orderId);
+
+    /// <summary>
+    /// Persiste cambios sobre una orden de mantenimiento existente (spec 022).
+    /// </summary>
+    void Update(MaintenanceOrder order);
 }

@@ -43,6 +43,66 @@ public class MaintenanceApiClient(HttpClient httpClient)
         }
     }
 
+    // Spec 022 (RF-1): precarga de la reserva a editar.
+    public async Task<ServiceResult<MaintenanceOrderDto>> GetOrderAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.GetAsync($"/api/maintenances/{id}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var order = await response.Content.ReadFromJsonAsync<MaintenanceOrderDto>(cancellationToken: cancellationToken);
+                return ServiceResult<MaintenanceOrderDto>.Ok(order!);
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al obtener el mantenimiento", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                _ => ServiceErrorType.Validation
+            };
+
+            return ServiceResult<MaintenanceOrderDto>.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<MaintenanceOrderDto>.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
+    // Spec 022 (RF-2 a RF-4): modificación de una reserva pendiente.
+    public async Task<ServiceResult> UpdateReservationAsync(
+        Guid id,
+        UpdateMaintenanceReservationRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PutAsJsonAsync($"/api/maintenances/{id}", request, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al actualizar la reserva", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.BadRequest => ServiceErrorType.Validation,
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                _ => ServiceErrorType.Validation
+            };
+
+            return ServiceResult.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     private static async Task<(string Message, bool RequiresConfirmation)> ReadErrorAsync(
         HttpResponseMessage response,
         string fallback,

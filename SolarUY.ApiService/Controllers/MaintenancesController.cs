@@ -37,4 +37,43 @@ public class MaintenancesController : ControllerBase
 
         return CreatedAtAction(nameof(CreateReservation), new { id = result.Value }, new { id = result.Value });
     }
+
+    // Precarga de la edición de una reserva (spec 022, RF-1).
+    [HttpGet("{id:guid}")]
+    public IActionResult GetOrder(Guid id)
+    {
+        var result = _maintenanceService.GetById(id);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
+    // Modificación de una reserva pendiente (spec 022, RF-2 a RF-4).
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPut("{id:guid}")]
+    public IActionResult UpdateReservation(Guid id, [FromBody] UpdateMaintenanceReservationRequest request)
+    {
+        var result = _maintenanceService.UpdateReservation(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return NoContent();
+    }
 }

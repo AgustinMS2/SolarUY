@@ -38,4 +38,22 @@ public class FakeMaintenanceRepository : IMaintenanceRepository
             o.ScheduledDateUtc >= startUtc &&
             o.ScheduledDateUtc < endUtc);
     }
+
+    public MaintenanceOrder? GetById(Guid orderId)
+    {
+        return PersistedOrders.FirstOrDefault(o => o.Id == orderId);
+    }
+
+    public void Update(MaintenanceOrder order)
+    {
+        var index = PersistedOrders.FindIndex(o => o.Id == order.Id);
+        if (index >= 0)
+        {
+            PersistedOrders[index] = order;
+        }
+        else
+        {
+            PersistedOrders.Add(order);
+        }
+    }
 }

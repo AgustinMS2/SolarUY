@@ -1,0 +1,297 @@
+@page "/mantenimientos/{Id:guid}/editar"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Administrator)]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Domain
+@using SolarUY.Web.Security
+@inject MaintenanceApiClient MaintenanceApiClient
+@inject TechnicianApiClient TechnicianApiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Modificar Mantenimiento — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-calendar-plus me-2" aria-hidden="true"></span>
+                        Modificar Reserva de Mantenimiento
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (_isLoading)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-5">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <span class="text-muted">Cargando datos de la reserva...</span>
+                        </div>
+                    }
+                    else if (_orderError != null)
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <div class="flex-grow-1">@_orderError</div>
+                        </div>
+                    }
+                    else if (_order != null)
+                    {
+                        @if (!string.IsNullOrEmpty(_successMessage))
+                        {
+                            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                                <span class="bi bi-check-circle-fill me-2"></span>
+                                <div>@_successMessage</div>
+                                <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                                <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                                <div>@_errorMessage</div>
+                                <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                            </div>
+                        }
+
+                        @if (_isClosed)
+                        {
+                            // RF-3: impedir la edición de órdenes completadas o canceladas.
+                            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                <span class="bi bi-lock-fill me-2"></span>
+                                <div>No se pueden modificar mantenimientos que ya han sido completados o cancelados.</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Panel solar</label>
+                                <input class="form-control" value="@PanelDisplay()" disabled />
+                                <div class="form-text">El panel de la reserva no se puede modificar.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="technicianSelect">Técnico asignado <span class="text-danger">*</span></label>
+                                <select id="technicianSelect" class="form-select" @bind="_selectedTechnicianId">
+                                    <option value="">-- Seleccionar técnico --</option>
+                                    @foreach (var technician in _activeTechnicians)
+                                    {
+                                        <option value="@technician.Id">@technician.FullName @(string.IsNullOrWhiteSpace(technician.Specialty) ? "" : $"({technician.Specialty})")</option>
+                                    }
+                                </select>
+                                @if (_currentTechnicianMissing)
+                                {
+                                    <div class="form-text text-warning">El técnico original de la reserva ya no está activo: debés asignar uno nuevo.</div>
+                                }
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="scheduleDate">Nueva fecha y hora <span class="text-danger">*</span></label>
+                                <input type="datetime-local" id="scheduleDate" class="form-control" value="@_scheduledDateLocal" @onchange="OnScheduleChanged" />
+                                <div class="form-text">En hora local de Uruguay; se guarda en UTC.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="description">Motivo / Descripción del trabajo <span class="text-danger">*</span></label>
+                                <textarea id="description" class="form-control" rows="3" maxlength="500" @bind="_description"></textarea>
+                                <div class="form-text">Entre 5 y 500 caracteres.</div>
+                            </div>
+
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-primary" @onclick="GuardarAsync" disabled="@_isSubmitting">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                    }
+                                    Guardar cambios
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary ms-2" @onclick="Cancelar" disabled="@_isSubmitting">Cancelar</button>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private MaintenanceOrderDto? _order;
+    private List<TechnicianDto> _activeTechnicians = [];
+    private bool _isLoading = true;
+    private bool _isSubmitting;
+    private bool _isClosed;
+    private bool _currentTechnicianMissing;
+    private string? _orderError;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    private string _selectedTechnicianId = "";
+    private string _scheduledDateLocal = "";
+    private string _description = "";
+
+    private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var orderResult = await MaintenanceApiClient.GetOrderAsync(Id);
+            if (!orderResult.Success || orderResult.Value == null)
+            {
+                _orderError = orderResult.ErrorMessage ?? "El mantenimiento solicitado no existe.";
+                return;
+            }
+
+            _order = orderResult.Value;
+
+            // RF-3: impedir la edición de órdenes completadas o canceladas.
+            if (_order.Status != MaintenanceStatus.Pending)
+            {
+                _isClosed = true;
+                return;
+            }
+
+            // RF-1: precargar los datos actuales.
+            var techniciansResult = await TechnicianApiClient.GetAllAsync();
+            if (techniciansResult.Success && techniciansResult.Value != null)
+            {
+                _activeTechnicians = techniciansResult.Value
+                    .Where(t => t.Status == TechnicianStatus.Active)
+                    .ToList();
+            }
+
+            // Si el técnico asignado sigue activo, se deja seleccionado.
+            if (_activeTechnicians.Any(t => t.Id == _order.TechnicianId))
+            {
+                _selectedTechnicianId = _order.TechnicianId.ToString();
+            }
+            else
+            {
+                _currentTechnicianMissing = true;
+            }
+
+            _scheduledDateLocal = ConvertUtcToUruguayLocal(_order.ScheduledDateUtc) ?? "";
+            _description = _order.Description;
+        }
+        catch (Exception ex)
+        {
+            _orderError = $"Ocurrió un error inesperado al cargar la reserva: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string PanelDisplay()
+    {
+        if (_order == null)
+        {
+            return "";
+        }
+
+        var park = string.IsNullOrWhiteSpace(_order.SolarParkName) ? "" : $"{_order.SolarParkName} — ";
+        return $"{park}{_order.SolarPanelSerie}";
+    }
+
+    private void OnScheduleChanged(ChangeEventArgs e)
+    {
+        _scheduledDateLocal = e.Value?.ToString() ?? "";
+        _errorMessage = null;
+    }
+
+    private async Task GuardarAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        if (_order == null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_selectedTechnicianId))
+        {
+            _errorMessage = "Debés seleccionar un técnico activo.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_scheduledDateLocal) || !DateTime.TryParse(_scheduledDateLocal, out var localDate))
+        {
+            _errorMessage = "La nueva fecha programada debe ser posterior al momento actual.";
+            return;
+        }
+
+        var scheduledDateUtc = UruguayTimeZone() is { } timeZone
+            ? TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), timeZone)
+            : localDate.ToUniversalTime();
+
+        var request = new UpdateMaintenanceReservationRequest
+        {
+            TechnicianId = Guid.Parse(_selectedTechnicianId),
+            ScheduledDateUtc = scheduledDateUtc,
+            Description = _description
+        };
+
+        _isSubmitting = true;
+
+        try
+        {
+            var result = await MaintenanceApiClient.UpdateReservationAsync(_order.Id, request);
+
+            if (result.Success)
+            {
+                _successMessage = "Reserva de mantenimiento actualizada correctamente.";
+                return;
+            }
+
+            _errorMessage = result.ErrorMessage ?? "Error desconocido al actualizar la reserva.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private static TimeZoneInfo? UruguayTimeZone()
+    {
+        foreach (var id in UruguayTimeZoneIds)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var timeZone) && timeZone != null)
+            {
+                return timeZone;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ConvertUtcToUruguayLocal(DateTime scheduledDateUtc)
+    {
+        if (UruguayTimeZone() is { } timeZone)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(scheduledDateUtc, DateTimeKind.Utc), timeZone)
+                .ToString("yyyy-MM-ddTHH:mm");
+        }
+
+        return scheduledDateUtc.ToString("yyyy-MM-ddTHH:mm");
+    }
+
+    private void Cancelar()
+    {
+        // RF-5: volver al listado sin persistir modificaciones (listado de la spec 024).
+        NavManager.NavigateTo("/mantenimientos");
+    }
+}

@@ -42,4 +42,20 @@ public class MaintenanceRepository : IMaintenanceRepository
             o.ScheduledDateUtc >= startUtc &&
             o.ScheduledDateUtc < endUtc);
     }
+
+    // Spec 022: para precargar la edición se necesita el nombre técnico y la serie del panel.
+    public MaintenanceOrder? GetById(Guid orderId)
+    {
+        return _context.MaintenanceOrders
+            .Include(o => o.Technician)
+            .Include(o => o.SolarPanel)
+                .ThenInclude(p => p!.SolarPark)
+            .FirstOrDefault(o => o.Id == orderId);
+    }
+
+    public void Update(MaintenanceOrder order)
+    {
+        _context.MaintenanceOrders.Update(order);
+        _context.SaveChanges();
+    }
 }

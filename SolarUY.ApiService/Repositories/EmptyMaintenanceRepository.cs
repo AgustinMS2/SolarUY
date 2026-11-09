@@ -23,4 +23,15 @@ public class EmptyMaintenanceRepository : IMaintenanceRepository
     {
         return false;
     }
+
+    public MaintenanceOrder? GetById(Guid orderId)
+    {
+        // Este stub no tiene almacenamiento: no hay órdenes que recuperar.
+        return null;
+    }
+
+    public void Update(MaintenanceOrder order)
+    {
+        // No conserva la orden: este stub no tiene almacenamiento.
+    }
 }
