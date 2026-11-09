@@ -91,6 +91,25 @@ public class SolarNodesController : ControllerBase
     }
 
     [Authorize(Roles = Roles.Administrator)]
+    [HttpDelete("{id:guid}")]
+    public IActionResult Delete(Guid id)
+    {
+        var result = _service.Deactivate(id);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return NoContent();
+    }
+
+    [Authorize(Roles = Roles.Administrator)]
     [HttpPost("{id:guid}/inverter")]
     public IActionResult AssignInverter(Guid id, [FromBody] AssignInverterRequest request)
     {

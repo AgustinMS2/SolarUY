@@ -13,6 +13,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<SolarPanel> SolarPanels => Set<SolarPanel>();
     public DbSet<SolarNode> SolarNodes => Set<SolarNode>();
     public DbSet<Inverter> Inverters => Set<Inverter>();
+    public DbSet<Technician> Technicians => Set<Technician>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -75,5 +76,23 @@ public class SolarUyDbContext : DbContext
             entity.HasIndex(e => e.SolarNodeId).IsUnique();
             entity.HasOne(e => e.SolarNode).WithMany().HasForeignKey(e => e.SolarNodeId).OnDelete(DeleteBehavior.Restrict);
         });
+
+        modelBuilder.Entity<Technician>(entity =>
+        {
+            entity.ToTable("Technicians");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FullName).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.DocumentId).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.NormalizedDocumentId).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.NormalizedEmail).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.PhoneNumber).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Specialty).HasMaxLength(100);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.HasIndex(e => e.NormalizedDocumentId).IsUnique();
+            entity.HasIndex(e => e.NormalizedEmail).IsUnique();
+        });
+
     }
 }

@@ -141,6 +141,12 @@
                                                         <button type="button" class="btn btn-sm btn-outline-secondary ms-1" @onclick="() => OpenPanelsModal(node)">
                                                             Paneles
                                                         </button>
+                                                        @if (node.Status == "Activo")
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-outline-warning ms-1" @onclick="() => OpenDeactivateModal(node)">
+                                                                Dar de baja
+                                                            </button>
+                                                        }
                                                     </AuthorizeView>
                                                 </td>
                                             </tr>
@@ -191,7 +197,34 @@
             </div>
         </div>
     </div>
-}
+    }
+
+    @if (_nodeForDeactivate != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content shadow">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Dar de baja nodo</h5>
+                        <button type="button" class="btn-close" aria-label="Cerrar" @onclick="CloseDeactivateModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-0">¿Confirmás la baja del nodo "@_nodeForDeactivate.Name"?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDeactivateModal">Cancelar</button>
+                        <button type="button" class="btn btn-danger" @onclick="ConfirmDeactivateAsync" disabled="@_isDeactivating">
+                            @if (_isDeactivating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Confirmar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 
 @code {
     [Parameter]
@@ -201,6 +234,8 @@
     private string? _actionErrorMessage;
     private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeForInverter;
     private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeForPanels;
+    private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeForDeactivate;
+    private bool _isDeactivating;
     private SolarUY.ApiService.Dtos.SolarNodeDto? _nodeToUnassign;
     private bool _isUnassigning;
 
@@ -226,6 +261,52 @@
     private void ClosePanelsModal()
     {
         _nodeForPanels = null;
+    }
+
+    private void OpenDeactivateModal(SolarUY.ApiService.Dtos.SolarNodeDto node)
+    {
+        _successMessage = null;
+        _actionErrorMessage = null;
+        _nodeForDeactivate = node;
+    }
+
+    private void CloseDeactivateModal()
+    {
+        _nodeForDeactivate = null;
+    }
+
+    private async Task ConfirmDeactivateAsync()
+    {
+        if (_nodeForDeactivate == null || _isDeactivating)
+        {
+            return;
+        }
+
+        _isDeactivating = true;
+
+        try
+        {
+            var result = await NodeApiClient.DeactivateAsync(_nodeForDeactivate.Id);
+            if (result.Success)
+            {
+                _successMessage = "Nodo dado de baja correctamente.";
+            }
+            else
+            {
+                _actionErrorMessage = result.ErrorMessage;
+            }
+
+            _nodeForDeactivate = null;
+            await CargarDatosAsync();
+        }
+        catch (Exception ex)
+        {
+            _actionErrorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isDeactivating = false;
+        }
     }
 
     // Reload the list so the panel counter reflects the change.

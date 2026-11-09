@@ -11,4 +11,5 @@ public interface ISolarNodeService
     ServiceResult Update(Guid id, UpdateSolarNodeRequest request);
     ServiceResult AssignInverter(Guid nodeId, AssignInverterRequest request);
     ServiceResult UnassignInverter(Guid nodeId);
+    ServiceResult Deactivate(Guid id);
 }

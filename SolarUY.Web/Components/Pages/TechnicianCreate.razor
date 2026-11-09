@@ -1,0 +1,119 @@
+@page "/tecnicos/nuevo"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Administrador")]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@inject TechnicianApiClient TechnicianApiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Alta de Técnico — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-person-meet me-2" aria-hidden="true"></span>
+                        Registrar Técnico
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-check-circle-fill me-2"></span>
+                            <div>@_successMessage</div>
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <div>@_errorMessage</div>
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    <EditForm Model="_formModel" OnValidSubmit="HandleSubmitAsync">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+                            <InputText id="fullName" class="form-control" @bind-Value="_formModel.FullName" required />
+                            <ValidationMessage For="@(() => _formModel.FullName)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Documento de identidad <span class="text-danger">*</span></label>
+                            <InputText id="documentId" class="form-control" @bind-Value="_formModel.DocumentId" required />
+                            <ValidationMessage For="@(() => _formModel.DocumentId)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
+                            <InputText id="email" class="form-control" @bind-Value="_formModel.Email" required />
+                            <ValidationMessage For="@(() => _formModel.Email)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Teléfono de contacto <span class="text-danger">*</span></label>
+                            <InputText id="phoneNumber" class="form-control" @bind-Value="_formModel.PhoneNumber" required />
+                            <ValidationMessage For="@(() => _formModel.PhoneNumber)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Especialidad (opcional)</label>
+                            <InputText id="specialty" class="form-control" @bind-Value="_formModel.Specialty" />
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="submit" class="btn btn-primary">Registrar Técnico</button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CreateTechnicianRequest _formModel = new();
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    private async Task HandleSubmitAsync()
+    {
+        try
+        {
+            _errorMessage = null;
+            var result = await TechnicianApiClient.CreateAsync(_formModel);
+
+            if (result.Success)
+            {
+                _successMessage = "Técnico registrado correctamente.";
+                _formModel = new CreateTechnicianRequest();
+                // Navigate back to technician list
+                // NavManager.NavigateTo("/tecnicos", forceLoad: true);
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Error desconocido al registrar el técnico.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+    }
+
+    private void Cancelar()
+    {
+        _formModel = new CreateTechnicianRequest();
+        _successMessage = null;
+        _errorMessage = null;
+    }
+}

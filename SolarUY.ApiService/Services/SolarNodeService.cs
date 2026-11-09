@@ -283,4 +283,25 @@ public class SolarNodeService : ISolarNodeService
 
         return ServiceResult.Ok();
     }
+
+    public ServiceResult Deactivate(Guid id)
+    {
+        var node = _repository.GetById(id);
+        if (node == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
+        }
+
+        if (node.Status == SolarNodeStatus.Inactive)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "El nodo ya está inactivo.");
+        }
+
+        node.Status = SolarNodeStatus.Inactive;
+        node.UpdatedAtUtc = DateTime.UtcNow;
+        _repository.Update(node);
+        _logger.LogInformation("Solar node {NodeId} deactivated successfully", id);
+
+        return ServiceResult.Ok();
+    }
 }
