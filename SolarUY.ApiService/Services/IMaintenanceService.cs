@@ -12,4 +12,6 @@ public interface IMaintenanceService
     ServiceResult<MaintenanceOrderDto> GetById(Guid orderId);
 
     ServiceResult UpdateReservation(Guid orderId, UpdateMaintenanceReservationRequest request);
+
+    ServiceResult CancelReservation(Guid orderId, CancelMaintenanceRequest request);
 }

@@ -102,6 +102,9 @@
                             </div>
 
                             <div class="d-flex justify-content-end mt-3">
+                                <button type="button" class="btn btn-danger me-auto" @onclick="OpenCancelModal" disabled="@_isSubmitting">
+                                    <span class="bi bi-slash-circle me-1"></span> Cancelar mantenimiento
+                                </button>
                                 <button type="button" class="btn btn-primary" @onclick="GuardarAsync" disabled="@_isSubmitting">
                                     @if (_isSubmitting)
                                     {
@@ -118,6 +121,11 @@
         </div>
     </div>
 </div>
+
+@if (_showCancelModal && _order != null && !_isClosed)
+{
+    <MaintenanceCancelModal Order="_order" OnClose="CloseCancelModal" OnCancelledSuccessfully="OnCancelledSuccessfullyAsync" />
+}
 
 @code {
     [Parameter]
@@ -136,6 +144,7 @@
     private string _selectedTechnicianId = "";
     private string _scheduledDateLocal = "";
     private string _description = "";
+    private bool _showCancelModal;
 
     private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
 
@@ -293,5 +302,35 @@
     {
         // RF-5: volver al listado sin persistir modificaciones (listado de la spec 024).
         NavManager.NavigateTo("/mantenimientos");
+    }
+
+    private void OpenCancelModal()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _showCancelModal = true;
+    }
+
+    private void CloseCancelModal()
+    {
+        _showCancelModal = false;
+    }
+
+    private async Task OnCancelledSuccessfullyAsync(string message)
+    {
+        _showCancelModal = false;
+        _successMessage = message;
+        _errorMessage = null;
+
+        // Recargar la orden: ahora está Cancelada y el formulario se bloquea (RF-4).
+        var result = await MaintenanceApiClient.GetOrderAsync(Id);
+        if (result.Success && result.Value != null)
+        {
+            _order = result.Value;
+            if (_order.Status != MaintenanceStatus.Pending)
+            {
+                _isClosed = true;
+            }
+        }
     }
 }

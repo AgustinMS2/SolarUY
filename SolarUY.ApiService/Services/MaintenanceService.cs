@@ -196,4 +196,44 @@ public class MaintenanceService : IMaintenanceService
 
         return ServiceResult.Ok();
     }
+
+    public ServiceResult CancelReservation(Guid orderId, CancelMaintenanceRequest request)
+    {
+        var order = _maintenanceRepository.GetById(orderId);
+        if (order == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El mantenimiento solicitado no existe.");
+        }
+
+        // RF-4: solo las órdenes Pendientes pueden cancelarse.
+        if (order.Status != MaintenanceStatus.Pending)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "El mantenimiento ya se encuentra finalizado o cancelado.");
+        }
+
+        // RF-3: motivo obligatorio, al menos 10 caracteres.
+        var reason = request.Reason?.Trim() ?? string.Empty;
+        if (reason.Length < 10)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.Validation,
+                "El motivo de cancelación es obligatorio y debe tener al menos 10 caracteres.");
+        }
+
+        if (reason.Length > 500)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.Validation,
+                "El motivo de cancelación no puede superar los 500 caracteres.");
+        }
+
+        // RF-2: estado Cancelado, motivo y fecha registrados en UTC.
+        order.Status = MaintenanceStatus.Cancelled;
+        order.CancellationReason = reason;
+        order.UpdatedAtUtc = DateTime.UtcNow;
+        _maintenanceRepository.Update(order);
+        _logger.LogInformation("Maintenance order {OrderId} cancelled", orderId);
+
+        return ServiceResult.Ok();
+    }
 }

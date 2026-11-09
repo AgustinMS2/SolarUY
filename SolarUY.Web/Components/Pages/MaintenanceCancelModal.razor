@@ -1,0 +1,123 @@
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Services
+@inject MaintenanceApiClient MaintenanceApiClient
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <span class="bi bi-slash-circle me-1" aria-hidden="true"></span>
+                    Cancelar mantenimiento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" @onclick="Close" disabled="@_isSaving"></button>
+            </div>
+
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                }
+
+                <p class="mb-3">
+                    ¿Confirmás la cancelación del mantenimiento del panel
+                    <strong>@(Order.SolarParkName != null ? $"{Order.SolarParkName}: " : "")@Order.SolarPanelSerie</strong>?
+                </p>
+
+                <div class="mb-0">
+                    <label for="cancel-reason" class="form-label">Motivo de cancelación <span class="text-danger">*</span></label>
+                    <textarea id="cancel-reason" class="form-control" rows="3" maxlength="500"
+                              value="@_reason" @onchange="OnReasonChanged" disabled="@_isSaving"></textarea>
+                    <div class="form-text">Obligatorio. Mínimo 10 caracteres (se registra para auditoría).</div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close" disabled="@_isSaving">Volver</button>
+                <button type="button" class="btn btn-danger" @onclick="CancelarAsync" disabled="@_isSaving">
+                    @if (_isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    }
+                    Confirmar cancelación
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public MaintenanceOrderDto Order { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>
+    /// Se dispara cuando la cancelación fue confirmada y efectiva, con el mensaje de éxito.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> OnCancelledSuccessfully { get; set; }
+
+    private string _reason = "";
+    private bool _isSaving;
+    private string? _errorMessage;
+
+    private void OnReasonChanged(ChangeEventArgs e)
+    {
+        _reason = e.Value?.ToString() ?? "";
+        _errorMessage = null;
+    }
+
+    private void Close()
+    {
+        // RF-5: cerrar sin cancelar la orden.
+        _reason = "";
+        _errorMessage = null;
+        _isSaving = false;
+        _ = OnClose.InvokeAsync();
+    }
+
+    private async Task CancelarAsync()
+    {
+        _errorMessage = null;
+
+        // RF-3: el motivo es obligatorio y necesita al menos 10 caracteres.
+        var trimmedReason = _reason?.Trim() ?? string.Empty;
+        if (trimmedReason.Length < 10)
+        {
+            _errorMessage = "El motivo de cancelación es obligatorio y debe tener al menos 10 caracteres.";
+            return;
+        }
+
+        if (trimmedReason.Length > 500)
+        {
+            _errorMessage = "El motivo de cancelación no puede superar los 500 caracteres.";
+            return;
+        }
+
+        _isSaving = true;
+
+        try
+        {
+            var result = await MaintenanceApiClient.CancelAsync(Order.Id, trimmedReason);
+
+            if (result.Success)
+            {
+                // RF-2: el mensaje de éxito lo muestra el padre al recargar la orden.
+                await OnCancelledSuccessfully.InvokeAsync("Mantenimiento cancelado correctamente.");
+                return;
+            }
+
+            _errorMessage = result.ErrorMessage ?? "Error desconocido al cancelar el mantenimiento.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

@@ -103,6 +103,38 @@ public class MaintenanceApiClient(HttpClient httpClient)
         }
     }
 
+    // Spec 023 (RF-1 a RF-4): cancelación de una reserva pendiente con motivo obligatorio.
+    public async Task<ServiceResult> CancelAsync(Guid id, string reason, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync(
+                $"/api/maintenances/{id}/cancel",
+                new CancelMaintenanceRequest { Reason = reason },
+                cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al cancelar el mantenimiento", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.BadRequest => ServiceErrorType.Validation,
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                _ => ServiceErrorType.Validation
+            };
+
+            return ServiceResult.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     private static async Task<(string Message, bool RequiresConfirmation)> ReadErrorAsync(
         HttpResponseMessage response,
         string fallback,

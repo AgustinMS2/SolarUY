@@ -76,4 +76,25 @@ public class MaintenancesController : ControllerBase
 
         return NoContent();
     }
+
+    // Cancelación de una reserva pendiente con motivo obligatorio (spec 023, RF-1 a RF-4).
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPost("{id:guid}/cancel")]
+    public IActionResult CancelReservation(Guid id, [FromBody] CancelMaintenanceRequest request)
+    {
+        var result = _maintenanceService.CancelReservation(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(new { message = "Mantenimiento cancelado correctamente." });
+    }
 }
