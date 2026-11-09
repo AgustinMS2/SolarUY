@@ -67,6 +67,59 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("Inverters", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.MaintenanceOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ReplacedParts")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("ScheduledDateUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SolarPanelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TechnicianId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TechnicianId");
+
+                    b.HasIndex("SolarPanelId", "Status");
+
+                    b.ToTable("MaintenanceOrders", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -197,6 +250,63 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("SolarParks", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.Technician", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DocumentId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("NormalizedDocumentId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Specialty")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedDocumentId")
+                        .IsUnique();
+
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique();
+
+                    b.ToTable("Technicians", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>
                 {
                     b.HasOne("SolarUY.ApiService.Domain.SolarNode", "SolarNode")
@@ -206,6 +316,25 @@ namespace SolarUY.ApiService.Migrations
                         .IsRequired();
 
                     b.Navigation("SolarNode");
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.MaintenanceOrder", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarPanel", "SolarPanel")
+                        .WithMany()
+                        .HasForeignKey("SolarPanelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SolarUY.ApiService.Domain.Technician", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SolarPanel");
+
+                    b.Navigation("Technician");
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>

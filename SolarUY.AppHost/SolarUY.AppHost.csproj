@@ -5,7 +5,7 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AspireUseCliBundle>true</AspireUseCliBundle>
+    <AspireUseCliBundle>false</AspireUseCliBundle>
     <UserSecretsId>09a217a0-875b-4962-8e90-fe63a5bf4c4e</UserSecretsId>
     <RollForward>LatestMajor</RollForward>
   </PropertyGroup>

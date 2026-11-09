@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,9 +19,10 @@ builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarU
 
 // Técnicos (specs 018-020).
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITacticianRepository, SolarUY.ApiService.Repositories.TacticianRepository>();
-// Placeholder de mantenimientos hasta la spec 021.
-builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.EmptyMaintenanceRepository>();
+// Mantenimientos (specs 020-021): repositorio real, reemplaza el placeholder EmptyMaintenanceRepository.
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.MaintenanceRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ITechnicianService, SolarUY.ApiService.Services.TechnicianService>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IMaintenanceService, SolarUY.ApiService.Services.MaintenanceService>();
 
 // Access to the Keycloak Admin API for user role management (spec 017).
 builder.Services.TryAddSingleton(TimeProvider.System);
@@ -79,6 +81,14 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Aspire crea la base vacía pero no aplica migraciones EF (spec 021): aplicar migraciones
+// pendientes al arrancar mantiene el esquema al día en cada despliegue.
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Data.SolarUyDbContext>();
+    context.Database.Migrate();
+}
 
 // Configure the HTTP request pipeline.
 app.UseExceptionHandler();

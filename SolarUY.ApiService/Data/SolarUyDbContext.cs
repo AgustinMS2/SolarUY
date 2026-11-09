@@ -15,6 +15,8 @@ public class SolarUyDbContext : DbContext
     public DbSet<Inverter> Inverters => Set<Inverter>();
     public DbSet<Technician> Technicians => Set<Technician>();
 
+    public DbSet<MaintenanceOrder> MaintenanceOrders => Set<MaintenanceOrder>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -92,6 +94,31 @@ public class SolarUyDbContext : DbContext
             entity.Property(e => e.CreatedAtUtc).IsRequired();
             entity.HasIndex(e => e.NormalizedDocumentId).IsUnique();
             entity.HasIndex(e => e.NormalizedEmail).IsUnique();
+        });
+
+        modelBuilder.Entity<MaintenanceOrder>(entity =>
+        {
+            entity.ToTable("MaintenanceOrders");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.ScheduledDateUtc).IsRequired();
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.CancellationReason).HasMaxLength(500);
+            entity.Property(e => e.ResolutionNotes).HasMaxLength(500);
+            entity.Property(e => e.ReplacedParts).HasMaxLength(500);
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            // Spec 021 (RF-3): consulta de "un mantenimiento pendiente por día para un panel".
+            entity.HasIndex(e => new { e.SolarPanelId, e.Status });
+            entity.HasIndex(e => e.TechnicianId);
+            entity.HasOne(e => e.SolarPanel)
+                .WithMany()
+                .HasForeignKey(e => e.SolarPanelId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Technician)
+                .WithMany()
+                .HasForeignKey(e => e.TechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
     }

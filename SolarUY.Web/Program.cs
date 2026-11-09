@@ -26,6 +26,8 @@ builder.Services.AddHttpClient<SolarUY.ApiService.Services.SolarNodeApiClient>(c
     .AddHttpMessageHandler<BearerTokenHandler>();
 builder.Services.AddHttpClient<SolarUY.ApiService.Services.TechnicianApiClient>(client => client.BaseAddress = new("http://apiservice"))
     .AddHttpMessageHandler<BearerTokenHandler>();
+builder.Services.AddHttpClient<SolarUY.Web.Services.MaintenanceApiClient>(client => client.BaseAddress = new("http://apiservice"))
+    .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
 

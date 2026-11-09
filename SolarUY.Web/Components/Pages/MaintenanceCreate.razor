@@ -1,0 +1,354 @@
+@page "/mantenimientos/nuevo"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Administrator)]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Domain
+@using SolarUY.Web.Security
+@using SolarPanelDto = SolarUY.Web.Services.SolarPanelDto
+@inject MaintenanceApiClient MaintenanceApiClient
+@inject PanelsApiClient PanelsApiClient
+@inject TechnicianApiClient TechnicianApiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Reservar Mantenimiento — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8 col-xl-7">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-calendar-check me-2" aria-hidden="true"></span>
+                        Reservar Mantenimiento
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    @if (_isLoading)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-5">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <span class="text-muted">Cargando paneles y técnicos...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(_successMessage))
+                        {
+                            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+                                <span class="bi bi-check-circle-fill me-2"></span>
+                                <div>@_successMessage</div>
+                                <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                            </div>
+                            <div class="d-flex justify-content-end mb-3">
+                                <button type="button" class="btn btn-outline-primary" @onclick="IrAListado">
+                                    <span class="bi bi-list-check me-1"></span> Ver listado de mantenimientos
+                                </button>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(_errorMessage))
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                                <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                                <div>@_errorMessage</div>
+                                <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                            </div>
+                        }
+
+                        @if (_requiresConfirmation && !string.IsNullOrEmpty(_confirmationMessage))
+                        {
+                            <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                <span class="bi bi-exclamation-circle-fill me-2"></span>
+                                <div class="flex-grow-1">@_confirmationMessage</div>
+                            </div>
+                            <div class="d-flex justify-content-end mb-3">
+                                <button type="button" class="btn btn-warning me-2" @onclick="ReservarConConfirmacionAsync" disabled="@_isSubmitting">
+                                    Agendar de todas formas
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" @onclick="DescartarConfirmacion" disabled="@_isSubmitting">
+                                    Elegir otra fecha
+                                </button>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label" for="panelSelect">Panel solar <span class="text-danger">*</span></label>
+                            <select id="panelSelect" class="form-select" @bind="_selectedPanelId">
+                                <option value="">-- Seleccionar panel --</option>
+                                @foreach (var panel in _activePanels)
+                                {
+                                    <option value="@panel.Id">@panel.SolarParkName — @panel.SerieNumber (@panel.PowerW W)</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="technicianSelect">Técnico asignado <span class="text-danger">*</span></label>
+                            <select id="technicianSelect" class="form-select" @bind="_selectedTechnicianId">
+                                <option value="">-- Seleccionar técnico --</option>
+                                @foreach (var technician in _activeTechnicians)
+                                {
+                                    <option value="@technician.Id">@technician.FullName @(string.IsNullOrWhiteSpace(technician.Specialty) ? "" : $"({technician.Specialty})")</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="typeSelect">Tipo de intervención <span class="text-danger">*</span></label>
+                            <select id="typeSelect" class="form-select" @bind="_selectedType">
+                                <option value="">-- Seleccionar tipo --</option>
+                                <option value="Preventive">Preventivo</option>
+                                <option value="Corrective">Correctivo</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="scheduleDate">Fecha y hora programada <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="scheduleDate" class="form-control" min="@MinScheduleLocalValue()" value="@_scheduledDateLocal" @onchange="OnScheduleChanged" />
+                            <div class="form-text">Se agenda en hora local de Uruguay y se guarda en UTC.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="description">Motivo / Descripción del trabajo <span class="text-danger">*</span></label>
+                            <textarea id="description" class="form-control" rows="3" maxlength="500" @bind="_description"></textarea>
+                            <div class="form-text">Entre 5 y 500 caracteres.</div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="button" class="btn btn-primary" @onclick="ReservarAsync" disabled="@_isSubmitting">
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                }
+                                Reservar mantenimiento
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="Cancelar" disabled="@_isSubmitting">Cancelar</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<SolarPanelDto> _activePanels = [];
+    private List<TechnicianDto> _activeTechnicians = [];
+    private bool _isLoading = true;
+    private bool _isSubmitting;
+    private string? _successMessage;
+    private string? _errorMessage;
+    private bool _requiresConfirmation;
+    private string? _confirmationMessage;
+
+    private string _selectedPanelId = "";
+    private string _selectedTechnicianId = "";
+    private string _selectedType = "";
+    private string _scheduledDateLocal = "";
+    private string _description = "";
+    private bool _confirmSecondInterventionFlag;
+
+    private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var panels = await PanelsApiClient.GetAllAsync();
+            _activePanels = panels
+                .Where(p => p.Status == "Activo")
+                .OrderBy(p => p.SolarParkName)
+                .ThenBy(p => p.SerieNumber)
+                .ToList();
+
+            var techniciansResult = await TechnicianApiClient.GetAllAsync();
+            if (techniciansResult.Success && techniciansResult.Value != null)
+            {
+                // Técnicos dados de baja no se ofrecen para nuevas reservas (spec 020, caso límite).
+                _activeTechnicians = techniciansResult.Value
+                    .Where(t => t.Status == TechnicianStatus.Active)
+                    .ToList();
+            }
+            else
+            {
+                _errorMessage = techniciansResult.ErrorMessage ?? "Error al cargar la lista de técnicos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado al cargar los datos: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private static TimeZoneInfo? UruguayTimeZone()
+    {
+        foreach (var id in UruguayTimeZoneIds)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var timeZone) && timeZone != null)
+            {
+                return timeZone;
+            }
+        }
+
+        return null;
+    }
+
+    // Fecha/hora mínima seleccionable en formato de atributo min (datetime-local).
+    private string MinScheduleLocalValue() =>
+        DateTime.Now.ToString("yyyy-MM-ddTHH:mm");
+
+    private async Task ReservarAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _requiresConfirmation = false;
+        _confirmationMessage = null;
+
+        if (string.IsNullOrEmpty(_selectedPanelId))
+        {
+            _errorMessage = "Debés seleccionar un panel solar activo.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_selectedTechnicianId))
+        {
+            _errorMessage = "Debés seleccionar un técnico activo.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_selectedType))
+        {
+            _errorMessage = "Debés seleccionar el tipo de intervención.";
+            return;
+        }
+
+        var scheduledDateUtc = ConvertLocalToUtc();
+        if (scheduledDateUtc == null)
+        {
+            _errorMessage = "La fecha y hora del mantenimiento debe ser posterior al momento actual.";
+            return;
+        }
+
+        var request = new CreateMaintenanceReservationRequest
+        {
+            SolarPanelId = Guid.Parse(_selectedPanelId),
+            TechnicianId = Guid.Parse(_selectedTechnicianId),
+            Type = (MaintenanceType)int.Parse(_selectedType),
+            ScheduledDateUtc = scheduledDateUtc.Value,
+            Description = _description,
+            ConfirmSecondIntervention = _confirmSecondInterventionFlag
+        };
+
+        _isSubmitting = true;
+
+        try
+        {
+            var result = await MaintenanceApiClient.CreateReservationAsync(request);
+
+            if (result.Success)
+            {
+                // RF-4: limpiar el formulario y ofrecer el listado de mantenimientos.
+                LimpiarFormulario();
+                _successMessage = "Mantenimiento reservado correctamente.";
+                return;
+            }
+
+            if (result.ErrorType == ServiceErrorType.ConfirmationRequired)
+            {
+                // RF-3: pedir confirmación para agendar una segunda intervención.
+                _requiresConfirmation = true;
+                _confirmationMessage = result.ErrorMessage;
+                return;
+            }
+
+            _errorMessage = result.ErrorMessage ?? "Error desconocido al reservar el mantenimiento.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    private async Task ReservarConConfirmacionAsync()
+    {
+        _confirmSecondInterventionFlag = true;
+        await ReservarAsync();
+        _confirmSecondInterventionFlag = false;
+    }
+
+    private void DescartarConfirmacion()
+    {
+        // RF-4 análogo: cerrar el aviso sin aplicar modificaciones; la fecha puede ajustarse.
+        _requiresConfirmation = false;
+        _confirmationMessage = null;
+        _confirmSecondInterventionFlag = false;
+        _scheduledDateLocal = "";
+    }
+
+    private void OnScheduleChanged(ChangeEventArgs e)
+    {
+        _scheduledDateLocal = e.Value?.ToString() ?? "";
+        _requiresConfirmation = false;
+        _confirmationMessage = null;
+    }
+
+    private DateTime? ConvertLocalToUtc()
+    {
+        if (string.IsNullOrWhiteSpace(_scheduledDateLocal))
+        {
+            return null;
+        }
+
+        if (!DateTime.TryParse(_scheduledDateLocal, out var localDate))
+        {
+            return null;
+        }
+
+        var scheduledDateUtc = UruguayTimeZone() is { } timeZone
+            ? TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), timeZone)
+            : localDate.ToUniversalTime();
+
+        // El chequeo de fecha futura (al menos 1 h posterior) lo aplica también el servicio; acá se evita enviar fechas claramente inválidas.
+        if (scheduledDateUtc <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        return scheduledDateUtc;
+    }
+
+    private void LimpiarFormulario()
+    {
+        _selectedPanelId = "";
+        _selectedTechnicianId = "";
+        _selectedType = "";
+        _scheduledDateLocal = "";
+        _description = "";
+        _confirmSecondInterventionFlag = false;
+        _requiresConfirmation = false;
+        _confirmationMessage = null;
+    }
+
+    private void Cancelar()
+    {
+        LimpiarFormulario();
+        _successMessage = null;
+        _errorMessage = null;
+    }
+
+    private void IrAListado()
+    {
+        NavManager.NavigateTo("/mantenimientos");
+    }
+}
