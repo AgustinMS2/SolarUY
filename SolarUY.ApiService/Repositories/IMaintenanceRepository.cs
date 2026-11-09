@@ -1,4 +1,5 @@
 using SolarUY.ApiService.Domain;
+using SolarUY.ApiService.Dtos;
 
 namespace SolarUY.ApiService.Repositories;
 
@@ -34,4 +35,10 @@ public interface IMaintenanceRepository
     /// Persiste cambios sobre una orden de mantenimiento existente (spec 022).
     /// </summary>
     void Update(MaintenanceOrder order);
+
+    /// <summary>
+    /// Recupera las órdenes aplicando filtros combinables y las ordena
+    /// cronológicamente descendente por fecha programada (spec 024, RF-2 y RF-3).
+    /// </summary>
+    IReadOnlyList<MaintenanceOrder> GetAll(MaintenanceFilter filter);
 }

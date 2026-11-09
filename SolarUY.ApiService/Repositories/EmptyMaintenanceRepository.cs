@@ -1,4 +1,5 @@
 using SolarUY.ApiService.Domain;
+using SolarUY.ApiService.Dtos;
 
 namespace SolarUY.ApiService.Repositories;
 
@@ -33,5 +34,11 @@ public class EmptyMaintenanceRepository : IMaintenanceRepository
     public void Update(MaintenanceOrder order)
     {
         // No conserva la orden: este stub no tiene almacenamiento.
+    }
+
+    public IReadOnlyList<MaintenanceOrder> GetAll(MaintenanceFilter filter)
+    {
+        // Este stub no tiene almacenamiento: lista siempre vacía.
+        return [];
     }
 }

@@ -38,6 +38,24 @@ public class MaintenancesController : ControllerBase
         return CreatedAtAction(nameof(CreateReservation), new { id = result.Value }, new { id = result.Value });
     }
 
+    // Listado con filtros combinables (spec 024, RF-1 a RF-4).
+    [HttpGet]
+    public IActionResult GetAll([FromQuery] MaintenanceFilter filter)
+    {
+        var result = _maintenanceService.GetAll(filter);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
     // Precarga de la edición de una reserva (spec 022, RF-1).
     [HttpGet("{id:guid}")]
     public IActionResult GetOrder(Guid id)

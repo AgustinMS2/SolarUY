@@ -116,20 +116,40 @@ public class MaintenanceService : IMaintenanceService
             return ServiceResult<MaintenanceOrderDto>.Fail(ServiceErrorType.NotFound, "El mantenimiento solicitado no existe.");
         }
 
-        var dto = new MaintenanceOrderDto
+        return ServiceResult<MaintenanceOrderDto>.Ok(MapToDto(order));
+    }
+
+    public ServiceResult<IReadOnlyList<MaintenanceOrderDto>> GetAll(MaintenanceFilter filter)
+    {
+        // RF-2/RF-3: ordenamiento cronológico descendente y filtros combinables (los aplica el repositorio).
+        var orders = _maintenanceRepository.GetAll(filter);
+        var dtoList = orders.Select(MapToDto).ToList();
+
+        return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Ok(dtoList.AsReadOnly());
+    }
+
+    private MaintenanceOrderDto MapToDto(MaintenanceOrder order)
+    {
+        // Con repositorio EF vienen precargadas las navegaciones; con fakes de tests se resuelven vía repos.
+        var panel = order.SolarPanel ?? _panelRepository.GetById(order.SolarPanelId);
+        var parkName = panel?.SolarPark?.Name
+            ?? (panel != null ? _panelRepository.GetParkById(panel.SolarParkId)?.Name : null);
+        var technicianName = order.Technician?.FullName
+            ?? _technicianRepository.GetById(order.TechnicianId)?.FullName;
+
+        return new MaintenanceOrderDto
         {
             Id = order.Id,
             SolarPanelId = order.SolarPanelId,
-            SolarPanelSerie = order.SolarPanel?.SerieNumber,
-            SolarParkName = order.SolarPanel?.SolarPark?.Name,
+            SolarPanelSerie = panel?.SerieNumber,
+            SolarParkName = parkName,
             TechnicianId = order.TechnicianId,
+            TechnicianName = technicianName,
             Type = order.Type,
             ScheduledDateUtc = order.ScheduledDateUtc,
             Description = order.Description,
             Status = order.Status
         };
-
-        return ServiceResult<MaintenanceOrderDto>.Ok(dto);
     }
 
     public ServiceResult UpdateReservation(Guid orderId, UpdateMaintenanceReservationRequest request)

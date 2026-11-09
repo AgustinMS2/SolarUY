@@ -9,6 +9,8 @@ public interface IMaintenanceService
 {
     ServiceResult<Guid> CreateReservation(CreateMaintenanceReservationRequest request);
 
+    ServiceResult<IReadOnlyList<MaintenanceOrderDto>> GetAll(MaintenanceFilter filter);
+
     ServiceResult<MaintenanceOrderDto> GetById(Guid orderId);
 
     ServiceResult UpdateReservation(Guid orderId, UpdateMaintenanceReservationRequest request);

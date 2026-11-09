@@ -15,6 +15,8 @@ public class MaintenanceOrderDto
 
     public Guid TechnicianId { get; set; }
 
+    public string? TechnicianName { get; set; }
+
     public MaintenanceType Type { get; set; }
 
     public DateTime ScheduledDateUtc { get; set; }

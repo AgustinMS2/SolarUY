@@ -1,4 +1,5 @@
 using SolarUY.ApiService.Domain;
+using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Repositories;
 
 namespace SolarUY.Tests.Fakes;
@@ -14,6 +15,11 @@ public class FakeMaintenanceRepository : IMaintenanceRepository
     /// Órdenes de mantenimiento "persistidas" por el fake (spec 021).
     /// </summary>
     public List<MaintenanceOrder> PersistedOrders { get; } = [];
+
+    /// <summary>
+    /// Paneles conocidos por el fake, necesarios para resolver el filtro por parque (spec 024).
+    /// </summary>
+    public List<SolarPanel> Panels { get; } = [];
 
     public int CountPendingByTechnician(Guid technicianId)
     {
@@ -55,5 +61,49 @@ public class FakeMaintenanceRepository : IMaintenanceRepository
         {
             PersistedOrders.Add(order);
         }
+    }
+
+    public IReadOnlyList<MaintenanceOrder> GetAll(MaintenanceFilter filter)
+    {
+        var query = PersistedOrders.AsEnumerable();
+
+        if (filter.Status.HasValue)
+        {
+            var status = filter.Status.Value;
+            query = query.Where(o => o.Status == status);
+        }
+
+        if (filter.TechnicianId.HasValue)
+        {
+            var technicianId = filter.TechnicianId.Value;
+            query = query.Where(o => o.TechnicianId == technicianId);
+        }
+
+        if (filter.ParkId.HasValue)
+        {
+            var parkId = filter.ParkId.Value;
+            var panelIdsOfPark = Panels
+                .Where(p => p.SolarParkId == parkId)
+                .Select(p => p.Id)
+                .ToHashSet();
+            query = query.Where(o => panelIdsOfPark.Contains(o.SolarPanelId));
+        }
+
+        if (filter.FromUtc.HasValue)
+        {
+            var fromUtc = filter.FromUtc.Value;
+            query = query.Where(o => o.ScheduledDateUtc >= fromUtc);
+        }
+
+        if (filter.ToUtc.HasValue)
+        {
+            var toUtc = filter.ToUtc.Value;
+            query = query.Where(o => o.ScheduledDateUtc <= toUtc);
+        }
+
+        // Spec 024 (RF-2): orden cronológico descendente por fecha programada.
+        return query
+            .OrderByDescending(o => o.ScheduledDateUtc)
+            .ToList();
     }
 }

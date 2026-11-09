@@ -1,0 +1,387 @@
+@page "/mantenimientos"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Domain
+@using SolarUY.Web.Security
+@using SolarParkDto = SolarUY.Web.Services.SolarParkDto
+@inject MaintenanceApiClient MaintenanceApiClient
+@inject SolarUY.Web.Services.SolarParkApiClient ParkApiClient
+@inject TechnicianApiClient TechnicianApiClient
+@inject NavigationManager NavManager
+
+<PageTitle>Listado de Mantenimientos — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-10">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-primary text-white py-3">
+                    <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                        <span class="bi bi-clipboard2-check me-2" aria-hidden="true"></span>
+                        Listado de Mantenimientos
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-2 mb-3 align-items-end">
+                        <div class="col-12 col-md-2">
+                            <label class="form-label small" for="statusFilter">Estado</label>
+                            <select id="statusFilter" class="form-select form-select-sm" @bind="_statusFilter" @bind:after="CargarDatosAsync">
+                                <option value="">Todos</option>
+                                <option value="1">Pendiente</option>
+                                <option value="2">Completado</option>
+                                <option value="3">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small" for="parkFilter">Parque solar</label>
+                            <select id="parkFilter" class="form-select form-select-sm" @bind="_selectedParkId" @bind:after="CargarDatosAsync">
+                                <option value="">-- Todos los parques --</option>
+                                @foreach (var park in _parks)
+                                {
+                                    <option value="@park.Id">@park.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small" for="techFilter">Técnico asignado</label>
+                            <select id="techFilter" class="form-select form-select-sm" @bind="_selectedTechnicianId" @bind:after="CargarDatosAsync">
+                                <option value="">-- Todos los técnicos --</option>
+                                @foreach (var technician in _technicians)
+                                {
+                                    <option value="@technician.Id">@technician.FullName</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small" for="fromDate">Desde</label>
+                            <input type="date" id="fromDate" class="form-control form-control-sm" value="@_fromDate" @onchange="OnFromChanged" />
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small" for="toDate">Hasta</label>
+                            <input type="date" id="toDate" class="form-control form-control-sm" value="@_toDate" @onchange="OnToChanged" />
+                        </div>
+                    </div>
+
+                    @if (_isLoading)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-5">
+                            <div class="spinner-border text-primary me-2" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <span class="text-muted">Cargando mantenimientos...</span>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <span>@_errorMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+                    else if (!string.IsNullOrEmpty(_successMessage))
+                    {
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <span>@_successMessage</span>
+                            <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    @if (!_isLoading && (_orders == null || _orders.Count == 0))
+                    {
+                        <div class="alert alert-info mb-0">
+                            <span>No se encontraron mantenimientos para los criterios seleccionados.</span>
+                        </div>
+                    }
+                    else if (!_isLoading && _orders != null && _orders.Count > 0)
+                    {
+                        <AuthorizeView Roles="@AppRoles.Administrator">
+                            <div class="d-flex justify-content-end mb-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="IrANuevo">
+                                    <span class="bi bi-plus me-1"></span> Nuevo mantenimiento
+                                </button>
+                            </div>
+                        </AuthorizeView>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">Código</th>
+                                        <th scope="col">Parque solar</th>
+                                        <th scope="col">Panel afectado</th>
+                                        <th scope="col">Técnico asignado</th>
+                                        <th scope="col">Tipo</th>
+                                        <th scope="col">Fecha programada</th>
+                                        <th scope="col">Estado</th>
+                                        <th scope="col" class="text-end pe-3">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var order in CurrentPage)
+                                    {
+                                        <tr>
+                                            <td><span title="@order.Id" class="text-muted">@ShortCode(order.Id)</span></td>
+                                            <td>@(string.IsNullOrWhiteSpace(order.SolarParkName) ? "—" : order.SolarParkName)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(order.SolarPanelSerie) ? "—" : order.SolarPanelSerie)</td>
+                                            <td>@(string.IsNullOrWhiteSpace(order.TechnicianName) ? "Sin técnico" : order.TechnicianName)</td>
+                                            <td>@(order.Type == MaintenanceType.Preventive ? "Preventivo" : "Correctivo")</td>
+                                            <td>@FormatLocalDate(order.ScheduledDateUtc)</td>
+                                            <td>
+                                                <span class="@BadgeClass(order.Status) fs-sm">@StatusText(order.Status)</span>
+                                            </td>
+                                            <td class="pe-3 text-end text-nowrap">
+                                                <AuthorizeView Roles="@AppRoles.Administrator">
+                                                    @if (order.Status == MaintenanceStatus.Pending)
+                                                    {
+                                                        <a href="/mantenimientos/@order.Id/editar" class="btn btn-sm btn-outline-primary">
+                                                            <span class="bi bi-pencil me-1"></span> Modificar
+                                                        </a>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger ms-1" @onclick="() => OpenCancelModal(order)">
+                                                            Cancelar
+                                                        </button>
+                                                    }
+                                                </AuthorizeView>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @if (_totalPages > 1)
+                        {
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="text-muted small">Página @_currentPage de @_totalPages</span>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@(_currentPage <= 1)" @onclick="PreviousPage">Anterior</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" disabled="@(_currentPage >= _totalPages)" @onclick="NextPage">Siguiente</button>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_orderToCancel != null)
+{
+    <MaintenanceCancelModal Order="_orderToCancel" OnClose="CloseCancelModal" OnCancelledSuccessfully="OnCancelledSuccessfullyAsync" />
+}
+
+@code {
+    private List<MaintenanceOrderDto> _orders = [];
+    private List<SolarParkDto> _parks = [];
+    private List<TechnicianDto> _technicians = [];
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private MaintenanceOrderDto? _orderToCancel;
+
+    // RF-3: filtros combinables.
+    private string _statusFilter = "";
+    private string _selectedParkId = "";
+    private string _selectedTechnicianId = "";
+    private string _fromDate = "";
+    private string _toDate = "";
+
+    // Paginación liviana sobre el listado ya traído del API.
+    private const int PageSize = 20;
+    private int _currentPage = 1;
+
+    private int _totalPages => Math.Max(1, (int)Math.Ceiling(_orders.Count / (double)PageSize));
+
+    private IEnumerable<MaintenanceOrderDto> CurrentPage =>
+        _orders
+            .Skip((_currentPage - 1) * PageSize)
+            .Take(PageSize);
+
+    private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFilterOptionsAsync();
+        await CargarDatosAsync();
+    }
+
+    private async Task LoadFilterOptionsAsync()
+    {
+        try
+        {
+            var parks = await ParkApiClient.GetAllAsync();
+            _parks = parks.OrderBy(p => p.Name).ToList();
+
+            var techniciansResult = await TechnicianApiClient.GetAllAsync();
+            if (techniciansResult.Success && techniciansResult.Value != null)
+            {
+                // Se muestran activos e inactivos: órdenes antiguas pueden referenciar técnicos ya dados de baja.
+                _technicians = techniciansResult.Value.ToList();
+            }
+        }
+        catch
+        {
+            // Si no se cargan los filtros, el listado igual se muestra (spec 024).
+        }
+    }
+
+    private async Task CargarDatosAsync()
+    {
+        _currentPage = 1;
+        _isLoading = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var result = await MaintenanceApiClient.GetAllAsync(BuildFilter());
+
+            if (result.Success)
+            {
+                _orders = result.Value?.ToList() ?? [];
+            }
+            else
+            {
+                _errorMessage = result.ErrorMessage ?? "Error al cargar la lista de mantenimientos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private MaintenanceFilter BuildFilter()
+    {
+        var filter = new MaintenanceFilter();
+
+        if (int.TryParse(_statusFilter, out var status) && Enum.IsDefined(typeof(MaintenanceStatus), status))
+        {
+            filter.Status = (MaintenanceStatus)status;
+        }
+
+        if (Guid.TryParse(_selectedParkId, out var parkId))
+        {
+            filter.ParkId = parkId;
+        }
+
+        if (Guid.TryParse(_selectedTechnicianId, out var technicianId))
+        {
+            filter.TechnicianId = technicianId;
+        }
+
+        if (DateTime.TryParseExact(_fromDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var fromDate))
+        {
+            filter.FromUtc = ConvertLocalToUtc(fromDate.Date);
+        }
+
+        if (DateTime.TryParseExact(_toDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var toDate))
+        {
+            // Fin del día local del "Hasta" para que el rango sea inclusivo.
+            filter.ToUtc = ConvertLocalToUtc(toDate.Date.AddDays(1).AddMilliseconds(-1));
+        }
+
+        return filter;
+    }
+
+    private static DateTime ConvertLocalToUtc(DateTime localDate)
+    {
+        if (UruguayTimeZone() is { } timeZone)
+        {
+            return TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(localDate, DateTimeKind.Unspecified), timeZone);
+        }
+
+        return localDate.ToUniversalTime();
+    }
+
+    private static TimeZoneInfo? UruguayTimeZone()
+    {
+        foreach (var id in UruguayTimeZoneIds)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var timeZone) && timeZone != null)
+            {
+                return timeZone;
+            }
+        }
+
+        return null;
+    }
+
+    private static string FormatLocalDate(DateTime scheduledDateUtc)
+    {
+        if (UruguayTimeZone() is { } timeZone)
+        {
+            var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(scheduledDateUtc, DateTimeKind.Utc), timeZone);
+            // Spec 024 (NFR): formato DD/MM/AAAA HH:mm en hora local de Uruguay.
+            return local.ToString("dd/MM/yyyy HH:mm");
+        }
+
+        return scheduledDateUtc.ToString("dd/MM/yyyy HH:mm");
+    }
+
+    private static string ShortCode(Guid id) => id.ToString()[..8];
+
+    private static string StatusText(MaintenanceStatus status) => status switch
+    {
+        MaintenanceStatus.Pending => "Pendiente",
+        MaintenanceStatus.Completed => "Completado",
+        MaintenanceStatus.Cancelled => "Cancelado",
+        _ => status.ToString()
+    };
+
+    // RF-5: colores diferenciados por estado.
+    private static string BadgeClass(MaintenanceStatus status) => status switch
+    {
+        MaintenanceStatus.Pending => "badge bg-warning text-dark",
+        MaintenanceStatus.Completed => "badge bg-success",
+        MaintenanceStatus.Cancelled => "badge bg-secondary",
+        _ => "badge bg-light text-dark"
+    };
+
+    private void OnFromChanged(ChangeEventArgs e)
+    {
+        _fromDate = e.Value?.ToString() ?? "";
+        _ = CargarDatosAsync();
+    }
+
+    private void OnToChanged(ChangeEventArgs e)
+    {
+        _toDate = e.Value?.ToString() ?? "";
+        _ = CargarDatosAsync();
+    }
+
+    private void PreviousPage() => _currentPage--;
+
+    private void NextPage() => _currentPage++;
+
+    private void IrANuevo()
+    {
+        NavManager.NavigateTo("/mantenimientos/nuevo");
+    }
+
+    private void OpenCancelModal(MaintenanceOrderDto order)
+    {
+        _successMessage = null;
+        _errorMessage = null;
+        _orderToCancel = order;
+    }
+
+    private void CloseCancelModal()
+    {
+        _orderToCancel = null;
+    }
+
+    private async Task OnCancelledSuccessfullyAsync(string message)
+    {
+        _orderToCancel = null;
+        _successMessage = message;
+        await CargarDatosAsync();
+    }
+}

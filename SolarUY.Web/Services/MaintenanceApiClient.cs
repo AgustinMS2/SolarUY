@@ -43,6 +43,75 @@ public class MaintenanceApiClient(HttpClient httpClient)
         }
     }
 
+    // Spec 024 (RF-1 a RF-4): listado con filtros combinables.
+    public async Task<ServiceResult<IReadOnlyList<MaintenanceOrderDto>>> GetAllAsync(
+        MaintenanceFilter? filter = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = "/api/maintenances";
+            var queryString = CollectFilterQuery(filter);
+            if (queryString.Length > 0)
+            {
+                url += $"?{queryString}";
+            }
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var orders = await response.Content.ReadFromJsonAsync<List<MaintenanceOrderDto>>(cancellationToken: cancellationToken);
+                return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Ok(orders ?? []);
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al obtener la lista de mantenimientos", cancellationToken);
+            return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Fail(ServiceErrorType.Validation, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
+    private static string CollectFilterQuery(MaintenanceFilter? filter)
+    {
+        if (filter == null)
+        {
+            return "";
+        }
+
+        var parts = new List<string>();
+
+        if (filter.Status.HasValue)
+        {
+            parts.Add($"status={(int)filter.Status.Value}");
+        }
+
+        if (filter.ParkId.HasValue)
+        {
+            parts.Add($"parkId={filter.ParkId.Value}");
+        }
+
+        if (filter.TechnicianId.HasValue)
+        {
+            // El endpoint de consulta agrupa por query "techId" (spec 024 plan).
+            parts.Add($"techId={filter.TechnicianId.Value}");
+        }
+
+        if (filter.FromUtc.HasValue)
+        {
+            parts.Add($"from={Uri.EscapeDataString(filter.FromUtc.Value.ToString("yyyy-MM-ddTHH:mm:ssZ"))}");
+        }
+
+        if (filter.ToUtc.HasValue)
+        {
+            parts.Add($"to={Uri.EscapeDataString(filter.ToUtc.Value.ToString("yyyy-MM-ddTHH:mm:ssZ"))}");
+        }
+
+        return string.Join("&", parts);
+    }
+
     // Spec 022 (RF-1): precarga de la reserva a editar.
     public async Task<ServiceResult<MaintenanceOrderDto>> GetOrderAsync(Guid id, CancellationToken cancellationToken = default)
     {
