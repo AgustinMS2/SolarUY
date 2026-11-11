@@ -1,0 +1,332 @@
+@page "/mis-mantenimientos"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Domain
+@using SolarUY.Web.Security
+@inject MaintenanceApiClient MaintenanceApiClient
+@inject TechnicianApiClient TechnicianApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+
+<PageTitle>Mis Mantenimientos — SolarUY</PageTitle>
+
+<div class="container py-3 px-2 px-md-3" style="max-width: 720px;">
+    <!-- Encabezado Mobile-First -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+            <h2 class="h4 mb-0 fw-bold d-flex align-items-center text-primary">
+                <span class="bi bi-tools me-2" aria-hidden="true"></span>
+                Mis Mantenimientos
+            </h2>
+            <small class="text-muted">Órdenes de trabajo asignadas a tu cuenta</small>
+        </div>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="CargarOrdenes" title="Actualizar lista">
+            <span class="bi bi-arrow-clockwise"></span>
+        </button>
+    </div>
+
+    <!-- Caso límite: Administrador simulando a un técnico -->
+    <AuthorizeView Roles="@AppRoles.Administrator">
+        <div class="card bg-light border-0 mb-3 shadow-sm">
+            <div class="card-body p-2 p-md-3">
+                <label for="admin-tech-select" class="form-label small fw-bold mb-1 text-secondary">
+                    <span class="bi bi-person-gear me-1"></span> Vista de Administrador — Simular Técnico:
+                </label>
+                <select id="admin-tech-select" class="form-select form-select-sm"
+                        @bind="_selectedAdminTechEmail" @bind:after="CargarOrdenes">
+                    <option value="">-- Mi usuario actual --</option>
+                    @foreach (var tech in _technicians)
+                    {
+                        <option value="@tech.Email">@tech.FullName (@tech.Email)</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </AuthorizeView>
+
+    <!-- Filtros rápidos Mobile (Pills) -->
+    <div class="d-flex gap-1 gap-md-2 mb-3 overflow-x-auto pb-1">
+        <button type="button" class="btn btn-sm flex-fill @(_quickFilter == QuickFilter.Hoy ? "btn-primary" : "btn-outline-primary")"
+                @onclick="() => SetFilter(QuickFilter.Hoy)">
+            Hoy (@CountHoy)
+        </button>
+        <button type="button" class="btn btn-sm flex-fill @(_quickFilter == QuickFilter.Proximos ? "btn-primary" : "btn-outline-primary")"
+                @onclick="() => SetFilter(QuickFilter.Proximos)">
+            Próximos (@CountProximos)
+        </button>
+        <button type="button" class="btn btn-sm flex-fill @(_quickFilter == QuickFilter.Completados ? "btn-primary" : "btn-outline-primary")"
+                @onclick="() => SetFilter(QuickFilter.Completados)">
+            Completados (@CountCompletados)
+        </button>
+        <button type="button" class="btn btn-sm flex-fill @(_quickFilter == QuickFilter.Todos ? "btn-primary" : "btn-outline-primary")"
+                @onclick="() => SetFilter(QuickFilter.Todos)">
+            Todos (@_orders.Count)
+        </button>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="d-flex flex-column justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Cargando mantenimientos...</span>
+            </div>
+            <span class="text-muted fw-semibold">Cargando tus tareas de campo...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center shadow-sm" role="alert">
+            <span class="bi bi-exclamation-triangle-fill fs-4 me-2"></span>
+            <div>@_errorMessage</div>
+        </div>
+    }
+    else
+    {
+        <!-- RF-5: Aviso cuando no hay pendientes para hoy -->
+        @if (CountHoy == 0)
+        {
+            <div class="alert alert-success d-flex align-items-center shadow-sm mb-3" role="alert">
+                <span class="bi bi-check-circle-fill fs-3 me-3 text-success"></span>
+                <div>
+                    <div class="fw-bold">No tenés mantenimientos pendientes asignados para hoy. ¡Todo al día!</div>
+                    <div class="small text-muted">Revisá la pestaña "Próximos" para ver tus tareas futuras.</div>
+                </div>
+            </div>
+        }
+
+        @if (FilteredOrders.Count == 0)
+        {
+            <div class="text-center py-5 text-muted card border-0 shadow-sm bg-light">
+                <div class="card-body py-5">
+                    <span class="bi bi-clipboard2-check display-4 text-secondary mb-3 d-block"></span>
+                    <p class="h6 mb-1">No hay órdenes para mostrar en este filtro.</p>
+                </div>
+            </div>
+        }
+        else
+        {
+            <!-- Lista de tarjetas táctiles Mobile-First -->
+            <div class="d-flex flex-column gap-3">
+                @foreach (var order in FilteredOrders)
+                {
+                    <div class="card border-0 shadow-sm rounded-3 @(order.Status == MaintenanceStatus.Pending ? "border-start border-warning border-4" : "")">
+                        <div class="card-body p-3">
+                            <!-- Tipo de intervención y Estado -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge @GetTypeBadgeClass(order.Type) fs-7 px-2 py-1">
+                                    @(order.Type == MaintenanceType.Preventive ? "Preventivo" : "Correctivo")
+                                </span>
+                                <span class="badge @GetStatusBadgeClass(order.Status) fs-7 px-2 py-1">
+                                    @(order.Status switch
+                                    {
+                                        MaintenanceStatus.Pending => "Pendiente",
+                                        MaintenanceStatus.Completed => "Completado",
+                                        MaintenanceStatus.Cancelled => "Cancelado",
+                                        _ => order.Status.ToString()
+                                    })
+                                </span>
+                            </div>
+
+                            <!-- Parque y Nodo -->
+                            <h3 class="h5 fw-bold text-dark mb-1">
+                                <span class="bi bi-sun-fill text-warning me-1"></span>
+                                @(order.SolarParkName ?? "Parque no especificado")
+                            </h3>
+                            <div class="text-muted small mb-2 d-flex align-items-center">
+                                <span class="bi bi-geo-alt-fill text-danger me-1"></span>
+                                <strong>Nodo:</strong>&nbsp;@(order.SolarNodeName ?? "Sin nodo asignado")
+                            </div>
+
+                            <!-- Detalles: Panel y Hora -->
+                            <div class="row g-2 mb-3 bg-light rounded p-2 small">
+                                <div class="col-6">
+                                    <div class="text-muted">Panel solar:</div>
+                                    <div class="fw-semibold font-monospace text-truncate">
+                                        <span class="bi bi-grid-3x3 me-1"></span>@(order.SolarPanelSerie ?? "—")
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted">Fecha y hora (UY):</div>
+                                    <div class="fw-semibold">
+                                        <span class="bi bi-clock me-1"></span>@FormatLocalUruguay(order.ScheduledDateUtc)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Motivo / Descripción -->
+                            <div class="mb-3">
+                                <div class="text-muted small fw-bold mb-1">Motivo del trabajo:</div>
+                                <div class="p-2 border rounded bg-white small text-break">
+                                    @order.Description
+                                </div>
+                            </div>
+
+                            <!-- RF-4: Botón destacado Comenzar / Confirmar Mantenimiento -->
+                            @if (order.Status == MaintenanceStatus.Pending)
+                            {
+                                <a href="@($"/mantenimientos/{order.Id}/confirmar")"
+                                   class="btn btn-success btn-lg w-100 py-3 fw-bold d-flex align-items-center justify-content-center shadow-sm">
+                                    <span class="bi bi-check2-circle fs-4 me-2"></span>
+                                    Confirmar Mantenimiento
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private enum QuickFilter
+    {
+        Hoy,
+        Proximos,
+        Completados,
+        Todos
+    }
+
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private List<MaintenanceOrderDto> _orders = [];
+    private List<TechnicianDto> _technicians = [];
+    private string? _selectedAdminTechEmail;
+    private QuickFilter _quickFilter = QuickFilter.Hoy;
+
+    private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
+
+    private int CountHoy => _orders.Count(o => o.Status == MaintenanceStatus.Pending && ToLocalDateInUruguay(o.ScheduledDateUtc) == TodayInUruguay());
+    private int CountProximos => _orders.Count(o => o.Status == MaintenanceStatus.Pending && ToLocalDateInUruguay(o.ScheduledDateUtc) > TodayInUruguay());
+    private int CountCompletados => _orders.Count(o => o.Status == MaintenanceStatus.Completed);
+
+    private IReadOnlyList<MaintenanceOrderDto> FilteredOrders
+    {
+        get
+        {
+            var today = TodayInUruguay();
+            return _quickFilter switch
+            {
+                QuickFilter.Hoy => _orders
+                    .Where(o => o.Status == MaintenanceStatus.Pending && ToLocalDateInUruguay(o.ScheduledDateUtc) == today)
+                    .ToList(),
+                QuickFilter.Proximos => _orders
+                    .Where(o => o.Status == MaintenanceStatus.Pending && ToLocalDateInUruguay(o.ScheduledDateUtc) > today)
+                    .ToList(),
+                QuickFilter.Completados => _orders
+                    .Where(o => o.Status == MaintenanceStatus.Completed)
+                    .ToList(),
+                _ => _orders
+            };
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.IsInRole(AppRoles.Administrator))
+        {
+            var techResult = await TechnicianApiClient.GetAllAsync();
+            if (techResult.Success && techResult.Value != null)
+            {
+                _technicians = techResult.Value.ToList();
+            }
+        }
+
+        await CargarOrdenes();
+    }
+
+    private void SetFilter(QuickFilter filter)
+    {
+        _quickFilter = filter;
+    }
+
+    private async Task CargarOrdenes()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        var result = await MaintenanceApiClient.GetMyMaintenancesAsync(_selectedAdminTechEmail);
+
+        if (result.Success && result.Value != null)
+        {
+            _orders = result.Value.ToList();
+            // Si no hay tareas para hoy pero sí hay próximas, cambiamos automáticamente a Próximos o Todos si el usuario no tenía tareas hoy
+            if (CountHoy == 0 && CountProximos > 0 && _quickFilter == QuickFilter.Hoy)
+            {
+                _quickFilter = QuickFilter.Proximos;
+            }
+            else if (CountHoy == 0 && _orders.Count > 0 && _quickFilter == QuickFilter.Hoy)
+            {
+                _quickFilter = QuickFilter.Todos;
+            }
+        }
+        else
+        {
+            _orders = [];
+            _errorMessage = result.ErrorMessage ?? "Error al cargar las tareas de mantenimiento.";
+        }
+
+        _isLoading = false;
+    }
+
+    private static TimeZoneInfo? UruguayTimeZone()
+    {
+        foreach (var id in UruguayTimeZoneIds)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var timeZone) && timeZone != null)
+            {
+                return timeZone;
+            }
+        }
+        return null;
+    }
+
+    private static DateTime ToLocalDateInUruguay(DateTime dateUtc)
+    {
+        if (UruguayTimeZone() is { } timeZone)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(dateUtc, DateTimeKind.Utc), timeZone).Date;
+        }
+        return dateUtc.AddHours(-3).Date;
+    }
+
+    private static DateTime TodayInUruguay()
+    {
+        if (UruguayTimeZone() is { } timeZone)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timeZone).Date;
+        }
+        return DateTime.UtcNow.AddHours(-3).Date;
+    }
+
+    private static string FormatLocalUruguay(DateTime scheduledDateUtc)
+    {
+        if (UruguayTimeZone() is { } timeZone)
+        {
+            var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(scheduledDateUtc, DateTimeKind.Utc), timeZone);
+            return local.ToString("dd/MM/yyyy HH:mm");
+        }
+        return scheduledDateUtc.AddHours(-3).ToString("dd/MM/yyyy HH:mm");
+    }
+
+    private static string GetTypeBadgeClass(MaintenanceType type) => type switch
+    {
+        MaintenanceType.Preventive => "bg-info text-dark",
+        MaintenanceType.Corrective => "bg-warning text-dark",
+        _ => "bg-secondary text-white"
+    };
+
+    private static string GetStatusBadgeClass(MaintenanceStatus status) => status switch
+    {
+        MaintenanceStatus.Pending => "bg-warning text-dark",
+        MaintenanceStatus.Completed => "bg-success text-white",
+        MaintenanceStatus.Cancelled => "bg-secondary text-white",
+        _ => "bg-light text-dark"
+    };
+}
+

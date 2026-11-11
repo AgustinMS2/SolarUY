@@ -204,6 +204,42 @@ public class MaintenanceApiClient(HttpClient httpClient)
         }
     }
 
+    // Spec 025 (RF-1): órdenes asignadas al técnico autenticado.
+    public async Task<ServiceResult<IReadOnlyList<MaintenanceOrderDto>>> GetMyMaintenancesAsync(
+        string? email = null,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var url = "/api/maintenances/mine";
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                url += $"?email={Uri.EscapeDataString(email)}";
+            }
+
+            var response = await httpClient.GetAsync(url, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var orders = await response.Content.ReadFromJsonAsync<List<MaintenanceOrderDto>>(cancellationToken: cancellationToken);
+                return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Ok(orders ?? []);
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al obtener mis tareas de mantenimiento", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                _ => ServiceErrorType.Validation
+            };
+
+            return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     private static async Task<(string Message, bool RequiresConfirmation)> ReadErrorAsync(
         HttpResponseMessage response,
         string fallback,

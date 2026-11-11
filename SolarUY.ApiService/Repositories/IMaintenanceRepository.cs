@@ -41,4 +41,9 @@ public interface IMaintenanceRepository
     /// cronológicamente descendente por fecha programada (spec 024, RF-2 y RF-3).
     /// </summary>
     IReadOnlyList<MaintenanceOrder> GetAll(MaintenanceFilter filter);
+
+    /// <summary>
+    /// Recupera todas las órdenes asignadas a un técnico determinado (spec 025).
+    /// </summary>
+    IReadOnlyList<MaintenanceOrder> GetByTechnicianId(Guid technicianId);
 }

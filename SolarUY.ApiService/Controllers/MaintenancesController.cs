@@ -56,6 +56,43 @@ public class MaintenancesController : ControllerBase
         return Ok(result.Value);
     }
 
+    // Órdenes asignadas al técnico autenticado (spec 025, RF-1).
+    [Authorize(Roles = Roles.Any)]
+    [HttpGet("mine")]
+    public IActionResult GetMyMaintenances([FromQuery] string? email = null)
+    {
+        string? targetEmail = null;
+        if (User.IsInRole(Roles.Administrator) && !string.IsNullOrWhiteSpace(email))
+        {
+            targetEmail = email;
+        }
+        else
+        {
+            targetEmail = User.FindFirst("email")?.Value
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                ?? User.FindFirst("preferred_username")?.Value;
+        }
+
+        if (string.IsNullOrWhiteSpace(targetEmail))
+        {
+            return BadRequest(new { message = "No se pudo determinar el correo del usuario autenticado." });
+        }
+
+        var result = _maintenanceService.GetMyMaintenances(targetEmail);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(result.Value);
+    }
+
     // Precarga de la edición de una reserva (spec 022, RF-1).
     [HttpGet("{id:guid}")]
     public IActionResult GetOrder(Guid id)

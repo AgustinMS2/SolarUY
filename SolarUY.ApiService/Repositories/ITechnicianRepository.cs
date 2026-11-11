@@ -14,5 +14,7 @@ public interface ITechnicianRepository
 
     Technician? GetById(Guid id);
 
+    Technician? GetByEmail(string email);
+
     void Update(Technician technician);
 }

@@ -42,6 +42,14 @@ public class FakeTechnicianRepository : ITechnicianRepository
         return PersistedTechnicians.FirstOrDefault(t => t.Id == id);
     }
 
+    public Technician? GetByEmail(string email)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        return PersistedTechnicians.FirstOrDefault(t =>
+            t.NormalizedEmail == normalized ||
+            t.Email.Equals(email, StringComparison.OrdinalIgnoreCase));
+    }
+
     public void Update(Technician technician)
     {
         var index = PersistedTechnicians.FindIndex(t => t.Id == technician.Id);

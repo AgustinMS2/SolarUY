@@ -49,6 +49,12 @@ public class TechnicianRepository : ITechnicianRepository
         return _context.Technicians.FirstOrDefault(t => t.Id == id);
     }
 
+    public Technician? GetByEmail(string email)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        return _context.Technicians.FirstOrDefault(t => t.NormalizedEmail == normalized);
+    }
+
     public void Update(Technician technician)
     {
         _context.Technicians.Update(technician);

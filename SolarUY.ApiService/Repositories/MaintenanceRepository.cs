@@ -51,6 +51,8 @@ public class MaintenanceRepository : IMaintenanceRepository
             .Include(o => o.Technician)
             .Include(o => o.SolarPanel)
                 .ThenInclude(p => p!.SolarPark)
+            .Include(o => o.SolarPanel)
+                .ThenInclude(p => p!.SolarNode)
             .FirstOrDefault(o => o.Id == orderId);
     }
 
@@ -67,6 +69,8 @@ public class MaintenanceRepository : IMaintenanceRepository
             .Include(o => o.Technician)
             .Include(o => o.SolarPanel)
                 .ThenInclude(p => p!.SolarPark)
+            .Include(o => o.SolarPanel)
+                .ThenInclude(p => p!.SolarNode)
             .AsQueryable();
 
         if (filter.Status.HasValue)
@@ -96,6 +100,19 @@ public class MaintenanceRepository : IMaintenanceRepository
 
         return query
             .OrderByDescending(o => o.ScheduledDateUtc)
+            .ToList();
+    }
+
+    // Spec 025: órdenes del técnico.
+    public IReadOnlyList<MaintenanceOrder> GetByTechnicianId(Guid technicianId)
+    {
+        return _context.MaintenanceOrders
+            .Include(o => o.Technician)
+            .Include(o => o.SolarPanel)
+                .ThenInclude(p => p!.SolarPark)
+            .Include(o => o.SolarPanel)
+                .ThenInclude(p => p!.SolarNode)
+            .Where(o => o.TechnicianId == technicianId)
             .ToList();
     }
 }

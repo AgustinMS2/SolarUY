@@ -41,4 +41,9 @@ public class EmptyMaintenanceRepository : IMaintenanceRepository
         // Este stub no tiene almacenamiento: lista siempre vacía.
         return [];
     }
+
+    public IReadOnlyList<MaintenanceOrder> GetByTechnicianId(Guid technicianId)
+    {
+        return [];
+    }
 }

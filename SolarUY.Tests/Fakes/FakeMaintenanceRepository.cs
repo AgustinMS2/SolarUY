@@ -106,4 +106,9 @@ public class FakeMaintenanceRepository : IMaintenanceRepository
             .OrderByDescending(o => o.ScheduledDateUtc)
             .ToList();
     }
+
+    public IReadOnlyList<MaintenanceOrder> GetByTechnicianId(Guid technicianId)
+    {
+        return PersistedOrders.Where(o => o.TechnicianId == technicianId).ToList();
+    }
 }

@@ -13,6 +13,8 @@ public class MaintenanceOrderDto
 
     public string? SolarParkName { get; set; }
 
+    public string? SolarNodeName { get; set; }
+
     public Guid TechnicianId { get; set; }
 
     public string? TechnicianName { get; set; }

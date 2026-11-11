@@ -136,6 +136,7 @@ public class MaintenanceService : IMaintenanceService
             ?? (panel != null ? _panelRepository.GetParkById(panel.SolarParkId)?.Name : null);
         var technicianName = order.Technician?.FullName
             ?? _technicianRepository.GetById(order.TechnicianId)?.FullName;
+        var nodeName = panel?.SolarNode?.Name;
 
         return new MaintenanceOrderDto
         {
@@ -143,6 +144,7 @@ public class MaintenanceService : IMaintenanceService
             SolarPanelId = order.SolarPanelId,
             SolarPanelSerie = panel?.SerieNumber,
             SolarParkName = parkName,
+            SolarNodeName = nodeName,
             TechnicianId = order.TechnicianId,
             TechnicianName = technicianName,
             Type = order.Type,
@@ -255,5 +257,40 @@ public class MaintenanceService : IMaintenanceService
         _logger.LogInformation("Maintenance order {OrderId} cancelled", orderId);
 
         return ServiceResult.Ok();
+    }
+
+    public ServiceResult<IReadOnlyList<MaintenanceOrderDto>> GetMyMaintenances(string technicianEmail)
+    {
+        if (string.IsNullOrWhiteSpace(technicianEmail))
+        {
+            return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Fail(
+                ServiceErrorType.Validation,
+                "El correo electrónico es obligatorio.");
+        }
+
+        var technician = _technicianRepository.GetByEmail(technicianEmail);
+        if (technician == null)
+        {
+            return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Fail(
+                ServiceErrorType.NotFound,
+                "No se encontró un perfil de técnico asociado a tu usuario.");
+        }
+
+        var orders = _maintenanceRepository.GetByTechnicianId(technician.Id);
+
+        // RF-2: priorizando las órdenes "Pendientes" por fecha programada ascendente,
+        // luego las completadas/canceladas por fecha descendente.
+        var pending = orders
+            .Where(o => o.Status == MaintenanceStatus.Pending)
+            .OrderBy(o => o.ScheduledDateUtc);
+
+        var others = orders
+            .Where(o => o.Status != MaintenanceStatus.Pending)
+            .OrderByDescending(o => o.ScheduledDateUtc);
+
+        var sortedOrders = pending.Concat(others).ToList();
+        var dtos = sortedOrders.Select(MapToDto).ToList();
+
+        return ServiceResult<IReadOnlyList<MaintenanceOrderDto>>.Ok(dtos.AsReadOnly());
     }
 }

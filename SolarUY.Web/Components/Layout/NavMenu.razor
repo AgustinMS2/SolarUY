@@ -56,6 +56,30 @@
             </div>
         </AuthorizeView>
 
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="nodos" Match="NavLinkMatch.All">
+                <span class="bi bi-diagram-3-fill" aria-hidden="true"></span> Nodos
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="tecnicos" Match="NavLinkMatch.All">
+                <span class="bi bi-person-badge-fill" aria-hidden="true"></span> Técnicos
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="mantenimientos" Match="NavLinkMatch.All">
+                <span class="bi bi-calendar-check-fill" aria-hidden="true"></span> Mantenimientos
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="mis-mantenimientos" Match="NavLinkMatch.All">
+                <span class="bi bi-tools" aria-hidden="true"></span> Mis Mantenimientos
+            </NavLink>
+        </div>
+
         <AuthorizeView Roles="@AppRoles.Administrator">
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="usuarios">
