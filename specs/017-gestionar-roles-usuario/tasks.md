@@ -1,6 +1,6 @@
 ﻿# Tareas: Spec 017 — Gestionar Roles de Usuario
 
-- [ ] **T1. Mapeo de claims de roles Keycloak a .NET ClaimTypes.Role.** RF-1, RF-4
+- [x] **T1. Mapeo de claims de roles Keycloak a .NET ClaimTypes.Role.** RF-1, RF-4
   - Hecho cuando: el token JWT mapea los roles Administrador y Técnico de forma reconocible por User.IsInRole.
 
 - [x] **T2. Protección de controladores con [Authorize(Roles = ...)].** RF-1, RF-4
@@ -18,8 +18,8 @@
 - [x] **T6. `UsersController`: `GET /api/users` y `PUT /api/users/{id}/role`.** RF-3, RF-6, RF-7
   - Hecho cuando: responden 200/204/400/404/503 según el caso, ambos exigen `[Authorize(Roles = Roles.Administrator)]` y `dotnet test` (incluidos los tests de arquitectura de seguridad) sigue en verde.
 
-- [ ] **T7. Pantalla `/usuarios`: `UsersApiClient`, `UserList.razor` y enlace en el menú.** RF-3, RF-6, RF-7
+- [x] **T7. Pantalla `/usuarios`: `UsersApiClient`, `UserList.razor` y enlace en el menú.** RF-3, RF-6, RF-7
   - Hecho cuando: en el navegador el Administrador ve la lista, cambia el rol de un usuario y ve "Rol de usuario actualizado correctamente."; el botón "Guardar" solo se habilita si el rol cambió; el Técnico no ve el enlace ni puede abrir la pantalla; la vista es responsive.
 
-- [ ] **T8. Regla del último Administrador activo (tests primero).** RF-5
+- [x] **T8. Regla del último Administrador activo (tests primero).** RF-5
   - Hecho cuando: los tests (el único Administrador activo no puede dejar de serlo, se permite con dos activos, un Administrador deshabilitado no cuenta) fallaron antes y ahora pasan; el endpoint responde 409 y la pantalla muestra "No se puede quitar el rol de Administrador al último administrador activo del sistema." sin cambiar el rol.

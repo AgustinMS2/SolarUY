@@ -88,13 +88,16 @@ namespace SolarUY.ApiService.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int?>("PanelOutcome")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ReplacedParts")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
                     b.Property<string>("ResolutionNotes")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("ScheduledDateUtc")
                         .HasColumnType("timestamp with time zone");

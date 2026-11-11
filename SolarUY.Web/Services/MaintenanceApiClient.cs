@@ -204,6 +204,35 @@ public class MaintenanceApiClient(HttpClient httpClient)
         }
     }
 
+    // Spec 026: el técnico (o el administrador, por contingencia) confirma un mantenimiento realizado.
+    public async Task<ServiceResult> ConfirmAsync(Guid id, ConfirmMaintenanceRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync($"/api/maintenances/{id}/confirm", request, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al confirmar el mantenimiento", cancellationToken);
+            var errorType = response.StatusCode switch
+            {
+                System.Net.HttpStatusCode.BadRequest => ServiceErrorType.Validation,
+                System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
+                System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                _ => ServiceErrorType.Validation
+            };
+
+            return ServiceResult.Fail(errorType, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
     // Spec 025 (RF-1): órdenes asignadas al técnico autenticado.
     public async Task<ServiceResult<IReadOnlyList<MaintenanceOrderDto>>> GetMyMaintenancesAsync(
         string? email = null,

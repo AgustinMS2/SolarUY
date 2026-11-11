@@ -259,6 +259,72 @@ public class MaintenanceService : IMaintenanceService
         return ServiceResult.Ok();
     }
 
+    // Spec 026: el técnico (o el administrador, por contingencia) confirma una intervención realizada.
+    public ServiceResult ConfirmMaintenance(Guid orderId, ConfirmMaintenanceRequest request)
+    {
+        var order = _maintenanceRepository.GetById(orderId);
+        if (order == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.NotFound, "El mantenimiento solicitado no existe.");
+        }
+
+        // RF-4: solo las órdenes Pendientes pueden confirmarse (ni las Completadas ni las Canceladas).
+        if (order.Status != MaintenanceStatus.Pending)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "Este mantenimiento ya fue completado previamente.");
+        }
+
+        // RF-2: observaciones obligatorias, de 10 a 1000 caracteres.
+        var notes = request.Notes?.Trim() ?? string.Empty;
+        if (notes.Length < 10)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.Validation,
+                "Las observaciones técnicas son obligatorias y deben tener al menos 10 caracteres.");
+        }
+
+        if (notes.Length > 1000)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.Validation,
+                "Las observaciones técnicas no pueden superar los 1000 caracteres.");
+        }
+
+        // Componentes reemplazados: opcionales, hasta 300 caracteres; vacío = sin valor.
+        var replacedParts = string.IsNullOrWhiteSpace(request.ReplacedParts) ? null : request.ReplacedParts.Trim();
+        if (replacedParts != null && replacedParts.Length > 300)
+        {
+            return ServiceResult.Fail(
+                ServiceErrorType.Validation,
+                "Los componentes reemplazados no pueden superar los 300 caracteres.");
+        }
+
+        // Estado del panel tras la tarea: coincidencia exacta (no se aceptan números ni otros textos).
+        MaintenancePanelOutcome? outcome = request.PanelOutcome switch
+        {
+            "Operational" => MaintenancePanelOutcome.Operational,
+            "NeedsFollowUp" => MaintenancePanelOutcome.NeedsFollowUp,
+            _ => null
+        };
+        if (outcome == null)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Validation, "Seleccioná el estado del panel tras la tarea.");
+        }
+
+        // RF-1: la orden queda Completada con la fecha real de finalización en UTC.
+        var now = DateTime.UtcNow;
+        order.Status = MaintenanceStatus.Completed;
+        order.ResolutionNotes = notes;
+        order.ReplacedParts = replacedParts;
+        order.PanelOutcome = outcome;
+        order.CompletedAtUtc = now;
+        order.UpdatedAtUtc = now;
+        _maintenanceRepository.Update(order);
+        _logger.LogInformation("Maintenance order {OrderId} confirmed as completed", orderId);
+
+        return ServiceResult.Ok();
+    }
+
     public ServiceResult<IReadOnlyList<MaintenanceOrderDto>> GetMyMaintenances(string technicianEmail)
     {
         if (string.IsNullOrWhiteSpace(technicianEmail))

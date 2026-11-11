@@ -15,5 +15,5 @@
 - [x] **T5. Endpoints POST y DELETE /api/solar-nodes/{id}/panels.** RF-1 a RF-8
   - Hecho cuando: responden 200/400/404/409 (con y sin pedido de confirmación) según el caso, exigen rol Administrador y dotnet test sigue en verde.
 
-- [ ] **T6. Modal de paneles del nodo y columna "Nodo" en el listado de paneles.** RF-1, RF-3, RF-5, RF-6, RF-9
+- [x] **T6. Modal de paneles del nodo y columna "Nodo" en el listado de paneles.** RF-1, RF-3, RF-5, RF-6, RF-9
   - Hecho cuando: en el navegador el Administrador asocia, reasigna (con confirmación) y desasocia paneles desde la lista de nodos, el contador de paneles se actualiza, el listado de paneles muestra el nodo o "Sin asignar" y el Técnico no ve los botones; probado en escritorio y celular.

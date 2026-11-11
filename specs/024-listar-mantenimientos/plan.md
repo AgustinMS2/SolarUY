@@ -27,9 +27,11 @@
   - Filtros combinables: Selector de Estado, Selector de Parque, Selector de Técnico, Rango Desde/Hasta.
   - Grilla con indicadores de estado en color: Pendiente (amarillo), Completado (verde), Cancelado (gris).
   - Enlaces a "Modificar" y "Cancelar" en órdenes pendientes para Administradores.
+  - Botón "Nuevo mantenimiento" en el encabezado de la tarjeta, visible solo para el Administrador (`<AuthorizeView>`) y siempre presente (con el listado vacío, cargando o con resultados). Navega a `/mantenimientos/nuevo`.
 
 ## Estrategia de Tests
 - **Tests unitarios**:
   - Filtro por estado retorna exclusivamente las órdenes de ese estado.
   - Ordenamiento por fecha descendente.
   - Lista vacía cuando ningún registro coincide.
+- **UI Blazor**: verificación manual en navegador (el botón con la lista vacía y con resultados, y ausente para el Técnico).

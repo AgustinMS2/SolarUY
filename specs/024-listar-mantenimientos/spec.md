@@ -27,6 +27,7 @@ Proporcionar una vista global consolidada de todos los mantenimientos registrado
   - Pendiente: Amarillo / Ámbar.
   - Completado: Verde.
   - Cancelado: Gris / Rojo tenue.
+- **RF-6**: EL SISTEMA mostrará al Administrador un botón "Nuevo mantenimiento" que abre la pantalla de reserva (spec 021). El botón estará siempre visible, también mientras carga el listado y cuando no hay mantenimientos que mostrar, de modo que se pueda crear la primera reserva. El Técnico no verá el botón.
 
 ## Requisitos no funcionales
 - Paginación ágil y carga en diferido de listados extensos.
@@ -34,6 +35,7 @@ Proporcionar una vista global consolidada de todos los mantenimientos registrado
 
 ## Casos límite
 - Órdenes sin técnico asignado (si se admitieran) muestran "Sin técnico".
+- Sin ningún mantenimiento registrado: se muestra "No se encontraron mantenimientos para los criterios seleccionados." y el Administrador sigue viendo el botón "Nuevo mantenimiento".
 
 ## Fuera de alcance
 - Exportación a PDF/Excel (se contempla en specs de Reportes).

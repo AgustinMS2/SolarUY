@@ -223,7 +223,8 @@
             return;
         }
 
-        if (string.IsNullOrEmpty(_selectedType))
+        // The select sends the enum names ("Preventive" / "Corrective"), not numbers.
+        if (!Enum.TryParse<MaintenanceType>(_selectedType, out var maintenanceType) || !Enum.IsDefined(maintenanceType))
         {
             _errorMessage = "Debés seleccionar el tipo de intervención.";
             return;
@@ -240,7 +241,7 @@
         {
             SolarPanelId = Guid.Parse(_selectedPanelId),
             TechnicianId = Guid.Parse(_selectedTechnicianId),
-            Type = (MaintenanceType)int.Parse(_selectedType),
+            Type = maintenanceType,
             ScheduledDateUtc = scheduledDateUtc.Value,
             Description = _description,
             ConfirmSecondIntervention = _confirmSecondInterventionFlag

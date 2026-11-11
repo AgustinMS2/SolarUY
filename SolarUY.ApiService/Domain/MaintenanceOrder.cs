@@ -27,6 +27,9 @@ public class MaintenanceOrder
 
     public string? ReplacedParts { get; set; }
 
+    // Spec 026: estado del panel declarado por quien confirma el mantenimiento.
+    public MaintenancePanelOutcome? PanelOutcome { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     public DateTime? UpdatedAtUtc { get; set; }
@@ -45,4 +48,10 @@ public enum MaintenanceStatus
     Pending = 1,
     Completed = 2,
     Cancelled = 3
+}
+
+public enum MaintenancePanelOutcome
+{
+    Operational = 1,
+    NeedsFollowUp = 2
 }

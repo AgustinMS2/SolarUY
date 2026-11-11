@@ -17,11 +17,17 @@
     <div class="row justify-content-center">
         <div class="col-12 col-xl-10">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-primary text-white py-3">
+                <div class="card-header bg-primary text-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h3 class="card-title h5 mb-0 d-flex align-items-center">
                         <span class="bi bi-clipboard2-check me-2" aria-hidden="true"></span>
                         Listado de Mantenimientos
                     </h3>
+                    @* Spec 024 RF-6: always available to the Administrator, even when there are no orders yet. *@
+                    <AuthorizeView Roles="@AppRoles.Administrator">
+                        <button type="button" class="btn btn-light btn-sm" @onclick="IrANuevo">
+                            <span class="bi bi-plus me-1"></span> Nuevo mantenimiento
+                        </button>
+                    </AuthorizeView>
                 </div>
                 <div class="card-body p-4">
                     <div class="row g-2 mb-3 align-items-end">
@@ -97,14 +103,6 @@
                     }
                     else if (!_isLoading && _orders != null && _orders.Count > 0)
                     {
-                        <AuthorizeView Roles="@AppRoles.Administrator">
-                            <div class="d-flex justify-content-end mb-2">
-                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="IrANuevo">
-                                    <span class="bi bi-plus me-1"></span> Nuevo mantenimiento
-                                </button>
-                            </div>
-                        </AuthorizeView>
-
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
                                 <thead class="table-light">
@@ -138,6 +136,9 @@
                                                     {
                                                         <a href="/mantenimientos/@order.Id/editar" class="btn btn-sm btn-outline-primary">
                                                             <span class="bi bi-pencil me-1"></span> Modificar
+                                                        </a>
+                                                        <a href="/mantenimientos/@order.Id/confirmar" class="btn btn-sm btn-outline-success ms-1">
+                                                            Confirmar
                                                         </a>
                                                         <button type="button" class="btn btn-sm btn-outline-danger ms-1" @onclick="() => OpenCancelModal(order)">
                                                             Cancelar
@@ -345,16 +346,17 @@
         _ => "badge bg-light text-dark"
     };
 
-    private void OnFromChanged(ChangeEventArgs e)
+    // Task (no void) so Blazor re-renders when the reload finishes, not only when it starts.
+    private async Task OnFromChanged(ChangeEventArgs e)
     {
         _fromDate = e.Value?.ToString() ?? "";
-        _ = CargarDatosAsync();
+        await CargarDatosAsync();
     }
 
-    private void OnToChanged(ChangeEventArgs e)
+    private async Task OnToChanged(ChangeEventArgs e)
     {
         _toDate = e.Value?.ToString() ?? "";
-        _ = CargarDatosAsync();
+        await CargarDatosAsync();
     }
 
     private void PreviousPage() => _currentPage--;

@@ -34,18 +34,46 @@ public class SecurityArchitectureTests
         Assert.True(unprotected.Count == 0, "Controllers without [Authorize(Roles = ...)]: " + string.Join(", ", unprotected));
     }
 
-    [Fact]
-    public void MutatingEndpoints_Should_BeRestrictedToAdministrator()
+    // Mutating endpoints that the Técnico role may also use. Every entry must be justified by a spec and
+    // is expected to allow exactly Administrador and Técnico (Roles.Any). Keep this list as short as possible.
+    private static readonly HashSet<string> TechnicianAllowedMutations =
+    [
+        "MaintenancesController.ConfirmMaintenance" // Spec 026: the technician confirms the maintenance he performed.
+    ];
+
+    private static IEnumerable<MethodInfo> MutatingEndpoints()
     {
         var mutationAttributes = new[] { typeof(HttpPostAttribute), typeof(HttpPutAttribute), typeof(HttpPatchAttribute), typeof(HttpDeleteAttribute) };
 
-        var notRestricted = Controllers()
+        return Controllers()
             .SelectMany(t => t.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-            .Where(m => mutationAttributes.Any(a => m.IsDefined(a, inherit: true)))
-            .Where(m => !m.GetCustomAttributes<AuthorizeAttribute>(inherit: true).Any(a => a.Roles == Roles.Administrator))
-            .Select(m => $"{m.DeclaringType!.Name}.{m.Name}")
+            .Where(m => mutationAttributes.Any(a => m.IsDefined(a, inherit: true)));
+    }
+
+    private static string NameOf(MethodInfo method) => $"{method.DeclaringType!.Name}.{method.Name}";
+
+    [Fact]
+    public void MutatingEndpoints_Should_BeRestrictedToAdministrator_UnlessExplicitlyAllowedForTechnician()
+    {
+        var notRestricted = MutatingEndpoints()
+            .Where(m =>
+            {
+                var expectedRoles = TechnicianAllowedMutations.Contains(NameOf(m)) ? Roles.Any : Roles.Administrator;
+                return !m.GetCustomAttributes<AuthorizeAttribute>(inherit: true).Any(a => a.Roles == expectedRoles);
+            })
+            .Select(NameOf)
             .ToList();
 
-        Assert.True(notRestricted.Count == 0, "Mutating endpoints not restricted to Administrador: " + string.Join(", ", notRestricted));
+        Assert.True(notRestricted.Count == 0, "Mutating endpoints with the wrong roles: " + string.Join(", ", notRestricted));
+    }
+
+    [Fact]
+    public void TechnicianAllowedMutations_Should_OnlyListEndpointsThatExist()
+    {
+        var existing = MutatingEndpoints().Select(NameOf).ToHashSet();
+
+        var stale = TechnicianAllowedMutations.Where(name => !existing.Contains(name)).ToList();
+
+        Assert.True(stale.Count == 0, "Allow-list entries without a matching mutating endpoint: " + string.Join(", ", stale));
     }
 }

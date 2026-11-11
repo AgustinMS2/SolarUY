@@ -12,5 +12,5 @@
 - [x] **T4. Endpoints POST y DELETE /api/solar-nodes/{id}/inverter.** RF-1 a RF-10
   - Hecho cuando: responden 200/204/400/404/409 (con y sin pedido de confirmación) según el caso, exigen rol Administrador y dotnet test sigue en verde.
 
-- [ ] **T5. Modal de asignación, reemplazo y desvinculación en la UI.** RF-1 a RF-3, RF-7
+- [x] **T5. Modal de asignación, reemplazo y desvinculación en la UI.** RF-1 a RF-3, RF-7
   - Hecho cuando: desde la lista de nodos el Administrador asigna, reemplaza (con confirmación) y desvincula un inversor, la tabla muestra la serie asignada y el Técnico no ve los botones; probado en escritorio y celular.

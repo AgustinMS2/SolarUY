@@ -8,3 +8,6 @@
 
 - [x] **T3. Vista Blazor /mantenimientos (MaintenanceList.razor).** RF-1 a RF-5
   - Hecho cuando: muestra la grilla con barra de filtros por estado, parque, técnico y fechas, con badges en color.
+
+- [x] **T4. Botón "Nuevo mantenimiento" siempre visible para el Administrador.** RF-6
+  - Hecho cuando: en el navegador, con la lista vacía y con resultados, el Administrador ve el botón en el encabezado y este abre `/mantenimientos/nuevo`; el Técnico no lo ve.

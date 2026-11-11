@@ -9,5 +9,5 @@
 - [x] **T3. Controlador: GET /api/solar-nodes/{id} y PUT /api/solar-nodes/{id}.** RF-1 a RF-5
   - Hecho cuando: responden 200/404 y 204/400/404/409 según el caso y dotnet test sigue en verde.
 
-- [ ] **T4. Página /nodos/{id}/editar + botón "Editar" en el listado.** RF-1 a RF-6
+- [x] **T4. Página /nodos/{id}/editar + botón "Editar" en el listado.** RF-1 a RF-6
   - Hecho cuando: en el navegador se edita el nodo, el parque queda bloqueado, "Cancelar" vuelve sin guardar y se actualiza en el listado.

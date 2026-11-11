@@ -1,0 +1,265 @@
+@page "/mantenimientos/{Id:guid}/confirmar"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.ApiService.Services
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Domain
+@using SolarUY.Web.Security
+@inject MaintenanceApiClient MaintenanceApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
+
+<PageTitle>Confirmar Mantenimiento — SolarUY</PageTitle>
+
+<div class="container py-3 px-2 px-md-3" style="max-width: 720px;">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-success text-white py-3">
+            <h3 class="card-title h5 mb-0 d-flex align-items-center">
+                <span class="bi bi-check2-circle me-2" aria-hidden="true"></span>
+                Confirmar Mantenimiento
+            </h3>
+        </div>
+        <div class="card-body p-3 p-md-4">
+            @if (_isLoading)
+            {
+                <div class="d-flex justify-content-center align-items-center py-5">
+                    <div class="spinner-border text-primary me-2" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <span class="text-muted">Cargando datos del mantenimiento...</span>
+                </div>
+            }
+            else if (_loadError != null)
+            {
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                    <div>@_loadError</div>
+                </div>
+                <a href="@_backUrl" class="btn btn-outline-secondary">Volver a la lista</a>
+            }
+            else if (_isCompleted)
+            {
+                <div class="alert alert-success d-flex align-items-center" role="alert">
+                    <span class="bi bi-check-circle-fill me-2"></span>
+                    <div>@_successMessage</div>
+                </div>
+                <a href="@_backUrl" class="btn btn-outline-secondary">Volver a la lista</a>
+            }
+            else if (_order != null)
+            {
+                <!-- Resumen del panel intervenido y del motivo de la reserva original -->
+                <div class="row g-2 mb-3 bg-light rounded p-2 small">
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted">Parque solar:</div>
+                        <div class="fw-semibold">@(_order.SolarParkName ?? "—")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted">Nodo:</div>
+                        <div class="fw-semibold">@(_order.SolarNodeName ?? "Sin nodo asignado")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted">Panel solar:</div>
+                        <div class="fw-semibold font-monospace">@(_order.SolarPanelSerie ?? "—")</div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="text-muted">Fecha programada (UY):</div>
+                        <div class="fw-semibold">@FormatLocalUruguay(_order.ScheduledDateUtc)</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted">Tipo y técnico asignado:</div>
+                        <div class="fw-semibold">
+                            @(_order.Type == MaintenanceType.Preventive ? "Preventivo" : "Correctivo") — @(_order.TechnicianName ?? "—")
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted">Motivo de la reserva:</div>
+                        <div class="text-break">@_order.Description</div>
+                    </div>
+                </div>
+
+                @if (_isClosed)
+                {
+                    // RF-4: una orden Completada o Cancelada no se puede confirmar de nuevo.
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <span class="bi bi-lock-fill me-2"></span>
+                        <div>Este mantenimiento ya fue completado previamente.</div>
+                    </div>
+                    <a href="@_backUrl" class="btn btn-outline-secondary">Volver a la lista</a>
+                }
+                else
+                {
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <div>@_errorMessage</div>
+                            <button type="button" class="btn-close" @onclick="() => _errorMessage = null" aria-label="Cerrar"></button>
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="notes">Observaciones técnicas <span class="text-danger">*</span></label>
+                        <textarea id="notes" class="form-control" rows="5"
+                                  placeholder="Describí las acciones realizadas durante la intervención."
+                                  @bind="_notes" @bind:event="oninput" disabled="@_isSubmitting"></textarea>
+                        <div class="form-text d-flex justify-content-between">
+                            <span>Entre 10 y 1000 caracteres.</span>
+                            <span>@_notes.Trim().Length / 1000</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="parts">Componentes reemplazados <span class="text-muted fw-normal">(opcional)</span></label>
+                        <input id="parts" class="form-control" type="text"
+                               placeholder="Ej.: Fusible de string 15A, Conector MC4"
+                               @bind="_replacedParts" @bind:event="oninput" disabled="@_isSubmitting" />
+                        <div class="form-text d-flex justify-content-between">
+                            <span>Dejalo vacío si no se cambió ningún repuesto.</span>
+                            <span>@_replacedParts.Trim().Length / 300</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="outcome">Estado del panel tras la tarea <span class="text-danger">*</span></label>
+                        <select id="outcome" class="form-select" @bind="_panelOutcome" disabled="@_isSubmitting">
+                            <option value="">-- Seleccionar --</option>
+                            <option value="Operational">Operativo / Normal</option>
+                            <option value="NeedsFollowUp">Requiere seguimiento adicional</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid d-sm-flex gap-2">
+                        <button type="button" class="btn btn-success btn-lg flex-sm-grow-1" @onclick="ConfirmAsync" disabled="@_isSubmitting">
+                            @if (_isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Confirmar y Finalizar Mantenimiento
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-lg" @onclick="Cancel" disabled="@_isSubmitting">Cancelar</button>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private MaintenanceOrderDto? _order;
+    private bool _isLoading = true;
+    private bool _isSubmitting;
+    private bool _isClosed;
+    private bool _isCompleted;
+    private string? _loadError;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private string _notes = "";
+    private string _replacedParts = "";
+    private string _panelOutcome = "";
+    private string _backUrl = "/mis-mantenimientos";
+
+    private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // The Administrator (contingency) returns to the full list; the technician to "Mis mantenimientos".
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _backUrl = authState.User.IsInRole(AppRoles.Administrator) ? "/mantenimientos" : "/mis-mantenimientos";
+
+            var result = await MaintenanceApiClient.GetOrderAsync(Id);
+            if (!result.Success || result.Value == null)
+            {
+                _loadError = result.ErrorMessage ?? "El mantenimiento solicitado no existe.";
+                return;
+            }
+
+            _order = result.Value;
+            _isClosed = _order.Status != MaintenanceStatus.Pending;
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (_isSubmitting)
+        {
+            return;
+        }
+
+        _isSubmitting = true;
+        _errorMessage = null;
+
+        try
+        {
+            var request = new ConfirmMaintenanceRequest
+            {
+                Notes = _notes,
+                ReplacedParts = _replacedParts,
+                PanelOutcome = string.IsNullOrEmpty(_panelOutcome) ? null : _panelOutcome
+            };
+
+            var result = await MaintenanceApiClient.ConfirmAsync(Id, request);
+
+            if (result.Success)
+            {
+                // RF-1: show the confirmation and go back to the list.
+                _successMessage = "Mantenimiento confirmado y completado correctamente.";
+                _isCompleted = true;
+                StateHasChanged();
+                await Task.Delay(1500);
+                NavManager.NavigateTo(_backUrl);
+                return;
+            }
+
+            if (result.ErrorType == ServiceErrorType.Conflict)
+            {
+                // RF-4: somebody else closed it in the meantime.
+                _isClosed = true;
+                return;
+            }
+
+            _errorMessage = result.ErrorMessage;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+        }
+    }
+
+    // RF-5: going back changes nothing; the order stays pending.
+    private void Cancel()
+    {
+        NavManager.NavigateTo(_backUrl);
+    }
+
+    private static string FormatLocalUruguay(DateTime scheduledDateUtc)
+    {
+        foreach (var id in UruguayTimeZoneIds)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var timeZone) && timeZone != null)
+            {
+                var local = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(scheduledDateUtc, DateTimeKind.Utc), timeZone);
+                return local.ToString("dd/MM/yyyy HH:mm");
+            }
+        }
+
+        return scheduledDateUtc.AddHours(-3).ToString("dd/MM/yyyy HH:mm");
+    }
+}

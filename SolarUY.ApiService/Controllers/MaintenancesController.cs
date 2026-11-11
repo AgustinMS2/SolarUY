@@ -152,4 +152,25 @@ public class MaintenancesController : ControllerBase
 
         return Ok(new { message = "Mantenimiento cancelado correctamente." });
     }
+
+    // Spec 026: confirma un mantenimiento realizado. Lo usan el Técnico y, por contingencia, el Administrador.
+    [Authorize(Roles = Roles.Any)]
+    [HttpPost("{id:guid}/confirm")]
+    public IActionResult ConfirmMaintenance(Guid id, [FromBody] ConfirmMaintenanceRequest request)
+    {
+        var result = _maintenanceService.ConfirmMaintenance(id, request);
+
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+            };
+        }
+
+        return Ok(new { message = "Mantenimiento confirmado y completado correctamente." });
+    }
 }

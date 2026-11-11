@@ -105,7 +105,7 @@ public class SolarUyDbContext : DbContext
             entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Status).IsRequired();
             entity.Property(e => e.CancellationReason).HasMaxLength(500);
-            entity.Property(e => e.ResolutionNotes).HasMaxLength(500);
+            entity.Property(e => e.ResolutionNotes).HasMaxLength(1000);
             entity.Property(e => e.ReplacedParts).HasMaxLength(500);
             entity.Property(e => e.CreatedAtUtc).IsRequired();
             // Spec 021 (RF-3): consulta de "un mantenimiento pendiente por día para un panel".
