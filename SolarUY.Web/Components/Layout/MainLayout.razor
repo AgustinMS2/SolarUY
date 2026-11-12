@@ -1,4 +1,4 @@
-﻿@using SolarUY.Web.Components.Pages
+@using SolarUY.Web.Components.Pages
 @inherits LayoutComponentBase
 
 <div class="page">
@@ -7,40 +7,57 @@
     </div>
 
     <main>
-        <div class="top-row px-4">
-            <AuthorizeView>
-                <Authorized>
-                    <span class="d-flex align-items-center text-nowrap">
-                        <span class="fw-semibold" data-testid="user-name">@context.User.Identity?.Name</span>
-                        @foreach (var role in GetRoles(context.User))
-                        {
-                            <span class="badge bg-primary ms-2" data-testid="user-role">@role</span>
-                        }
-                    </span>
-                    <LogoutConfirmationModal @rendermode="InteractiveServer" />
-                </Authorized>
-                <NotAuthorized>
-                    <a href="account/login" data-enhance-nav="false" class="btn btn-sm btn-primary">Iniciar sesión</a>
-                </NotAuthorized>
-            </AuthorizeView>
-        </div>
+        <header class="top-row" aria-label="Barra superior">
+            <div class="d-flex align-items-center">
+                <span class="top-bar-badge d-none d-md-inline-flex align-items-center">
+                    <i class="bi bi-shield-check text-success me-1" aria-hidden="true"></i>
+                    SolarUY • Operaciones Fotovoltaicas
+                </span>
+            </div>
 
-        <article class="content px-4">
+            <div class="d-flex align-items-center gap-2">
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="user-chip">
+                            <span class="user-avatar" aria-hidden="true">
+                                @GetInitial(context.User.Identity?.Name)
+                            </span>
+                            <div class="d-flex flex-column lh-sm text-start pe-1">
+                                <span class="fw-semibold text-dark text-nowrap" data-testid="user-name">@context.User.Identity?.Name</span>
+                                <div class="d-flex gap-1 mt-0">
+                                    @foreach (var role in GetRoles(context.User))
+                                    {
+                                        <span class="badge @GetRoleBadgeClass(role) py-0 px-1" style="font-size: 0.6875rem;" data-testid="user-role">@role</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <LogoutConfirmationModal @rendermode="InteractiveServer" />
+                    </Authorized>
+                    <NotAuthorized>
+                        <a href="account/login" data-enhance-nav="false" class="btn btn-sm btn-primary">
+                            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Iniciar sesión
+                        </a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </header>
+
+        <article class="content">
             @Body
         </article>
     </main>
 </div>
 
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
+    Ha ocurrido un error inesperado.
+    <a href="" class="reload">Recargar</a>
     <a class="dismiss">🗙</a>
 </div>
 
 @code {
     private static readonly string[] SystemRoles = ["Administrador", "Técnico"];
 
-    // Keycloak also sends internal roles (offline_access, uma_authorization...): only the system roles are shown.
     private static IEnumerable<string> GetRoles(System.Security.Claims.ClaimsPrincipal user)
     {
         return user.FindAll("roles")
@@ -48,4 +65,17 @@
             .Where(r => SystemRoles.Contains(r))
             .Distinct();
     }
+
+    private static string GetInitial(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "U";
+        return name.Trim()[..1].ToUpperInvariant();
+    }
+
+    private static string GetRoleBadgeClass(string role) => role switch
+    {
+        "Administrador" => "bg-primary",
+        "Técnico" => "bg-warning",
+        _ => "bg-secondary"
+    };
 }

@@ -5,7 +5,7 @@
 - **Arquitectura base**: Solución .NET 9 (todos los proyectos en `net9.0`; Aspire 13 igual necesita tener instalado el SDK de .NET 10 para compilar el AppHost) con .NET Aspire (`SolarUY.AppHost`), Web Frontend (`SolarUY.Web` - Blazor Server), API de negocio (`SolarUY.ApiService`), y librerías compartidas (`SolarUY.ServiceDefaults`).
 - **Persistencia**: PostgreSQL con EF Core (planificado soporte TimescaleDB para telemetría de series de tiempo).
 - **Autenticación**: Keycloak OIDC containerizado en Aspire (Roles: `Administrador`, `Técnico`).
-- **Fase actual**: SDD en marcha. Specs 001–025 implementadas y verificadas (las pantallas de la 011 a la 025, probadas en navegador con Docker el 2026-11-11); spec 026 con T1–T4 verificadas y T5 bloqueada por la 031; 300 tests en verde (uno depende de la hora, ver más abajo).
+- **Fase actual**: SDD en marcha. Specs 001–025 implementadas y verificadas; spec 026 con T1–T4 verificadas y T5 bloqueada por la 031; rediseño de interfaz de usuario "SolarOps Clean" completado (layout, navegación, home por rol y accesibilidad WCAG); 300 tests en verde (uno depende de la hora, ver más abajo).
 
 ---
 
@@ -84,18 +84,19 @@
 
 ---
 
-## Estado Actual de Verificación (2026-11-10)
+## Estado Actual de Verificación (2026-11-12)
 
-- **Rama**: `master` (estado al integrar la spec 013 sobre las specs 011 y 017).
+- **Rama**: `master`.
 - **Compilación**: la solución compila.
-- **Tests**: `dotnet test` → **300 en verde** (2026-11-11, 08:18 UTC). Hay un test que depende de la hora y puede fallar entre las 00:00 y las 05:00 de Uruguay: `MaintenanceServiceReservationTests.CreateReservation_WithPendingOrderSameDay_RequiresConfirmation` (spec 021): depende de la hora y falla entre las 00:00 y las 05:00 de Uruguay; no es un bug del producto.
+- **Tests**: `dotnet test` → **300 en verde** (2026-11-12). Hay un test que depende de la hora y puede fallar entre las 00:00 y las 05:00 de Uruguay: `MaintenanceServiceReservationTests.CreateReservation_WithPendingOrderSameDay_RequiresConfirmation` (spec 021): depende de la hora y falla entre las 00:00 y las 05:00 de Uruguay; no es un bug del producto.
   - Corregido: `SolarNodesController.Update` (spec 011) ahora exige `[Authorize(Roles = Roles.Administrator)]`, igual que su página de edición.
 - **Deuda inmediata**:
   1. ~~Corregir el `[Authorize]` de `SolarNodesController.Update`~~ — hecho, `dotnet test` en verde.
   2. ~~Validar en navegador la T4 de la spec 011~~ — hecho (2026-11-11).
   3. Specs 015, 016 y 017 verificadas con Keycloak real.
-  4. Continuar con las specs 027–037 (primero aclarar y aprobar; la 027 depende de la 036) según prioridad del usuario.
-  5. Decidir si Postgres conserva los datos entre ejecuciones (`WithDataVolume()` + `ContainerLifetime.Persistent` en `SolarUY.AppHost/AppHost.cs`). Hoy el contenedor se recrea en cada arranque y se pierden parques, nodos, paneles, técnicos y reservas; Keycloak sí conserva usuarios y roles porque reimporta el realm. Es un archivo compartido: avisar al equipo.
+  4. Rediseño visual "SolarOps Clean" completado e integrado en `SolarUY.Web` (2026-11-12).
+  5. Continuar con las specs 027–037 (primero aclarar y aprobar; la 027 depende de la 036) según prioridad del usuario.
+  6. Decidir si Postgres conserva los datos entre ejecuciones (`WithDataVolume()` + `ContainerLifetime.Persistent` en `SolarUY.AppHost/AppHost.cs`). Hoy el contenedor se recrea en cada arranque y se pierden parques, nodos, paneles, técnicos y reservas; Keycloak sí conserva usuarios y roles porque reimporta el realm. Es un archivo compartido: avisar al equipo.
 - **Hallazgos de la primera prueba real con Docker (2026-11-11)**:
   1. **Blazor sin interactividad**: en una PC con solo el runtime de ASP.NET Core 10, los proyectos `net9.0` con `RollForward=LatestMajor` corrían sobre el runtime 10, que ya no sirve `blazor.web.js` (404) y los formularios fallaban con "The POST request does not specify which form is being submitted". Solución: instalar los runtimes de .NET 9 (`winget install Microsoft.DotNet.AspNetCore.9` y `Microsoft.DotNet.Runtime.9`) y quitar el `RollForward` de `SolarUY.Web.csproj`. Pendiente de decisión del equipo: quitarlo también del resto o pasar todo a `net10.0` (la constitución dice .NET 9).
   2. **Spec 021, pantalla de reservar**: `MaintenanceCreate.razor` hacía `int.Parse` sobre el tipo ("Preventive"/"Corrective") y fallaba siempre; corregido con `Enum.TryParse`.
@@ -121,3 +122,11 @@
 12. **Keycloak local**: puerto fijo 8080, realm `SolarUY` importado desde `SolarUY.AppHost/Realms/SolarUY-realm.json`, usuario de prueba `admin` / `admin123` (rol Administrador).
 13. **Roles en Keycloak (spec 017)**: realm roles `Administrador` y `Técnico`, expuestos en el claim `roles`; el realm define el cliente de servicio `solaruy-api-admin` (secreto de desarrollo `solaruy-api-admin-dev-secret`) con permisos de `realm-management` sobre `realmRoles` para listar usuarios y reemplazar su rol.
 14. **Archivo del realm**: el JSON se llama `SolarUY-realm.json` (renombrado en el último merge; el nombre anterior era `solaruy-realm.json`).
+15. **Sistema de Diseño UI "SolarOps Clean" (2026-11-12)**:
+    - **Filosofía**: Enfoque industrial claro y de máxima legibilidad, diseñado para uso dual: oficina en escritorio y técnicos operando en campo bajo luz solar directa desde celular (WCAG AA).
+    - **Paleta oficial**: Pizarra/Slate (`#0F172A`) para navegación lateral, Azul Océano (`#0284C7`) para acciones primarias, Ámbar Solar (`#F59E0B`) para acentos y estados activos, fondo general gris hielo (`#F8FAFC`), tarjetas blancas (`#FFFFFF`) con bordes sutiles (`#E2E8F0`).
+    - **Tipografía e Íconos**: Fuente `Inter` (Google Fonts), Bootstrap Icons (`bi bi-*`) integrados vía CDN en `App.razor`, y fuente monoespaciada para números de serie de paneles y códigos de orden.
+    - **Accesibilidad**: `<html lang="es">`, indicador de foco de alto contraste (`:focus-visible` outline de 2px azul con offset), áreas táctiles de al menos 40–44 px de alto en botones e interactivos, y badges de estado con contraste validado.
+    - **Navegación (`NavMenu`)**: Demos eliminados (`Counter`, `Weather`); menú organizado por secciones: *Operación & Campo* (`/mis-mantenimientos`, `/mantenimientos`), *Infraestructura* (`/parques`, `/nodos`, `/paneles`) y *Gestión* (`/tecnicos`, `/usuarios`). Acento activo con barra ámbar a la izquierda.
+    - **Barra Superior (`MainLayout`)**: Sticky blanca con avatar circular, nombre de usuario, badge visual del rol (`Administrador` en azul, `Técnico` en ámbar) y modal de confirmación de logout.
+    - **Portal de Inicio (`Home.razor`)**: Reemplazo del "Hello world" por un portal inteligente orientado al rol: acceso destacado a *Mis Mantenimientos* de hoy para Técnicos; cuadrícula de 6 accesos directos operativos para Administradores; bienvenida con login OIDC para no autenticados; soporte preservado para `?sesion=finalizada` (Spec 016).
