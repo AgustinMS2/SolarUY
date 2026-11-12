@@ -70,12 +70,28 @@ builder.Services
             {
                 context.Response.ContentType = "application/json";
                 return context.Response.WriteAsJsonAsync(new { message = "Permisos insuficientes." });
+            },
+            OnMessageReceived = context =>
+            {
+                // Spec 027: autenticación para WebSockets / SignalR mediante token en query string
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
             }
         };
     });
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
+
+// Telemetría en tiempo real y SignalR (Spec 027).
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<SolarUY.ApiService.Services.IParkTelemetryService, SolarUY.ApiService.Services.ParkTelemetryService>();
+builder.Services.AddHostedService<SolarUY.ApiService.Services.ParkTelemetryBackgroundService>();
 
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -88,6 +104,7 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Data.SolarUyDbContext>();
     context.Database.Migrate();
+    SolarUY.ApiService.Data.DbInitializer.Seed(context);
 }
 
 // Configure the HTTP request pipeline.
@@ -102,6 +119,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<SolarUY.ApiService.Hubs.ParkTelemetryHub>(SolarUY.ApiService.Hubs.ParkTelemetryHub.HubUrl);
 
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
 

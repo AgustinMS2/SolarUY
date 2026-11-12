@@ -58,7 +58,7 @@
                             </div>
                         }
 
-                        <EditForm Model="@_formModel" OnValidSubmit="HandleSubmitAsync">
+                        <EditForm Model="@_formModel" OnValidSubmit="HandleSubmitAsync" FormName="EditSolarParkForm">
                             <DataAnnotationsValidator />
 
                             <div class="mb-3">
@@ -126,7 +126,8 @@
     [Parameter]
     public Guid Id { get; set; }
 
-    private SolarParkEditFormModel _formModel = new();
+    [SupplyParameterFromForm]
+    private SolarParkEditFormModel _formModel { get; set; } = new();
     private bool _isLoading = true;
     private bool _notFound;
     private bool _isSubmitting;

@@ -1,0 +1,452 @@
+@page "/parques/{id:guid}/monitoreo"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.SignalR.Client
+@using SolarUY.ApiService.Dtos
+@using SolarUY.Web.Services
+@using SolarUY.Web.Security
+@inject SolarParkApiClient ParkApiClient
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+@inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject KeycloakTokenService TokenService
+@inject ILogger<ParkMonitoring> Logger
+
+<PageTitle>Monitoreo en Tiempo Real — @(_park?.Name ?? "Parque Solar") — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <!-- Breadcrumb & Navigation -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="/parques" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+                    <span class="bi bi-arrow-left me-1"></span> Volver a Parques
+                </a>
+                <span class="text-muted">/</span>
+                <span class="text-secondary small fw-medium">Monitoreo en Vivo</span>
+            </div>
+            <h1 class="h3 mb-0 text-primary d-flex align-items-center">
+                <span class="bi bi-speedometer2 me-2" aria-hidden="true"></span>
+                @(_park?.Name ?? "Cargando parque...")
+            </h1>
+        </div>
+
+        <!-- Connection Status Indicator -->
+        <div class="d-flex align-items-center gap-2">
+            @if (_hubConnection?.State == HubConnectionState.Connected)
+            {
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="spinner-grow spinner-grow-sm me-2 text-success" role="status" aria-hidden="true"></span>
+                    <span>Conectado en vivo</span>
+                </span>
+            }
+            else if (_hubConnection?.State == HubConnectionState.Reconnecting)
+            {
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="spinner-border spinner-border-sm me-2 text-warning" role="status" aria-hidden="true"></span>
+                    <span>Reconectando con el parque...</span>
+                </span>
+            }
+            else
+            {
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="bi bi-x-circle me-1" aria-hidden="true"></span>
+                    <span>Desconectado</span>
+                </span>
+            }
+        </div>
+    </div>
+
+    @if (_isLoadingPark)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span class="text-muted">Cargando información del parque...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center justify-content-between shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <span class="bi bi-exclamation-triangle-fill me-2 fs-5"></span>
+                <div>@_errorMessage</div>
+            </div>
+            <a href="/parques" class="btn btn-outline-danger btn-sm">Volver al listado</a>
+        </div>
+    }
+    else if (_park != null)
+    {
+        <!-- Inactive Park Warning (Limiting case) -->
+        @if (_park.Status != "Activo")
+        {
+            <div class="alert alert-secondary d-flex align-items-center mb-4 border-0 shadow-sm" role="alert">
+                <span class="bi bi-info-circle-fill fs-4 text-secondary me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-0">Parque no activo</h6>
+                    <p class="mb-0 text-muted small">El parque se encuentra inactivo o sin equipos asociados. La telemetría en tiempo real permanecerá en 0.0 kW.</p>
+                </div>
+            </div>
+        }
+
+        <!-- RF-3 Alert: Power Below Alert Threshold -->
+        @if (_telemetry?.IsAlertActive == true)
+        {
+            <div class="alert alert-warning border-warning-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
+                <span class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">Generación por debajo del umbral de alerta (@($"{_park.PowerAlertThresholdKw:0.##} kW"))</h6>
+                    <p class="mb-0 small">
+                        La potencia instantánea (@($"{_telemetry.CurrentPowerKw:0.0} kW")) ha caído por debajo del umbral de alerta operativo configurado para este parque durante horas de sol.
+                    </p>
+                </div>
+            </div>
+        }
+
+        <!-- RF-4 Warning: Reconnecting SignalR -->
+        @if (_hubConnection?.State == HubConnectionState.Reconnecting)
+        {
+            <div class="alert alert-info border-info-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
+                <span class="spinner-border spinner-border-sm text-info me-2" role="status"></span>
+                <div>
+                    Reconectando con el servidor de telemetría... Se mantiene visible la última lectura recibida (@(_telemetry?.TimestampUtc.ToLocalTime().ToString("HH:mm:ss") ?? "reciente")).
+                </div>
+            </div>
+        }
+
+        <!-- Main Monitoring Dashboard Grid -->
+        <div class="row g-4 mb-4">
+            <!-- Left Column: SVG Radial Gauge Card -->
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0 text-secondary fw-bold d-flex align-items-center">
+                            <span class="bi bi-speedometer me-2 text-primary"></span> Tacómetro de Potencia Instantánea
+                        </h2>
+                        <span class="badge bg-light text-muted border">Actualización 3s</span>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center align-items-center px-4 py-3">
+                        <div class="gauge-container position-relative w-100 text-center" style="max-width: 380px;">
+                            <svg viewBox="0 0 200 135" class="w-100 h-auto" style="overflow: visible;">
+                                <defs>
+                                    <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#0284c7" />
+                                        <stop offset="85%" stop-color="#38bdf8" />
+                                        <stop offset="100%" stop-color="#f59e0b" />
+                                    </linearGradient>
+                                </defs>
+
+                                <!-- Background Arc (Track) -->
+                                <path d="M 20 105 A 80 80 0 0 1 180 105"
+                                      fill="none"
+                                      stroke="#e2e8f0"
+                                      stroke-width="14"
+                                      stroke-linecap="round" />
+
+                                <!-- Active Capacity Arc -->
+                                <path d="M 20 105 A 80 80 0 0 1 180 105"
+                                      fill="none"
+                                      stroke="@GaugeArcColor"
+                                      stroke-width="14"
+                                      stroke-linecap="round"
+                                      stroke-dasharray="251.33"
+                                      stroke-dashoffset="@GaugeDashOffset"
+                                      style="transition: stroke-dashoffset 0.6s ease-out, stroke 0.4s ease;" />
+
+                                <!-- Min / Max Labels -->
+                                <text x="18" y="125" font-size="9" fill="#64748b" font-weight="600" text-anchor="middle">0 kW</text>
+                                <text x="182" y="125" font-size="9" fill="#64748b" font-weight="600" text-anchor="middle">@($"{_park.MaxCapacityKw:0.##} kW")</text>
+
+                                <!-- Needle -->
+                                <line x1="100" y1="105" x2="100" y2="40"
+                                      stroke="#0f172a"
+                                      stroke-width="3.5"
+                                      stroke-linecap="round"
+                                      style="@NeedleStyle" />
+
+                                <!-- Needle Pivot -->
+                                <circle cx="100" cy="105" r="7.5" fill="#0f172a" />
+                                <circle cx="100" cy="105" r="3" fill="#ffffff" />
+                            </svg>
+
+                            <!-- Big Center Value -->
+                            <div class="mt-2">
+                                <div class="display-6 fw-bold text-dark">
+                                    @CurrentPowerKw.ToString("F1") <span class="fs-4 fw-normal text-muted">kW</span>
+                                </div>
+                                <div class="badge @(CapacityPercentage > 85 ? "bg-warning-subtle text-warning-emphasis" : "bg-primary-subtle text-primary") px-3 py-1 fs-6 rounded-pill mt-1">
+                                    @($"{CapacityPercentage:0.0}% de capacidad")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pb-3 px-4 text-center">
+                        <small class="text-muted">
+                            Última lectura: @(_telemetry != null ? _telemetry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss") : "Aguardando emisión...")
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: 4 Metrics Cards -->
+            <div class="col-12 col-lg-6">
+                <div class="row g-3 h-100">
+                    <!-- Metric Card 1: Potencia Instantánea -->
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-secondary fw-semibold small text-uppercase tracking-wide">Potencia Actual</span>
+                                    <div class="p-2 rounded-3 bg-primary-subtle text-primary">
+                                        <span class="bi bi-lightning-charge-fill fs-5"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-0 text-dark">@($"{CurrentPowerKw:0.0} kW")</h3>
+                                    <small class="text-muted">Generación instantánea</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metric Card 2: Porcentaje de Capacidad -->
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-secondary fw-semibold small text-uppercase tracking-wide">% Capacidad</span>
+                                    <div class="p-2 rounded-3 bg-info-subtle text-info">
+                                        <span class="bi bi-pie-chart-fill fs-5"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-0 text-dark">@($"{CapacityPercentage:0.0}%")</h3>
+                                    <small class="text-muted">De @($"{_park.MaxCapacityKw:0.##} kW") contratados</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metric Card 3: Energía Acumulada del Día -->
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-secondary fw-semibold small text-uppercase tracking-wide">Energía Hoy</span>
+                                    <div class="p-2 rounded-3 bg-success-subtle text-success">
+                                        <span class="bi bi-sun-fill fs-5"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-0 text-dark">@($"{EnergyTodayKwh:0.0} kWh")</h3>
+                                    <small class="text-muted">Acumulado desde 00:00 UYT</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metric Card 4: Umbral de Alerta -->
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <span class="text-secondary fw-semibold small text-uppercase tracking-wide">Umbral Alerta</span>
+                                    <div class="p-2 rounded-3 bg-warning-subtle text-warning">
+                                        <span class="bi bi-shield-exclamation fs-5"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 class="fw-bold mb-0 text-dark">@($"{_park.PowerAlertThresholdKw:0.##} kW")</h3>
+                                    <small class="text-muted">Alerta diurna operativa</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Park Details Summary Strip -->
+        <div class="card border-0 shadow-sm rounded-3 bg-light">
+            <div class="card-body px-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="bi bi-geo-alt-fill text-primary"></span>
+                    <span class="text-secondary small">Ubicación: <strong>@_park.Latitude.ToString("F4"), @_park.Longitude.ToString("F4")</strong></span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="bi bi-broadcast text-primary"></span>
+                    <span class="text-secondary small">Canal SignalR: <strong>park-@Id</strong></span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="bi bi-check-circle-fill text-success"></span>
+                    <span class="text-secondary small">Estado del Parque: <strong>@_park.Status</strong></span>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private SolarUY.Web.Services.SolarParkDto? _park;
+    private ParkTelemetryDto? _telemetry;
+    private HubConnection? _hubConnection;
+    private bool _isLoadingPark = true;
+    private string? _errorMessage;
+
+    private double CurrentPowerKw => _telemetry?.CurrentPowerKw ?? 0.0;
+    private double CapacityPercentage => _telemetry?.CapacityPercentage ?? 0.0;
+    private double EnergyTodayKwh => _telemetry?.EnergyTodayKwh ?? 0.0;
+
+    private double GaugeDashOffset
+    {
+        get
+        {
+            var clamped = Math.Clamp(CapacityPercentage / 100.0, 0.0, 1.0);
+            return 251.33 * (1.0 - clamped);
+        }
+    }
+
+    private string GaugeArcColor
+    {
+        get
+        {
+            if (_telemetry?.IsAlertActive == true) return "#f59e0b"; // Warning amber
+            if (CapacityPercentage > 90) return "#10b981"; // Vibrant green
+            return "#0284c7"; // Ocean blue
+        }
+    }
+
+    private string NeedleStyle
+    {
+        get
+        {
+            // From -90 deg (0%) to +90 deg (100%)
+            var clamped = Math.Clamp(CapacityPercentage, 0.0, 100.0);
+            var angle = -90.0 + (clamped * 1.8);
+            return $"transform-origin: 100px 105px; transform: rotate({angle.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)}deg); transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadParkAndConnectSignalRAsync();
+    }
+
+    private async Task LoadParkAndConnectSignalRAsync()
+    {
+        _isLoadingPark = true;
+        _errorMessage = null;
+
+        try
+        {
+            _park = await ParkApiClient.GetByIdAsync(Id);
+            if (_park == null)
+            {
+                _errorMessage = "No se encontró el parque solar solicitado.";
+                _isLoadingPark = false;
+                return;
+            }
+
+            _isLoadingPark = false;
+
+            await InitializeSignalRAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando parque solar {ParkId}", Id);
+            _errorMessage = $"Error al cargar los datos del parque: {ex.Message}";
+            _isLoadingPark = false;
+        }
+    }
+
+    private async Task InitializeSignalRAsync()
+    {
+        try
+        {
+            var apiBaseUrl = Configuration["services:apiservice:https:0"]
+                ?? Configuration["services:apiservice:http:0"]
+                ?? "http://apiservice";
+            var hubUrl = $"{apiBaseUrl.TrimEnd('/')}/hubs/park-telemetry";
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl, options =>
+                {
+                    options.HttpMessageHandlerFactory = _ => HttpMessageHandlerFactory.CreateHandler();
+                    options.AccessTokenProvider = async () =>
+                    {
+                        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                        var key = UserTokenStore.GetKey(authState.User);
+                        if (key == null) return null;
+                        return await TokenService.GetValidAccessTokenAsync(key, CancellationToken.None);
+                    };
+                })
+                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+                .Build();
+
+            _hubConnection.On<ParkTelemetryDto>("ReceiveParkTelemetry", (telemetry) =>
+            {
+                if (telemetry.ParkId == Id)
+                {
+                    _telemetry = telemetry;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            _hubConnection.Reconnecting += (error) =>
+            {
+                Logger.LogWarning(error, "SignalR reconectando para el parque {ParkId}", Id);
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnected += async (connectionId) =>
+            {
+                Logger.LogInformation("SignalR reconectado ({ConnectionId}). Re-suscribiendo a parque {ParkId}", connectionId, Id);
+                await _hubConnection.InvokeAsync("SubscribeToPark", Id);
+                await InvokeAsync(StateHasChanged);
+            };
+
+            _hubConnection.Closed += (error) =>
+            {
+                Logger.LogWarning(error, "SignalR desconectado para el parque {ParkId}", Id);
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("SubscribeToPark", Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error conectando al hub SignalR de telemetría para el parque {ParkId}", Id);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            try
+            {
+                if (_hubConnection.State == HubConnectionState.Connected)
+                {
+                    await _hubConnection.InvokeAsync("UnsubscribeFromPark", Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Error cerrando suscripción SignalR para parque {ParkId}", Id);
+            }
+            finally
+            {
+                await _hubConnection.DisposeAsync();
+            }
+        }
+    }
+}

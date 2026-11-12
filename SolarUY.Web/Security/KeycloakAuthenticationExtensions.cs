@@ -92,6 +92,22 @@ public static class KeycloakAuthenticationExtensions
 
                     return Task.CompletedTask;
                 };
+
+                options.Events.OnRedirectToIdentityProvider = context =>
+                {
+                    if (context.Properties.Parameters.TryGetValue("prompt", out var promptObj) && promptObj is string prompt)
+                    {
+                        context.ProtocolMessage.Prompt = prompt;
+                    }
+                    return Task.CompletedTask;
+                };
+
+                options.Events.OnRemoteFailure = context =>
+                {
+                    context.Response.Redirect(SessionEndedUrl);
+                    context.HandleResponse();
+                    return Task.CompletedTask;
+                };
             });
 
         builder.Services.AddAuthorization();
@@ -163,7 +179,7 @@ public static class KeycloakAuthenticationExtensions
         {
             var redirectUri = IsLocalUrl(returnUrl) ? returnUrl! : "/";
             return Results.Challenge(
-                new AuthenticationProperties { RedirectUri = redirectUri },
+                new AuthenticationProperties { RedirectUri = redirectUri, Parameters = { { "prompt", "login" } } },
                 [OpenIdConnectDefaults.AuthenticationScheme]);
         }).AllowAnonymous();
 

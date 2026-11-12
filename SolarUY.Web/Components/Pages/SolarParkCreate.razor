@@ -34,7 +34,7 @@
                         </div>
                     }
 
-                    <EditForm Model="@_formModel" OnValidSubmit="HandleSubmitAsync">
+                    <EditForm Model="@_formModel" OnValidSubmit="HandleSubmitAsync" FormName="CreateSolarParkForm">
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
@@ -95,7 +95,8 @@
 </div>
 
 @code {
-    private SolarParkFormModel _formModel = new();
+    [SupplyParameterFromForm]
+    private SolarParkFormModel _formModel { get; set; } = new();
     private bool _isSubmitting;
     private string? _successMessage;
     private string? _errorMessage;

@@ -1,6 +1,6 @@
 # Spec 027 — Ver Generación en Tiempo Real del Parque
 
-Estado: borrador
+Estado: aprobada
 Depende de: Spec 002 (Listar Parques)
 
 ## Contexto y objetivo

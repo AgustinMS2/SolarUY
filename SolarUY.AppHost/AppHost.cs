@@ -5,7 +5,9 @@ var postgres = builder.AddPostgres("postgres")
 
 // Fixed port so the token issuer (https://localhost:8080/realms/SolarUY) stays stable.
 var keycloak = builder.AddKeycloak("keycloak", 8080)
-    .WithRealmImport("./Realms");
+    .WithRealmImport("./Realms")
+    .WithEnvironment("QUARKUS_HTTP_LIMITS_MAX_HEADER_SIZE", "65536")
+    .WithEnvironment("QUARKUS_HTTP_LIMITS_MAX_HEADER_LIST_SIZE", "65536");
 
 var apiService = builder.AddProject<Projects.SolarUY_ApiService>("apiservice")
     .WithHttpHealthCheck("/health")
