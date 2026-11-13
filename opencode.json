@@ -7,7 +7,9 @@
         "npx",
         "-y",
         "chrome-devtools-mcp@latest",
-        "--no-usage-statistics"
+        "--no-usage-statistics",
+        "--executablePath",
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
       ]
     }
   }

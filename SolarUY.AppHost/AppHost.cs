@@ -18,6 +18,8 @@ var apiService = builder.AddProject<Projects.SolarUY_ApiService>("apiservice")
 
 builder.AddProject<Projects.SolarUY_Web>("webfrontend")
     .WithExternalHttpEndpoints()
+    // Puerto fijo 5205 para que el redirect_uri de Keycloak (realm importado) siga siendo válido.
+    .WithHttpEndpoint(port: 5205)
     .WithHttpHealthCheck("/health")
     .WithReference(apiService)
     .WithReference(keycloak)
