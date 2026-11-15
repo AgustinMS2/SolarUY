@@ -522,4 +522,124 @@ public class AlertServiceTests
         Assert.Equal(2, removed);
         Assert.Equal(kept.Id, Assert.Single(_repository.Alerts).Id);
     }
+
+    // =====================================================================
+    // Spec 026 (RF-3): al completarse un mantenimiento, las alertas activas del panel pasan a Atendida
+    // =====================================================================
+
+    private static readonly Guid PanelId = Guid.NewGuid();
+
+    private Alert PanelAlert(AlertStatus status, Guid? panelId = null, AlertEquipmentType type = AlertEquipmentType.Panel, int count = 1)
+    {
+        var alert = StoredAlert(status, Start.UtcDateTime.AddMinutes(-10), AlertSeverity.Critical, type, panelId ?? PanelId, count);
+        _repository.Alerts.Add(alert);
+        return alert;
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_PendingAlert_BecomesAttendedWithTheTimeAndIsReturned()
+    {
+        var alert = PanelAlert(AlertStatus.Pending);
+
+        var attended = _service.AttendPanelAlerts(PanelId);
+
+        var dto = Assert.Single(attended);
+        Assert.Equal(alert.Id, dto.Id);
+        Assert.Equal(AlertStatus.Attended, dto.Status);
+        Assert.Equal(AlertStatus.Attended, alert.Status);
+        Assert.Equal(Start.UtcDateTime, alert.AttendedAtUtc);
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_AcknowledgedAlert_BecomesAttendedKeepingItsAcknowledgementDate()
+    {
+        var acknowledgedAt = Start.UtcDateTime.AddMinutes(-5);
+        var alert = PanelAlert(AlertStatus.Acknowledged);
+        alert.AcknowledgedAtUtc = acknowledgedAt;
+
+        _service.AttendPanelAlerts(PanelId);
+
+        Assert.Equal(AlertStatus.Attended, alert.Status);
+        Assert.Equal(acknowledgedAt, alert.AcknowledgedAtUtc);
+    }
+
+    [Theory]
+    [InlineData(AlertStatus.Dismissed)]
+    [InlineData(AlertStatus.Attended)]
+    public void AttendPanelAlerts_DismissedOrAlreadyAttendedAlerts_AreNotTouchedNorReturned(AlertStatus status)
+    {
+        var alert = PanelAlert(status);
+
+        var attended = _service.AttendPanelAlerts(PanelId);
+
+        Assert.Empty(attended);
+        Assert.Equal(status, alert.Status);
+        Assert.Null(alert.AttendedAtUtc);
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_OnlyTouchesTheAlertsOfThatPanel()
+    {
+        var mine = PanelAlert(AlertStatus.Pending);
+        var otherPanel = PanelAlert(AlertStatus.Pending, panelId: Guid.NewGuid());
+
+        var attended = _service.AttendPanelAlerts(PanelId);
+
+        Assert.Equal(mine.Id, Assert.Single(attended).Id);
+        Assert.Equal(AlertStatus.Pending, otherPanel.Status);
+    }
+
+    [Theory]
+    [InlineData(AlertEquipmentType.Node)]
+    [InlineData(AlertEquipmentType.Park)]
+    public void AttendPanelAlerts_NodeAndParkAlertsWithTheSameIdentifierAreNotTouched(AlertEquipmentType type)
+    {
+        var alert = PanelAlert(AlertStatus.Pending, type: type);
+
+        var attended = _service.AttendPanelAlerts(PanelId);
+
+        Assert.Empty(attended);
+        Assert.Equal(AlertStatus.Pending, alert.Status);
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_ConsolidatedAlertIsAttendedAsAWhole()
+    {
+        var consolidated = PanelAlert(AlertStatus.Pending, count: 4);
+
+        var attended = _service.AttendPanelAlerts(PanelId);
+
+        Assert.Equal(4, Assert.Single(attended).OccurrenceCount);
+        Assert.Equal(AlertStatus.Attended, consolidated.Status);
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_AttendsEveryActiveAlertOfThePanel()
+    {
+        PanelAlert(AlertStatus.Pending);
+        PanelAlert(AlertStatus.Acknowledged);
+        PanelAlert(AlertStatus.Dismissed);
+
+        var attended = _service.AttendPanelAlerts(PanelId);
+
+        Assert.Equal(2, attended.Count);
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_PanelWithoutAlerts_ReturnsAnEmptyList()
+    {
+        Assert.Empty(_service.AttendPanelAlerts(PanelId));
+    }
+
+    [Fact]
+    public void AttendPanelAlerts_PendingAlertStopsCountingInTheBell()
+    {
+        PanelAlert(AlertStatus.Pending);
+        PanelAlert(AlertStatus.Pending, panelId: Guid.NewGuid());
+        Assert.Equal(2, _service.GetUnreadCount());
+
+        _service.AttendPanelAlerts(PanelId);
+
+        Assert.Equal(1, _service.GetUnreadCount());
+    }
 }

@@ -69,6 +69,15 @@ public class AlertRepository : IAlertRepository
             .ToList();
     }
 
+    public IReadOnlyList<Alert> GetActiveByPanel(Guid panelId)
+    {
+        return _context.Alerts
+            .Where(a => a.EquipmentType == AlertEquipmentType.Panel
+                        && a.EquipmentId == panelId
+                        && (a.Status == AlertStatus.Pending || a.Status == AlertStatus.Acknowledged))
+            .ToList();
+    }
+
     public int CountByStatus(AlertStatus status)
     {
         return _context.Alerts.Count(a => a.Status == status);

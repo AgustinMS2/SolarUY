@@ -29,7 +29,7 @@ Permitir al Técnico reportar la finalización de una intervención de mantenimi
   - SI las observaciones superan los 1000 caracteres, ENTONCES EL SISTEMA mostrará "Las observaciones técnicas no pueden superar los 1000 caracteres."
   - SI los componentes reemplazados superan los 300 caracteres, ENTONCES EL SISTEMA mostrará "Los componentes reemplazados no pueden superar los 300 caracteres."
   - SI no se selecciona el estado del panel tras la tarea, ENTONCES EL SISTEMA mostrará "Seleccioná el estado del panel tras la tarea."
-- **RF-3**: CUANDO la orden quede en estado "Completado", si el panel asociado poseía alertas activas de falla, EL SISTEMA resolverá automáticamente dichas alertas marcándolas como "Atendidas". *(Pendiente: se implementa junto con la spec 031, que es la que crea las alertas. Hasta entonces la confirmación no modifica alertas.)*
+- **RF-3**: CUANDO la orden quede en estado "Completado", si el panel asociado poseía alertas activas de falla, EL SISTEMA resolverá automáticamente dichas alertas marcándolas como "Atendidas". Son alertas activas las Pendientes y las Reconocidas; las Descartadas y las que ya estaban Atendidas no cambian. Solo se tocan las alertas del propio panel (no las del nodo ni las del parque). Los usuarios conectados ven el cambio en la campana al instante.
 - **RF-4**: SI la orden ya se encuentra en estado "Completado" o "Cancelado", ENTONCES EL SISTEMA impedirá una segunda confirmación y mostrará "Este mantenimiento ya fue completado previamente."
 - **RF-5**: CUANDO el técnico presione "Cancelar", EL SISTEMA regresará a la lista de tareas sin modificar el estado pendiente.
 - **RF-6**: SI el mantenimiento no existe, ENTONCES EL SISTEMA mostrará "El mantenimiento solicitado no existe."
@@ -51,9 +51,9 @@ Permitir al Técnico reportar la finalización de una intervención de mantenimi
 - Agendar automáticamente un mantenimiento de seguimiento y cambiar el estado del panel.
 
 ## Criterios de finalización
-- Tests unitarios en verde para las reglas del servicio (RF-1, RF-2, RF-4 y RF-6; RF-3 queda para la spec 031).
+- Tests unitarios en verde para las reglas del servicio (RF-1, RF-2, RF-4 y RF-6; el RF-3 se probó al crearse las alertas en la spec 031).
 - Tests de arquitectura en verde.
 - Verificación manual en navegador.
 
 ## Dudas abiertas
-- Ninguna. Decisiones tomadas: cualquier Técnico o Administrador puede confirmar cualquier orden pendiente; el estado del panel tras la tarea se guarda en la orden; RF-3 se difiere a la spec 031 porque las alertas todavía no existen.
+- Ninguna. Decisiones tomadas: cualquier Técnico o Administrador puede confirmar cualquier orden pendiente; el estado del panel tras la tarea se guarda en la orden; el RF-3 se implementó en la tarea T5, una vez creadas las alertas en la spec 031.

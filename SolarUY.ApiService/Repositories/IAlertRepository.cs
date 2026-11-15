@@ -34,6 +34,11 @@ public interface IAlertRepository
     int CountByStatus(AlertStatus status);
 
     /// <summary>
+    /// Alertas Pendientes o Reconocidas de un panel (spec 026, RF-3).
+    /// </summary>
+    IReadOnlyList<Alert> GetActiveByPanel(Guid panelId);
+
+    /// <summary>
     /// Alertas Descartadas creadas antes de la fecha dada (candidatas a la purga, RF-5).
     /// </summary>
     IReadOnlyList<Alert> GetDismissedCreatedBefore(DateTime createdBeforeUtc);

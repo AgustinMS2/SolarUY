@@ -12,10 +12,12 @@ namespace SolarUY.ApiService.Controllers;
 public class MaintenancesController : ControllerBase
 {
     private readonly IMaintenanceService _maintenanceService;
+    private readonly IAlertPublisher _alertPublisher;
 
-    public MaintenancesController(IMaintenanceService maintenanceService)
+    public MaintenancesController(IMaintenanceService maintenanceService, IAlertPublisher alertPublisher)
     {
         _maintenanceService = maintenanceService;
+        _alertPublisher = alertPublisher;
     }
 
     [Authorize(Roles = Roles.Administrator)]
@@ -156,7 +158,7 @@ public class MaintenancesController : ControllerBase
     // Spec 026: confirma un mantenimiento realizado. Lo usan el Técnico y, por contingencia, el Administrador.
     [Authorize(Roles = Roles.Any)]
     [HttpPost("{id:guid}/confirm")]
-    public IActionResult ConfirmMaintenance(Guid id, [FromBody] ConfirmMaintenanceRequest request)
+    public async Task<IActionResult> ConfirmMaintenance(Guid id, [FromBody] ConfirmMaintenanceRequest request, CancellationToken cancellationToken)
     {
         var result = _maintenanceService.ConfirmMaintenance(id, request);
 
@@ -169,6 +171,12 @@ public class MaintenancesController : ControllerBase
                 ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
                 _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
             };
+        }
+
+        // Spec 026 (RF-3): las alertas del panel que pasaron a Atendida se avisan a todos los usuarios conectados.
+        foreach (var alert in result.Value!.AttendedAlerts)
+        {
+            await _alertPublisher.PublishStatusChangeAsync(alert, cancellationToken);
         }
 
         return Ok(new { message = "Mantenimiento confirmado y completado correctamente." });

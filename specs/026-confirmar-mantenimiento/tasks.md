@@ -12,5 +12,5 @@
 - [x] **T4. Formulario Blazor /mantenimientos/{id}/confirmar y botones "Confirmar".** RF-1, RF-2, RF-4, RF-5
   - Hecho cuando: en el navegador el técnico (desde Mis mantenimientos) y el administrador (desde la lista) registran observaciones, confirman y la orden queda cerrada volviendo al listado; "Cancelar" no cambia nada; se ve bien en celular.
 
-- [ ] **T5. Resolver las alertas activas del panel al completar la orden (BLOQUEADA por la spec 031).** RF-3
+- [x] **T5. Resolver las alertas activas del panel al completar la orden.** RF-3
   - Hecho cuando: existe la entidad de alertas (spec 031) y la confirmación marca como "Atendidas" las alertas activas del panel, con tests unitarios en verde.

@@ -25,4 +25,10 @@ public interface IAlertService
 
     /// <summary>Elimina las alertas Descartadas nocturnas de más de 24 horas y devuelve cuántas eliminó (RF-5).</summary>
     int PurgeDismissed();
+
+    /// <summary>
+    /// Pasa a Atendida las alertas Pendientes o Reconocidas de un panel y devuelve las que cambiaron.
+    /// La usa la spec 026 (RF-3) al completarse un mantenimiento del panel.
+    /// </summary>
+    IReadOnlyList<AlertDto> AttendPanelAlerts(Guid panelId);
 }

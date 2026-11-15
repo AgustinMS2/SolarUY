@@ -11,17 +11,20 @@ public class MaintenanceService : IMaintenanceService
     private readonly ISolarPanelRepository _panelRepository;
     private readonly ITechnicianRepository _technicianRepository;
     private readonly ILogger<MaintenanceService> _logger;
+    private readonly IAlertService? _alertService;
 
     public MaintenanceService(
         IMaintenanceRepository maintenanceRepository,
         ISolarPanelRepository panelRepository,
         ITechnicianRepository technicianRepository,
-        ILogger<MaintenanceService> logger)
+        ILogger<MaintenanceService> logger,
+        IAlertService? alertService = null)
     {
         _maintenanceRepository = maintenanceRepository;
         _panelRepository = panelRepository;
         _technicianRepository = technicianRepository;
         _logger = logger;
+        _alertService = alertService;
     }
 
     public ServiceResult<Guid> CreateReservation(CreateMaintenanceReservationRequest request)
@@ -260,32 +263,32 @@ public class MaintenanceService : IMaintenanceService
     }
 
     // Spec 026: el técnico (o el administrador, por contingencia) confirma una intervención realizada.
-    public ServiceResult ConfirmMaintenance(Guid orderId, ConfirmMaintenanceRequest request)
+    public ServiceResult<MaintenanceConfirmation> ConfirmMaintenance(Guid orderId, ConfirmMaintenanceRequest request)
     {
         var order = _maintenanceRepository.GetById(orderId);
         if (order == null)
         {
-            return ServiceResult.Fail(ServiceErrorType.NotFound, "El mantenimiento solicitado no existe.");
+            return ServiceResult<MaintenanceConfirmation>.Fail(ServiceErrorType.NotFound, "El mantenimiento solicitado no existe.");
         }
 
         // RF-4: solo las órdenes Pendientes pueden confirmarse (ni las Completadas ni las Canceladas).
         if (order.Status != MaintenanceStatus.Pending)
         {
-            return ServiceResult.Fail(ServiceErrorType.Conflict, "Este mantenimiento ya fue completado previamente.");
+            return ServiceResult<MaintenanceConfirmation>.Fail(ServiceErrorType.Conflict, "Este mantenimiento ya fue completado previamente.");
         }
 
         // RF-2: observaciones obligatorias, de 10 a 1000 caracteres.
         var notes = request.Notes?.Trim() ?? string.Empty;
         if (notes.Length < 10)
         {
-            return ServiceResult.Fail(
+            return ServiceResult<MaintenanceConfirmation>.Fail(
                 ServiceErrorType.Validation,
                 "Las observaciones técnicas son obligatorias y deben tener al menos 10 caracteres.");
         }
 
         if (notes.Length > 1000)
         {
-            return ServiceResult.Fail(
+            return ServiceResult<MaintenanceConfirmation>.Fail(
                 ServiceErrorType.Validation,
                 "Las observaciones técnicas no pueden superar los 1000 caracteres.");
         }
@@ -294,7 +297,7 @@ public class MaintenanceService : IMaintenanceService
         var replacedParts = string.IsNullOrWhiteSpace(request.ReplacedParts) ? null : request.ReplacedParts.Trim();
         if (replacedParts != null && replacedParts.Length > 300)
         {
-            return ServiceResult.Fail(
+            return ServiceResult<MaintenanceConfirmation>.Fail(
                 ServiceErrorType.Validation,
                 "Los componentes reemplazados no pueden superar los 300 caracteres.");
         }
@@ -308,7 +311,7 @@ public class MaintenanceService : IMaintenanceService
         };
         if (outcome == null)
         {
-            return ServiceResult.Fail(ServiceErrorType.Validation, "Seleccioná el estado del panel tras la tarea.");
+            return ServiceResult<MaintenanceConfirmation>.Fail(ServiceErrorType.Validation, "Seleccioná el estado del panel tras la tarea.");
         }
 
         // RF-1: la orden queda Completada con la fecha real de finalización en UTC.
@@ -322,7 +325,10 @@ public class MaintenanceService : IMaintenanceService
         _maintenanceRepository.Update(order);
         _logger.LogInformation("Maintenance order {OrderId} confirmed as completed", orderId);
 
-        return ServiceResult.Ok();
+        // RF-3: las alertas activas del panel quedan como Atendidas (spec 031). Solo si la confirmación fue aceptada.
+        var attendedAlerts = _alertService?.AttendPanelAlerts(order.SolarPanelId) ?? [];
+
+        return ServiceResult<MaintenanceConfirmation>.Ok(new MaintenanceConfirmation(attendedAlerts));
     }
 
     public ServiceResult<IReadOnlyList<MaintenanceOrderDto>> GetMyMaintenances(string technicianEmail)

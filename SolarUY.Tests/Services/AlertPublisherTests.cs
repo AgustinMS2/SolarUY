@@ -115,5 +115,6 @@ public class AlertPublisherTests
         public AlertListDto GetRecent(int take) => throw new NotSupportedException();
         public int GetUnreadCount() => throw new NotSupportedException();
         public int PurgeDismissed() => throw new NotSupportedException();
+        public IReadOnlyList<AlertDto> AttendPanelAlerts(Guid panelId) => throw new NotSupportedException();
     }
 }

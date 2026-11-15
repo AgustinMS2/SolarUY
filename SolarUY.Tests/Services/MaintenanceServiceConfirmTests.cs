@@ -16,7 +16,9 @@ public class MaintenanceServiceConfirmTests
     private const string AlreadyClosedMessage = "Este mantenimiento ya fue completado previamente.";
 
     private readonly FakeMaintenanceRepository _repository = new();
+    private readonly FakeAlertRepository _alertRepository = new();
     private readonly MaintenanceService _service;
+    private readonly MaintenanceService _serviceWithAlerts;
 
     public MaintenanceServiceConfirmTests()
     {
@@ -25,6 +27,34 @@ public class MaintenanceServiceConfirmTests
             new FakeSolarPanelRepository(),
             new FakeTechnicianRepository(),
             NullLogger<MaintenanceService>.Instance);
+
+        // Spec 026 (RF-3): el mismo servicio, con el servicio de alertas conectado.
+        _serviceWithAlerts = new MaintenanceService(
+            _repository,
+            new FakeSolarPanelRepository(),
+            new FakeTechnicianRepository(),
+            NullLogger<MaintenanceService>.Instance,
+            new AlertService(_alertRepository, TimeProvider.System));
+    }
+
+    private Alert AddAlert(Guid equipmentId, AlertStatus status, AlertEquipmentType type = AlertEquipmentType.Panel)
+    {
+        var alert = new Alert
+        {
+            Id = Guid.NewGuid(),
+            SolarParkId = Guid.NewGuid(),
+            ParkName = "Parque Salto",
+            EquipmentType = type,
+            EquipmentId = equipmentId,
+            EquipmentName = "PNL-0042",
+            Severity = AlertSeverity.Critical,
+            Status = status,
+            Description = "Panel sin generación con sol",
+            CreatedAtUtc = DateTime.UtcNow.AddMinutes(-10),
+            LastOccurrenceAtUtc = DateTime.UtcNow.AddMinutes(-10)
+        };
+        _alertRepository.Alerts.Add(alert);
+        return alert;
     }
 
     private MaintenanceOrder AddOrder(MaintenanceStatus status = MaintenanceStatus.Pending)
@@ -283,5 +313,78 @@ public class MaintenanceServiceConfirmTests
         Assert.Null(order.ReplacedParts);
         Assert.Null(order.PanelOutcome);
         Assert.Null(order.CompletedAtUtc);
+    }
+
+    // ---- RF-3 (alertas del panel, spec 031)
+
+    [Fact]
+    public void ConfirmMaintenance_MarksTheActiveAlertsOfThePanelAsAttended()
+    {
+        var order = AddOrder();
+        var pending = AddAlert(order.SolarPanelId, AlertStatus.Pending);
+        var acknowledged = AddAlert(order.SolarPanelId, AlertStatus.Acknowledged);
+
+        var result = _serviceWithAlerts.ConfirmMaintenance(order.Id, Request());
+
+        Assert.True(result.Success);
+        Assert.Equal(AlertStatus.Attended, pending.Status);
+        Assert.Equal(AlertStatus.Attended, acknowledged.Status);
+        Assert.NotNull(pending.AttendedAtUtc);
+        Assert.Equal(2, result.Value!.AttendedAlerts.Count);
+        Assert.All(result.Value.AttendedAlerts, a => Assert.Equal(AlertStatus.Attended, a.Status));
+    }
+
+    [Fact]
+    public void ConfirmMaintenance_DoesNotTouchDismissedAlertsNorAlertsOfOtherEquipment()
+    {
+        var order = AddOrder();
+        var dismissed = AddAlert(order.SolarPanelId, AlertStatus.Dismissed);
+        var otherPanel = AddAlert(Guid.NewGuid(), AlertStatus.Pending);
+        var sameIdButNode = AddAlert(order.SolarPanelId, AlertStatus.Pending, AlertEquipmentType.Node);
+
+        var result = _serviceWithAlerts.ConfirmMaintenance(order.Id, Request());
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Value!.AttendedAlerts);
+        Assert.Equal(AlertStatus.Dismissed, dismissed.Status);
+        Assert.Equal(AlertStatus.Pending, otherPanel.Status);
+        Assert.Equal(AlertStatus.Pending, sameIdButNode.Status);
+    }
+
+    [Fact]
+    public void ConfirmMaintenance_WhenTheConfirmationIsRejected_LeavesTheAlertsUntouched()
+    {
+        var order = AddOrder();
+        var alert = AddAlert(order.SolarPanelId, AlertStatus.Pending);
+
+        var result = _serviceWithAlerts.ConfirmMaintenance(order.Id, Request(notes: "corto"));
+
+        Assert.False(result.Success);
+        Assert.Equal(AlertStatus.Pending, alert.Status);
+    }
+
+    [Fact]
+    public void ConfirmMaintenance_OnAnAlreadyCompletedOrder_LeavesTheAlertsUntouched()
+    {
+        var order = AddOrder(MaintenanceStatus.Completed);
+        var alert = AddAlert(order.SolarPanelId, AlertStatus.Pending);
+
+        var result = _serviceWithAlerts.ConfirmMaintenance(order.Id, Request());
+
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Equal(AlertStatus.Pending, alert.Status);
+    }
+
+    [Fact]
+    public void ConfirmMaintenance_WithoutAlertService_StillCompletesTheOrder()
+    {
+        var order = AddOrder();
+
+        var result = _service.ConfirmMaintenance(order.Id, Request());
+
+        Assert.True(result.Success);
+        Assert.Empty(result.Value!.AttendedAlerts);
+        Assert.Equal(MaintenanceStatus.Completed, order.Status);
     }
 }

@@ -9,7 +9,7 @@
   - `Services/IMaintenanceService.cs` y `MaintenanceService.cs`: método `ServiceResult ConfirmMaintenance(Guid id, ConfirmMaintenanceRequest request)`.
   - `Dtos/ConfirmMaintenanceRequest.cs`: `(string? Notes, string? ReplacedParts, string? PanelOutcome)`. `PanelOutcome` acepta `"Operational"` o `"NeedsFollowUp"`.
   - `Controllers/MaintenancesController.cs`: `POST /api/maintenances/{id}/confirm` con `[Authorize(Roles = Roles.Any)]` (Técnico y Administrador).
-  - **RF-3 (alertas) queda fuera de este plan**: el repositorio `IAlertRepository` del plan original no existe porque las alertas pertenecen a la spec 031.
+  - **RF-3 (alertas)**: se implementó en la tarea T5, después de crearse las alertas en la spec 031. `IAlertService.AttendPanelAlerts(panelId)` pasa a Atendida las alertas Pendientes o Reconocidas del panel; `MaintenanceService.ConfirmMaintenance` lo llama solo cuando la confirmación fue aceptada y devuelve las alertas atendidas (`MaintenanceConfirmation`), y `MaintenancesController` las emite por SignalR como cambio de estado.
 - `SolarUY.Web`:
   - Cliente HTTP de mantenimientos: método `ConfirmAsync(Guid id, ConfirmMaintenanceRequest request)`.
   - `Components/Pages/MaintenanceConfirm.razor` (ruta `/mantenimientos/{id:guid}/confirmar`, `[Authorize(Roles = AppRoles.Any)]`): formulario de confirmación.
@@ -51,7 +51,7 @@
   - Los errores de la API se muestran en la pantalla.
 
 ## Decisiones específicas de esta spec
-- RF-3 se difiere a la spec 031: hoy no existe entidad de alertas, y crear un repositorio vacío sería código sin uso.
+- RF-3 se difirió a la spec 031 (no había entidad de alertas) y se implementó en la T5 con tests unitarios del servicio de alertas y de la confirmación.
 - El estado del panel tras la tarea se guarda en la orden y no modifica el panel.
 
 ## Estrategia de Tests

@@ -63,6 +63,15 @@ public class FakeAlertRepository : IAlertRepository
 
     public int CountByStatus(AlertStatus status) => Alerts.Count(a => a.Status == status);
 
+    public IReadOnlyList<Alert> GetActiveByPanel(Guid panelId)
+    {
+        return Alerts
+            .Where(a => a.EquipmentType == AlertEquipmentType.Panel
+                        && a.EquipmentId == panelId
+                        && (a.Status == AlertStatus.Pending || a.Status == AlertStatus.Acknowledged))
+            .ToList();
+    }
+
     public IReadOnlyList<Alert> GetDismissedCreatedBefore(DateTime createdBeforeUtc)
     {
         return Alerts.Where(a => a.Status == AlertStatus.Dismissed && a.CreatedAtUtc < createdBeforeUtc).ToList();

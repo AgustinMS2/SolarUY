@@ -165,6 +165,21 @@ public class AlertService : IAlertService
         return toRemove.Count;
     }
 
+    public IReadOnlyList<AlertDto> AttendPanelAlerts(Guid panelId)
+    {
+        var now = Now();
+        var active = _repository.GetActiveByPanel(panelId);
+
+        foreach (var alert in active)
+        {
+            alert.Status = AlertStatus.Attended;
+            alert.AttendedAtUtc = now;
+            _repository.Update(alert);
+        }
+
+        return active.Select(ToDto).ToList();
+    }
+
     public static AlertDto ToDto(Alert alert)
     {
         ArgumentNullException.ThrowIfNull(alert);
