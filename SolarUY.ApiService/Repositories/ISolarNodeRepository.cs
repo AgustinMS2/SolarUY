@@ -10,4 +10,5 @@ public interface ISolarNodeRepository
     void Update(SolarNode node);
     SolarNode? GetById(Guid id);
     IReadOnlyList<SolarNode> GetAll(Guid? parkId = null);
+    IReadOnlyList<SolarNode> GetByParkId(Guid parkId);
 }

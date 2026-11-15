@@ -31,4 +31,21 @@ public class InMemoryInverterCommandSender : IInverterCommandSender
             panelSerieNumber, inverterEndpoint ?? "sin inversor asociado");
         return true;
     }
+
+    // Spec 033: stub de las órdenes de inyección a la red hasta la spec 036.
+    public bool SendInjectionCut(string inverterSerieNumber, string? inverterEndpoint)
+    {
+        _logger.LogInformation(
+            "Orden de corte de inyección a la red aceptada para el inversor {InverterSerie} (endpoint: {Endpoint})",
+            inverterSerieNumber, inverterEndpoint ?? "sin endpoint");
+        return true;
+    }
+
+    public bool SendInjectionResume(string inverterSerieNumber, string? inverterEndpoint)
+    {
+        _logger.LogInformation(
+            "Orden de reanudación de inyección a la red aceptada para el inversor {InverterSerie} (endpoint: {Endpoint})",
+            inverterSerieNumber, inverterEndpoint ?? "sin endpoint");
+        return true;
+    }
 }

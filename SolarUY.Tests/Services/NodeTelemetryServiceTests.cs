@@ -206,4 +206,29 @@ public class NodeTelemetryServiceTests
         Assert.False(result.IsOverheating);
         Assert.False(result.IsGridFrequencyAnomaly);
     }
+
+    // Spec 033: mientras dure el corte administrativo de inyección del inversor,
+    // este no opera: valores eléctricos en cero y alarmas suprimidas.
+    [Fact]
+    public void CalculateMetrics_WhenInverterInjectionIsCut_SetsValuesToZeroAndSuppressesAlerts()
+    {
+        var node = CreateActiveNode();
+        var inverter = CreateInverter();
+        inverter.GridInjectionEnabled = false;
+
+        var result = _service.CalculateMetrics(
+            node, inverter,
+            activePowerKw: 20, dcVoltage: 600, dcCurrent: 33,
+            acVoltage: 380, frequencyHz: 49.2, temperatureC: 80,
+            timestampUtc: DateTime.UtcNow);
+
+        Assert.Equal(0.0, result.ActivePowerKw);
+        Assert.Equal(0.0, result.DcVoltage);
+        Assert.Equal(0.0, result.DcCurrent);
+        Assert.Equal(0.0, result.AcVoltage);
+        Assert.Equal(0.0, result.GridFrequencyHz);
+        Assert.Equal(0.0, result.InverterTemperatureC);
+        Assert.False(result.IsOverheating);
+        Assert.False(result.IsGridFrequencyAnomaly);
+    }
 }

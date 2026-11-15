@@ -79,13 +79,17 @@ public class SolarNodeService : ISolarNodeService
 
         // One query for every node's inverter instead of one per row.
         var nodeIds = nodes.Select(n => n.Id).ToList();
-        var serieByNode = _inverterRepository
+        var inverterByNode = _inverterRepository
             .GetByNodeIds(nodeIds)
-            .ToDictionary(i => i.SolarNodeId, i => i.SerieNumber);
+            .ToDictionary(i => i.SolarNodeId, i => i);
         var panelCountByNode = _panelRepository.CountByNodeIds(nodeIds);
 
         return nodes
-            .Select(n => ToDto(n, serieByNode.GetValueOrDefault(n.Id), panelCountByNode.GetValueOrDefault(n.Id)))
+            .Select(n => ToDto(
+                n,
+                inverterByNode.GetValueOrDefault(n.Id)?.SerieNumber,
+                inverterByNode.GetValueOrDefault(n.Id)?.GridInjectionEnabled,
+                panelCountByNode.GetValueOrDefault(n.Id)))
             .ToList()
             .AsReadOnly();
     }
@@ -99,7 +103,8 @@ public class SolarNodeService : ISolarNodeService
         }
 
         var panelsCount = _panelRepository.CountByNodeIds([node.Id]).GetValueOrDefault(node.Id);
-        return ServiceResult<SolarNodeDto>.Ok(ToDto(node, _inverterRepository.GetByNodeId(node.Id)?.SerieNumber, panelsCount));
+        var inverter = _inverterRepository.GetByNodeId(node.Id);
+        return ServiceResult<SolarNodeDto>.Ok(ToDto(node, inverter?.SerieNumber, inverter?.GridInjectionEnabled, panelsCount));
     }
 
     public ServiceResult Update(Guid id, UpdateSolarNodeRequest request)
@@ -138,7 +143,7 @@ public class SolarNodeService : ISolarNodeService
         return ServiceResult.Ok();
     }
 
-    private static SolarNodeDto ToDto(SolarNode node, string? inverterSerie, int panelsCount)
+    private static SolarNodeDto ToDto(SolarNode node, string? inverterSerie, bool? inverterGridInjectionEnabled, int panelsCount)
     {
         return new SolarNodeDto(
             node.Id,
@@ -147,7 +152,8 @@ public class SolarNodeService : ISolarNodeService
             node.SolarPark?.Name ?? string.Empty,
             panelsCount,
             inverterSerie,
-            node.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo"
+            node.Status == SolarNodeStatus.Active ? "Activo" : "Inactivo",
+            inverterGridInjectionEnabled
         );
     }
 

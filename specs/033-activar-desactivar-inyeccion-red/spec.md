@@ -1,7 +1,7 @@
 # Spec 033 — Activar y Desactivar Inyección a la Red
 
-Estado: borrador
-Depende de: Spec 001 (Parques), Spec 013 (Inversores)
+Estado: aprobada (aclarada y confirmada por el usuario el 2026-11-15)
+Depende de: Spec 001 (Parques), Spec 013 (Inversores), Spec 027 y 028 (Monitoreo)
 
 ## Contexto y objetivo
 Proporcionar un control maestro de desconexión o reconexión de la inyección eléctrica hacia la red de distribución para un parque solar completo o para un inversor individual, ante requerimientos de la distribuidora eléctrica (curtailment), sobretensiones en la red o emergencias del parque.
@@ -12,9 +12,17 @@ Proporcionar un control maestro de desconexión o reconexión de la inyección e
 ## Historias de usuario
 - **HU-1**: Como Administrador, quiero deshabilitar la inyección a la red de un parque o inversor para cumplir con solicitudes de la red eléctrica o prevenir daños ante sobretensión.
 
+## Definiciones
+- **Inyección a la red**: entrega de potencia del inversor hacia la red de distribución. El estado administrativo de inyección se persiste por separado del estado operativo del equipamiento (`GridInjectionEnabled`, booleano, en parque e inversor).
+- **Corte administrativo**: desactivación de la inyección por decisión del Administrador; mientras dure, la potencia entregada se reporta en 0 kW y no se generan alertas de generación baja o cero (mismo tratamiento que un nodo inactivo).
+- **"CONFIRMAR"**: texto de confirmación exacto, sensible a mayúsculas y sin espacios adicionales válidos.
+- **Bitácora**: registro inmutable de auditoría de órdenes de inyección (solo altas, sin edición ni borrado): usuario, fecha UTC, IP, motivo y orden enviada.
+- **Motivo del corte**: campo opcional del modal de confirmación (además del texto "CONFIRMAR"), persistido en la auditoría.
+- **IP registrada**: la de la petición HTTP recibida por la API; en la arquitectura BFF actual corresponde al servidor Web (Blazor Server), no al navegador.
+
 ## Requisitos funcionales (EARS)
 
-- **RF-1**: CUANDO el Administrador presione "Corte de Inyección a Red" en el panel de control del parque, EL SISTEMA desplegará un modal con advertencia crítica: "¡Atención! Estás a punto de cortar la inyección a la red de todo el parque \"<nombre_parque>\". La potencia entregada pasará a 0 kW inmediatamente. Escribí 'CONFIRMAR' para proceder."
+- **RF-1**: CUANDO el Administrador presione "Corte de Inyección a Red" en el panel de control del parque, EL SISTEMA desplegará un modal con advertencia crítica: "¡Atención! Estás a punto de cortar la inyección a la red de todo el parque \"<nombre_parque>\". La potencia entregada pasará a 0 kW inmediatamente. Escribí 'CONFIRMAR' para proceder." El modal incluirá además un campo opcional de motivo (aclaración del 2026-11-15).
 - **RF-2**: CUANDO el Administrador escriba 'CONFIRMAR' y acepte, EL SISTEMA enviará la orden de desacople a todos los inversores del parque, registrará el evento de seguridad en auditoría y mostrará "Inyección a la red desactivada. El parque no está entregando energía a la red."
 - **RF-3**: SI el texto de confirmación no coincide exactamente con 'CONFIRMAR', ENTONCES EL SISTEMA mantendrá el botón deshabilitado y no enviará ninguna orden.
 - **RF-4**: MIENTRAS la inyección esté desactivada, el panel de monitoreo mostrará un banner fijo rojo en la parte superior: "INYECCIÓN A LA RED DETENIDA ADMINISTRATIVAMENTE".
@@ -26,10 +34,14 @@ Proporcionar un control maestro de desconexión o reconexión de la inyección e
 - Registro inmutable de auditoría con IP, usuario, timestamp y motivo del corte.
 
 ## Casos límite
-- Desconexión por inversor individual sin cortar el parque entero: se admite el mismo flujo seleccionando el inversor específico.
+- Desconexión por inversor individual sin cortar el parque entero: se admite el mismo flujo seleccionando el inversor específico (con su propio estado y banner en el monitoreo del nodo).
+- Órdenes a los inversores de un parque son "todo o nada": SI algún inversor no confirma la orden, EL SISTEMA no cambia ningún estado, no registra el evento en la bitácora y reporta "Error de comunicación con el inversor <serie>. La orden no pudo confirmarse." (consistente con la spec 032).
+- Parque o nodo inactivo: EL SISTEMA rechaza la orden (defensivo; la UI no ofrece el botón).
+- Corte/reanudación repetida: SI el estado ya es el solicitado, EL SISTEMA responde con conflicto sin reenviar órdenes.
 
 ## Fuera de alcance
 - Apertura física de reconectadores de media tensión externos (se opera sobre el inversor).
+- Comunicación HTTP real contra los endpoints de los inversores: se implementa con la spec 036; la orden se envía mediante el stub de la spec 032 extendido.
 
 ## Criterios de finalización
 - Tests unitarios en verde para validaciones de confirmación y autorización.

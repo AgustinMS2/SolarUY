@@ -17,6 +17,12 @@ public class FakeInverterCommandSender : IInverterCommandSender
     /// <summary>Números de serie de los paneles con orden de habilitación enviada.</summary>
     public List<string> SentActivateCommands { get; } = [];
 
+    /// <summary>Números de serie de los inversores con orden de corte de inyección enviada (spec 033).</summary>
+    public List<string> SentInjectionCutCommands { get; } = [];
+
+    /// <summary>Números de serie de los inversores con orden de reanudación de inyección enviada (spec 033).</summary>
+    public List<string> SentInjectionResumeCommands { get; } = [];
+
     public bool SendDeactivate(string panelSerieNumber, string? inverterEndpoint)
     {
         SentDeactivateCommands.Add(panelSerieNumber);
@@ -26,6 +32,18 @@ public class FakeInverterCommandSender : IInverterCommandSender
     public bool SendActivate(string panelSerieNumber, string? inverterEndpoint)
     {
         SentActivateCommands.Add(panelSerieNumber);
+        return Succeeds;
+    }
+
+    public bool SendInjectionCut(string inverterSerieNumber, string? inverterEndpoint)
+    {
+        SentInjectionCutCommands.Add(inverterSerieNumber);
+        return Succeeds;
+    }
+
+    public bool SendInjectionResume(string inverterSerieNumber, string? inverterEndpoint)
+    {
+        SentInjectionResumeCommands.Add(inverterSerieNumber);
         return Succeeds;
     }
 }

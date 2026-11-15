@@ -17,7 +17,8 @@ public record SolarParkDto(
     double Longitude,
     double MaxCapacityKw,
     double PowerAlertThresholdKw,
-    string Status
+    string Status,
+    bool GridInjectionEnabled = true
 );
 
 public record UpdateSolarParkDto(
@@ -34,6 +35,9 @@ public class SolarParkApiResponse
     public Guid? Id { get; set; }
     public string? ErrorMessage { get; set; }
 }
+
+sealed record CreateSolarParkSuccessResponse(Guid Id);
+sealed record ErrorResponse(string? Message);
 
 public class SolarParkApiClient(HttpClient httpClient)
 {
@@ -113,21 +117,49 @@ public class SolarParkApiClient(HttpClient httpClient)
         }
     }
 
-    /// <summary>Carga inicial del mapa de salud de paneles del parque (spec 030). Devuelve null si el parque no existe.</summary>
-    public async Task<SolarUY.ApiService.Dtos.ParkHealthSnapshotDto?> GetPanelHealthAsync(Guid id, CancellationToken cancellationToken = default)
+    // Spec 033: corte inicial del parque
+    public async Task<PanelApiResponse> CutInjectionAsync(Guid parkId, string confirmationText, string? reason = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            return await httpClient.GetFromJsonAsync<SolarUY.ApiService.Dtos.ParkHealthSnapshotDto>($"/api/solar-parks/{id}/panel-health", cancellationToken);
+            var response = await httpClient.PostAsJsonAsync($"/api/solar-parks/{parkId}/cut-injection", new { ConfirmationText = confirmationText, Reason = reason }, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new PanelApiResponse { Success = true };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"Error al procesar el corte de inyección ({response.StatusCode}).";
+            return new PanelApiResponse { Success = false, ErrorMessage = errorMessage };
         }
-        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        catch (Exception ex)
         {
-            return null;
+            return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
         }
     }
 
-    private sealed record CreateSolarParkSuccessResponse(Guid Id);
-    private sealed record ErrorResponse(string? Message);
+    // Spec 033: reanudación del parque
+    public async Task<PanelApiResponse> ResumeInjectionAsync(Guid parkId, string confirmationText, string? reason = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsJsonAsync($"/api/solar-parks/{parkId}/resume-injection", new { ConfirmationText = confirmationText, Reason = reason }, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new PanelApiResponse { Success = true };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"Error al procesar la reanudación de inyección ({response.StatusCode}).";
+            return new PanelApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
 
     public async Task<IReadOnlyList<SolarParkDto>> GetAllAsync(CancellationToken cancellationToken = default)
     {

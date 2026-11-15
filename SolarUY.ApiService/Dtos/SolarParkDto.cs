@@ -7,5 +7,6 @@ public record SolarParkDto(
     double Longitude,
     double MaxCapacityKw,
     double PowerAlertThresholdKw,
-    string Status
+    string Status,
+    bool GridInjectionEnabled
 );

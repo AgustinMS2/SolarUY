@@ -318,4 +318,46 @@ public class SolarNodeApiClient
             return ($"{fallback} ({(int)response.StatusCode}).", false);
         }
     }
+
+    // Spec 033: corte de inyección a la red del inversor del nodo
+    public async Task<ServiceResult> CutInverterInjectionAsync(Guid nodeId, string confirmationText, string? reason = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync($"/api/solar-nodes/{nodeId}/inverter/cut-injection", new { ConfirmationText = confirmationText, Reason = reason }, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al procesar el corte de inyección", cancellationToken);
+            return ServiceResult.Fail(ServiceErrorType.Validation, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
+
+    // Spec 033: reanudación de inyección a la red del inversor del nodo
+    public async Task<ServiceResult> ResumeInverterInjectionAsync(Guid nodeId, string confirmationText, string? reason = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await _http.PostAsJsonAsync($"/api/solar-nodes/{nodeId}/inverter/resume-injection", new { ConfirmationText = confirmationText, Reason = reason }, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return ServiceResult.Ok();
+            }
+
+            var (message, _) = await ReadErrorAsync(response, "Error al procesar la reanudación de inyección", cancellationToken);
+            return ServiceResult.Fail(ServiceErrorType.Validation, message);
+        }
+        catch (HttpRequestException ex)
+        {
+            return ServiceResult.Fail(ServiceErrorType.Unavailable, $"No se pudo comunicar con el servicio: {ex.Message}");
+        }
+    }
 }

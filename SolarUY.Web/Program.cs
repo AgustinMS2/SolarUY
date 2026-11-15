@@ -32,6 +32,8 @@ builder.Services.AddHttpClient<SolarUY.Web.Services.AlertsApiClient>(client => c
     .AddHttpMessageHandler<BearerTokenHandler>();
 builder.Services.AddHttpClient<SolarUY.Web.Services.ParkHistoricalApiClient>(client => client.BaseAddress = new("http://apiservice"))
     .AddHttpMessageHandler<BearerTokenHandler>();
+builder.Services.AddHttpClient<SolarUY.Web.Services.ChatApiClient>(client => client.BaseAddress = new("http://apiservice"))
+    .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
 

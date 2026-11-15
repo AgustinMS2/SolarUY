@@ -58,4 +58,14 @@ public class SolarNodeRepository : ISolarNodeRepository
             .ToList()
             .AsReadOnly();
     }
+
+    // Spec 033: nodos de un parque, para resolver los inversores a los que se envía la orden de inyección.
+    public IReadOnlyList<SolarNode> GetByParkId(Guid parkId)
+    {
+        return _context.SolarNodes
+            .Where(n => n.SolarParkId == parkId)
+            .OrderBy(n => n.NormalizedName)
+            .ToList()
+            .AsReadOnly();
+    }
 }
