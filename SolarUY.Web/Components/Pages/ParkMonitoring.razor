@@ -26,6 +26,13 @@
                 </a>
                 <span class="text-muted">/</span>
                 <span class="text-secondary small fw-medium">Monitoreo en Vivo</span>
+                @if (_park != null)
+                {
+                    <span class="text-muted">/</span>
+                    <a href="/parques/@_park.Id/historico" class="btn btn-outline-info btn-sm d-inline-flex align-items-center">
+                        <span class="bi bi-bar-chart-line me-1"></span> Ver Histórico
+                    </a>
+                }
             </div>
             <h1 class="h3 mb-0 text-primary d-flex align-items-center">
                 <span class="bi bi-speedometer2 me-2" aria-hidden="true"></span>

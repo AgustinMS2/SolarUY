@@ -1,0 +1,539 @@
+@page "/historicos"
+@page "/parques/{ParkId:guid}/historico"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.Web.Services
+@using SolarUY.Web.Security
+@inject SolarParkApiClient ParkApiClient
+@inject ParkHistoricalApiClient HistoricalApiClient
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ILogger<ParkHistoricalGeneration> Logger
+
+<PageTitle>Generación Histórica — @(_selectedPark?.Name ?? "Parques Solares") — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <!-- Breadcrumb & Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="/parques" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+                    <span class="bi bi-arrow-left me-1"></span> Volver a Parques
+                </a>
+                <span class="text-muted">/</span>
+                <span class="text-secondary small fw-medium">Reportes Históricos</span>
+            </div>
+            <h1 class="h3 mb-0 text-primary d-flex align-items-center">
+                <span class="bi bi-bar-chart-line-fill me-2" aria-hidden="true"></span>
+                Generación Histórica
+            </h1>
+        </div>
+
+        @if (_selectedPark != null)
+        {
+            <div class="d-flex align-items-center gap-2">
+                <a href="/parques/@_selectedPark.Id/monitoreo" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center">
+                    <span class="bi bi-speedometer2 me-1"></span> Monitoreo en Vivo
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- Filtros de Consulta: Parque y Período Temporal -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3 p-md-4">
+            <div class="row g-3 align-items-end">
+                <!-- Selector de Parque -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold text-secondary small text-uppercase">Parque Solar</label>
+                    <select class="form-select" @onchange="OnParkSelected" value="@_selectedParkId">
+                        @if (_parks != null)
+                        {
+                            @foreach (var park in _parks)
+                            {
+                                <option value="@park.Id">@park.Name (@($"{park.MaxCapacityKw:0.##} kW"))</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <!-- Granularidad (Pestañas) -->
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-semibold text-secondary small text-uppercase">Granularidad</label>
+                    <div class="btn-group w-100" role="group" aria-label="Granularidad temporal">
+                        <button type="button" class="btn @(_granularity == "Day" ? "btn-primary" : "btn-outline-primary")" @onclick='() => ChangeGranularity("Day")'>
+                            Día
+                        </button>
+                        <button type="button" class="btn @(_granularity == "Month" ? "btn-primary" : "btn-outline-primary")" @onclick='() => ChangeGranularity("Month")'>
+                            Mes
+                        </button>
+                        <button type="button" class="btn @(_granularity == "Year" ? "btn-primary" : "btn-outline-primary")" @onclick='() => ChangeGranularity("Year")'>
+                            Año
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Selector de Fecha / Mes / Año según pestaña -->
+                <div class="col-12 col-md-4">
+                    @if (_granularity == "Day")
+                    {
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">Fecha (Día)</label>
+                        <input type="date" class="form-control" value="@_selectedDate.ToString("yyyy-MM-dd")" @onchange="OnDateInputChanged" max="@_today.ToString("yyyy-MM-dd")" />
+                    }
+                    else if (_granularity == "Month")
+                    {
+                        <div class="row g-2">
+                            <div class="col-7">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Mes</label>
+                                <select class="form-select" @onchange="OnMonthChanged" value="@_selectedMonth">
+                                    <option value="1">Enero</option>
+                                    <option value="2">Febrero</option>
+                                    <option value="3">Marzo</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Mayo</option>
+                                    <option value="6">Junio</option>
+                                    <option value="7">Julio</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Setiembre</option>
+                                    <option value="10">Octubre</option>
+                                    <option value="11">Noviembre</option>
+                                    <option value="12">Diciembre</option>
+                                </select>
+                            </div>
+                            <div class="col-5">
+                                <label class="form-label fw-semibold text-secondary small text-uppercase">Año</label>
+                                <select class="form-select" @onchange="OnYearChanged" value="@_selectedYear">
+                                    @for (int y = _today.Year; y >= _today.Year - 5; y--)
+                                    {
+                                        <option value="@y">@y</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <label class="form-label fw-semibold text-secondary small text-uppercase">Año</label>
+                        <select class="form-select" @onchange="OnYearChanged" value="@_selectedYear">
+                            @for (int y = _today.Year; y >= _today.Year - 5; y--)
+                            {
+                                <option value="@y">@y</option>
+                            }
+                        </select>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span class="text-muted">Consultando métricas históricas...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center justify-content-between shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <span class="bi bi-exclamation-triangle-fill me-2 fs-5"></span>
+                <div>@_errorMessage</div>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" @onclick="LoadReportAsync">Reintentar</button>
+        </div>
+    }
+    else if (_report != null)
+    {
+        <!-- Estado Vacío Informativo (RF-8) -->
+        @if (!_report.HasData)
+        {
+            <div class="alert alert-info border-info-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
+                <span class="bi bi-info-circle-fill fs-4 text-info me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-0">No hay datos de generación registrados para el período seleccionado.</h6>
+                    <small class="text-muted">Las barras se muestran en cero. Podés seleccionar otro día, mes o año.</small>
+                </div>
+            </div>
+        }
+
+        <!-- 4 Tarjetas de Métricas Resumen (RF-5) -->
+        <div class="row g-3 mb-4">
+            <!-- 1. Generación Total -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="text-secondary fw-semibold small text-uppercase">Generación Total</span>
+                            <span class="bi bi-lightning-charge text-primary fs-5"></span>
+                        </div>
+                        <h3 class="fw-bold mb-1 mt-2 text-dark">
+                            @_report.TotalEnergy.ToString("N1") <span class="fs-6 fw-normal text-muted">@_report.Unit</span>
+                        </h3>
+                        <div class="mt-2">
+                            @if (_report.PreviousPeriodComparisonPercent is { } diff)
+                            {
+                                @if (diff > 0)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small">
+                                        <span class="bi bi-arrow-up-right me-1"></span>+@diff.ToString("F1")% vs previo
+                                    </span>
+                                }
+                                else if (diff < 0)
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1 rounded-pill small">
+                                        <span class="bi bi-arrow-down-right me-1"></span>@diff.ToString("F1")% vs previo
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1 rounded-pill small">
+                                        0.0% vs previo
+                                    </span>
+                                }
+                            }
+                            else
+                            {
+                                <small class="text-muted">Sin histórico previo</small>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Pico Máximo de Potencia -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="text-secondary fw-semibold small text-uppercase">Potencia Pico</span>
+                            <span class="bi bi-speedometer text-warning fs-5"></span>
+                        </div>
+                        <h3 class="fw-bold mb-1 mt-2 text-dark">
+                            @_report.PeakPowerKw.ToString("N1") <span class="fs-6 fw-normal text-muted">kW</span>
+                        </h3>
+                        <div class="text-muted small mt-2 text-truncate">
+                            @(string.IsNullOrEmpty(_report.PeakPowerTimeLocal) ? "Sin pico registrado" : $"Hora/Día: {_report.PeakPowerTimeLocal}")
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Horas de Sol Equivalente (HSP) -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="text-secondary fw-semibold small text-uppercase">Horas Sol (HSP)</span>
+                            <span class="bi bi-sun text-warning fs-5"></span>
+                        </div>
+                        <h3 class="fw-bold mb-1 mt-2 text-dark">
+                            @_report.EquivalentSunHours.ToString("F1") <span class="fs-6 fw-normal text-muted">h</span>
+                        </h3>
+                        <div class="text-muted small mt-2">
+                            Radiación equivalente
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Capacidad Nominal de Placa -->
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="text-secondary fw-semibold small text-uppercase">Capacidad Nominal</span>
+                            <span class="bi bi-shield-check text-success fs-5"></span>
+                        </div>
+                        <h3 class="fw-bold mb-1 mt-2 text-dark">
+                            @($"{_selectedPark?.MaxCapacityKw:0.##}") <span class="fs-6 fw-normal text-muted">kW</span>
+                        </h3>
+                        <div class="text-muted small mt-2 text-truncate">
+                            @(_selectedPark?.Name ?? "Parque")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfica de Barras Interactiva SVG (RF-1, RF-6) y Botón Exportar (RF-4, RF-7) -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h2 class="h5 mb-0 text-secondary fw-bold d-flex align-items-center">
+                        <span class="bi bi-bar-chart me-2 text-primary"></span>
+                        Evolución de Generación — @_report.PeriodLabel
+                    </h2>
+                    <small class="text-muted">Unidad: @_report.Unit</small>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" @onclick="ExportCsvAsync">
+                    <span class="bi bi-download me-1"></span> Exportar a CSV
+                </button>
+            </div>
+            <div class="card-body px-4 py-4">
+                @if (_hoveredPoint != null)
+                {
+                    <div class="alert alert-light border py-1 px-3 d-inline-flex align-items-center mb-3 shadow-xs">
+                        <span class="badge bg-primary me-2">@_hoveredPoint.Label</span>
+                        <span class="fw-semibold text-dark me-3">Energía: @_hoveredPoint.Energy.ToString("N2") @_report.Unit</span>
+                        <span class="text-muted small">Pico: @_hoveredPoint.PeakPowerKw.ToString("N1") kW</span>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted small mb-3">
+                        <span class="bi bi-cursor me-1"></span> Pasá el cursor sobre una barra para ver los detalles del período.
+                    </div>
+                }
+
+                <!-- Gráfica SVG Reactiva -->
+                <div class="svg-chart-container w-100 position-relative overflow-hidden" style="max-height: 380px;">
+                    <svg viewBox="0 0 900 320" class="w-100 h-auto" preserveAspectRatio="xMidYMid meet">
+                        <defs>
+                            <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#0284c7" />
+                                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.8" />
+                            </linearGradient>
+                            <linearGradient id="barHoverGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#f59e0b" />
+                                <stop offset="100%" stop-color="#fbbf24" stop-opacity="0.9" />
+                            </linearGradient>
+                        </defs>
+
+                        <!-- Ejes y Líneas Guía -->
+                        <line x1="60" y1="20" x2="60" y2="270" stroke="#cbd5e1" stroke-width="1.5" />
+                        <line x1="60" y1="270" x2="880" y2="270" stroke="#cbd5e1" stroke-width="1.5" />
+
+                        <!-- Líneas guía horizontales (4 niveles) -->
+                        @for (int i = 0; i <= 4; i++)
+                        {
+                            var yPos = 270 - (i * 60);
+                            var val = (MaxChartValue / 4.0) * i;
+                            <line x1="60" y1="@yPos" x2="880" y2="@yPos" stroke="#f1f5f9" stroke-width="1" stroke-dasharray="3,3" />
+                            @:<text x="52" y="@(yPos + 4)" text-anchor="end" font-size="10" fill="#94a3b8">@val.ToString("0.#")</text>
+                        }
+
+                        <!-- Barras de Generación -->
+                        @{
+                            var points = _report.Points;
+                            var count = points.Count;
+                            var availableWidth = 800.0;
+                            var slotWidth = availableWidth / Math.Max(1, count);
+                            var barWidth = Math.Max(4.0, slotWidth * 0.65);
+                        }
+
+                        @for (int i = 0; i < count; i++)
+                        {
+                            var point = points[i];
+                            var xCenter = 60.0 + (i * slotWidth) + (slotWidth / 2.0);
+                            var xBar = xCenter - (barWidth / 2.0);
+                            var normalizedHeight = MaxChartValue > 0 ? (point.Energy / MaxChartValue) * 240.0 : 0.0;
+                            var yBar = 270.0 - normalizedHeight;
+                            var isHovered = _hoveredPoint == point;
+
+                            <g @onmouseover="() => _hoveredPoint = point" @onmouseout="() => _hoveredPoint = null" style="cursor: pointer;">
+                                <!-- Barra -->
+                                <rect x="@xBar.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)"
+                                      y="@yBar.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)"
+                                      width="@barWidth.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)"
+                                      height="@Math.Max(1.0, normalizedHeight).ToString("F1", System.Globalization.CultureInfo.InvariantCulture)"
+                                      rx="3"
+                                      fill="@(isHovered ? "url(#barHoverGradient)" : "url(#barGradient)")"
+                                      style="transition: fill 0.2s ease, y 0.3s ease, height 0.3s ease;" />
+
+                                <!-- Etiqueta Eje X (filtrar según cantidad de puntos) -->
+                                @if (count <= 12 || i % 2 == 0)
+                                {
+                                    @:<text x="@xCenter.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)" y="290" text-anchor="middle" font-size="9" fill="@(isHovered ? "#0f172a" : "#64748b")" font-weight="@(isHovered ? "700" : "400")">@point.Label</text>
+                                }
+                            </g>
+                        }
+                    </svg>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid? ParkId { get; set; }
+
+    private IReadOnlyList<SolarParkDto>? _parks;
+    private SolarParkDto? _selectedPark;
+    private Guid _selectedParkId;
+
+    private string _granularity = "Day";
+    private DateOnly _selectedDate;
+    private int _selectedMonth;
+    private int _selectedYear;
+    private DateOnly _today;
+
+    private HistoricalGenerationReportDto? _report;
+    private HistoricalDataPointDto? _hoveredPoint;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    private double MaxChartValue
+    {
+        get
+        {
+            if (_report == null || _report.Points.Count == 0) return 10.0;
+            var max = _report.Points.Max(p => p.Energy);
+            return max > 0 ? max * 1.15 : 10.0;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
+        _selectedDate = _today;
+        _selectedMonth = _today.Month;
+        _selectedYear = _today.Year;
+
+        await LoadParksAndReportAsync();
+    }
+
+    private async Task LoadParksAndReportAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _parks = await ParkApiClient.GetAllAsync();
+            var activeParks = _parks.Where(p => p.Status == "Activo").ToList();
+
+            if (activeParks.Count == 0)
+            {
+                _errorMessage = "No hay parques solares activos registrados en el sistema.";
+                _isLoading = false;
+                return;
+            }
+
+            if (ParkId.HasValue && activeParks.Any(p => p.Id == ParkId.Value))
+            {
+                _selectedParkId = ParkId.Value;
+            }
+            else
+            {
+                _selectedParkId = activeParks[0].Id;
+            }
+
+            _selectedPark = activeParks.FirstOrDefault(p => p.Id == _selectedParkId);
+            await LoadReportAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al cargar parques para generación histórica");
+            _errorMessage = "No se pudo cargar la información de parques solares.";
+            _isLoading = false;
+        }
+    }
+
+    private async Task OnParkSelected(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var newId))
+        {
+            _selectedParkId = newId;
+            _selectedPark = _parks?.FirstOrDefault(p => p.Id == newId);
+            await LoadReportAsync();
+        }
+    }
+
+    private async Task ChangeGranularity(string granularity)
+    {
+        if (_granularity == granularity) return;
+        _granularity = granularity;
+        await LoadReportAsync();
+    }
+
+    private async Task OnDateInputChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var newDate))
+        {
+            _selectedDate = newDate;
+            await LoadReportAsync();
+        }
+    }
+
+    private async Task OnMonthChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var m))
+        {
+            _selectedMonth = m;
+            await LoadReportAsync();
+        }
+    }
+
+    private async Task OnYearChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var y))
+        {
+            _selectedYear = y;
+            await LoadReportAsync();
+        }
+    }
+
+    private async Task LoadReportAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        _hoveredPoint = null;
+
+        try
+        {
+            if (_granularity == "Day")
+            {
+                _report = await HistoricalApiClient.GetDailyReportAsync(_selectedParkId, _selectedDate);
+            }
+            else if (_granularity == "Month")
+            {
+                _report = await HistoricalApiClient.GetMonthlyReportAsync(_selectedParkId, _selectedYear, _selectedMonth);
+            }
+            else
+            {
+                _report = await HistoricalApiClient.GetYearlyReportAsync(_selectedParkId, _selectedYear);
+            }
+
+            if (_report == null)
+            {
+                _errorMessage = "No se pudieron obtener los datos de generación para el período seleccionado.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error al consultar reporte histórico de generación");
+            _errorMessage = "Ocurrió un error al consultar el servicio de históricos.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        if (_report == null) return;
+
+        var sb = new System.Text.StringBuilder();
+        // UTF-8 BOM
+        sb.Append('\uFEFF');
+        sb.AppendLine("Fecha_Hora_Local,Parque,Energia_kWh,Potencia_Pico_kW");
+
+        var parkName = _report.ParkName;
+        var unitFactor = _report.Unit == "MWh" ? 1000.0 : 1.0;
+
+        foreach (var p in _report.Points)
+        {
+            var dateStr = p.LocalTimestamp.ToString("yyyy-MM-dd HH:mm:ss");
+            var energyKwh = Math.Round(p.Energy * unitFactor, 2);
+            sb.AppendLine($"{dateStr},{parkName},{energyKwh.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)},{p.PeakPowerKw.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}");
+        }
+
+        var fileName = $"generacion_{_report.ParkName.Replace(' ', '_')}_{_report.Granularity}_{_report.PeriodLabel.Replace('/', '-')}.csv";
+        await JSRuntime.InvokeVoidAsync("downloadFile", fileName, sb.ToString(), "text/csv;charset=utf-8;");
+    }
+}

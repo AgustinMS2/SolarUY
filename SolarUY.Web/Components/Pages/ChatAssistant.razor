@@ -1,0 +1,333 @@
+@page "/asistente-ia"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.Web.Services
+@using SolarUY.Web.Security
+@inject ChatApiClient ChatClient
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ILogger<ChatAssistant> Logger
+
+<PageTitle>Asistente SolarUY IA — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <!-- Breadcrumb & Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="/" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+                    <span class="bi bi-arrow-left me-1"></span> Inicio
+                </a>
+                <span class="text-muted">/</span>
+                <span class="text-secondary small fw-medium">Asistente Conversacional</span>
+            </div>
+            <h1 class="h3 mb-0 text-primary d-flex align-items-center">
+                <span class="bi bi-stars me-2 text-warning" aria-hidden="true"></span>
+                Asistente SolarUY IA
+            </h1>
+            <p class="text-muted mb-0 small">Consultas en lenguaje natural sobre generación, parques, alertas operativas y mantenimientos.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center" @onclick="ClearChat" disabled="@_isGenerating">
+                <span class="bi bi-trash3 me-1"></span> Reiniciar chat
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal del Chat -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <!-- Ventana de Mensajes -->
+        <div id="chat-messages-container" class="card-body p-4 bg-light overflow-y-auto" style="min-height: 420px; max-height: 580px;">
+            @foreach (var msg in _messages)
+            {
+                @if (msg.Role == "user")
+                {
+                    <div class="d-flex justify-content-end mb-3">
+                        <div class="d-flex flex-column align-items-end" style="max-width: 80%;">
+                            <div class="bg-primary text-white rounded-3 px-3 py-2 shadow-xs">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="bi bi-person-fill me-1 small"></span>
+                                    <strong class="small">Vos</strong>
+                                </div>
+                                <div class="message-body">@msg.Content</div>
+                            </div>
+                            <small class="text-muted mt-1 px-1" style="font-size: 0.75rem;">@msg.TimestampUtc.ToLocalTime().ToString("HH:mm")</small>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex justify-content-start mb-3">
+                        <div class="d-flex flex-column align-items-start" style="max-width: 88%;">
+                            <div class="bg-white border rounded-3 p-3 shadow-xs text-dark w-100">
+                                <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                                    <div class="d-flex align-items-center">
+                                        <span class="bi bi-stars text-warning me-1"></span>
+                                        <strong class="text-primary small">Asistente SolarUY</strong>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(msg.Source))
+                                    {
+                                        <span class="badge bg-light text-secondary border small" style="font-size: 0.7rem;">@msg.Source</span>
+                                    }
+                                </div>
+                                <div class="message-body text-break">
+                                    @FormatContent(msg.Content)
+                                </div>
+                            </div>
+                            <small class="text-muted mt-1 px-1" style="font-size: 0.75rem;">@msg.TimestampUtc.ToLocalTime().ToString("HH:mm")</small>
+                        </div>
+                    </div>
+                }
+            }
+
+            @if (_isGenerating)
+            {
+                <div class="d-flex justify-content-start mb-3">
+                    <div class="bg-white border rounded-3 px-3 py-2 shadow-xs d-flex align-items-center gap-2 text-muted">
+                        <div class="spinner-grow spinner-grow-sm text-primary" role="status" aria-hidden="true"></div>
+                        <span class="small">Consultando datos y analizando respuesta...</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Barra Inferior: Preguntas Sugeridas e Input -->
+        <div class="card-footer bg-white border-top p-3">
+            <!-- Píldoras de Preguntas Frecuentes -->
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="text-muted small align-self-center me-1">
+                    <span class="bi bi-lightbulb text-warning me-1"></span>Sugerencias:
+                </span>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" @onclick='() => SendSuggestedQuery("¿Cuáles son los parques solares activos?")' disabled="@_isGenerating">
+                    Parques activos
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" @onclick='() => SendSuggestedQuery("¿Cuánta energía se ha generado hoy?")' disabled="@_isGenerating">
+                    Generación de hoy
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" @onclick='() => SendSuggestedQuery("¿Hay alertas de falla activas?")' disabled="@_isGenerating">
+                    Alertas activas
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" @onclick='() => SendSuggestedQuery("¿Qué mantenimientos están pendientes?")' disabled="@_isGenerating">
+                    Mantenimientos pendientes
+                </button>
+            </div>
+
+            <!-- Campo de Texto y Botón de Envío -->
+            <div class="input-group">
+                <input type="text"
+                       class="form-control"
+                       placeholder="Escribí tu consulta sobre parques, generación, alertas o mantenimientos..."
+                       @bind="_userInput"
+                       @bind:event="oninput"
+                       @onkeydown="HandleKeyDown"
+                       disabled="@_isGenerating"
+                       maxlength="500" />
+                <button class="btn btn-primary d-flex align-items-center px-4"
+                        type="button"
+                        @onclick="SendMessageAsync"
+                        disabled="@(_isGenerating || string.IsNullOrWhiteSpace(_userInput))">
+                    <span class="bi bi-send-fill me-1"></span>
+                    <span>Enviar</span>
+                </button>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2 px-1">
+                <small class="text-muted" style="font-size: 0.75rem;">
+                    Presioná <kbd>Enter</kbd> para enviar la consulta.
+                </small>
+                <small class="text-muted" style="font-size: 0.75rem;">
+                    Las respuestas se basan estrictamente en la telemetría y registros de SolarUY.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private record DisplayMessage(string Role, string Content, DateTime TimestampUtc, string? Source = null);
+
+    private readonly List<DisplayMessage> _messages = new();
+    private string _userInput = string.Empty;
+    private bool _isGenerating;
+
+    protected override void OnInitialized()
+    {
+        InitializeWelcomeMessage();
+    }
+
+    private void InitializeWelcomeMessage()
+    {
+        _messages.Clear();
+        _messages.Add(new DisplayMessage(
+            "assistant",
+            "¡Hola! Soy el **Asistente Inteligente de SolarUY**. Puedo responder preguntas sobre:\n\n" +
+            "- Estado y capacidad de los **parques solares**.\n" +
+            "- **Generación de energía** acumulada hoy y en el mes.\n" +
+            "- **Alertas de fallas** operativas y anomalías activas.\n" +
+            "- Órdenes de **mantenimiento programadas** y técnicos asignados.\n\n" +
+            "¿En qué puedo ayudarte hoy?",
+            DateTime.UtcNow,
+            "SolarUY Assistant"));
+    }
+
+    private void ClearChat()
+    {
+        InitializeWelcomeMessage();
+        _userInput = string.Empty;
+    }
+
+    private async Task SendSuggestedQuery(string query)
+    {
+        if (_isGenerating) return;
+        _userInput = query;
+        await SendMessageAsync();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !string.IsNullOrWhiteSpace(_userInput) && !_isGenerating)
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    private async Task SendMessageAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_userInput) || _isGenerating) return;
+
+        var messageToSend = _userInput.Trim();
+        _userInput = string.Empty;
+
+        // Agregar mensaje del usuario
+        _messages.Add(new DisplayMessage("user", messageToSend, DateTime.UtcNow));
+        _isGenerating = true;
+
+        try
+        {
+            var history = _messages
+                .TakeLast(6)
+                .Select(m => new ChatMessageDto(m.Role, m.Content, m.TimestampUtc))
+                .ToList();
+
+            var request = new ChatQueryRequest(messageToSend, history);
+            var response = await ChatClient.SendMessageAsync(request);
+
+            if (response != null)
+            {
+                _messages.Add(new DisplayMessage("assistant", response.Answer, DateTime.UtcNow, response.Source));
+            }
+            else
+            {
+                _messages.Add(new DisplayMessage("assistant", "No se recibió respuesta del servicio de asistencia.", DateTime.UtcNow, "Error"));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error procesando mensaje en chat asistente");
+            _messages.Add(new DisplayMessage("assistant", "Ocurrió un error inesperado al procesar tu consulta. Por favor intentá nuevamente.", DateTime.UtcNow, "Error"));
+        }
+        finally
+        {
+            _isGenerating = false;
+        }
+    }
+
+    private static MarkupString FormatContent(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return (MarkupString)string.Empty;
+
+        var sb = new System.Text.StringBuilder();
+        var lines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        var inTable = false;
+        var inList = false;
+
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+
+            // Tabla Markdown (| ... |)
+            if (line.StartsWith('|') && line.EndsWith('|'))
+            {
+                // Separador de cabecera | :--- | :--- |
+                if (line.Contains("---"))
+                {
+                    continue;
+                }
+
+                if (!inTable)
+                {
+                    if (inList) { sb.Append("</ul>"); inList = false; }
+                    sb.Append("<div class='table-responsive my-2'><table class='table table-sm table-bordered table-hover mb-0'><thead class='table-light'>");
+                    inTable = true;
+                    var headers = line.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                    sb.Append("<tr>");
+                    foreach (var h in headers) sb.Append($"<th class='px-2 py-1'>{FormatInline(h.Trim())}</th>");
+                    sb.Append("</tr></thead><tbody>");
+                }
+                else
+                {
+                    var cells = line.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                    sb.Append("<tr>");
+                    foreach (var c in cells) sb.Append($"<td class='px-2 py-1'>{FormatInline(c.Trim())}</td>");
+                    sb.Append("</tr>");
+                }
+                continue;
+            }
+
+            if (inTable)
+            {
+                sb.Append("</tbody></table></div>");
+                inTable = false;
+            }
+
+            // Lista con viñetas (- ...)
+            if (line.StartsWith("- ") || line.StartsWith("* "))
+            {
+                if (!inList)
+                {
+                    sb.Append("<ul class='mb-2 ps-3'>");
+                    inList = true;
+                }
+                sb.Append($"<li>{FormatInline(line.Substring(2))}</li>");
+                continue;
+            }
+
+            if (inList)
+            {
+                sb.Append("</ul>");
+                inList = false;
+            }
+
+            if (string.IsNullOrEmpty(line))
+            {
+                sb.Append("<div class='mb-2'></div>");
+            }
+            else
+            {
+                sb.Append($"<p class='mb-1'>{FormatInline(line)}</p>");
+            }
+        }
+
+        if (inTable) sb.Append("</tbody></table></div>");
+        if (inList) sb.Append("</ul>");
+
+        return (MarkupString)sb.ToString();
+    }
+
+    private static string FormatInline(string text)
+    {
+        // Reemplazo básico seguro de **negrita**
+        var escaped = System.Net.WebUtility.HtmlEncode(text);
+        while (escaped.Contains("**"))
+        {
+            var first = escaped.IndexOf("**", StringComparison.Ordinal);
+            var second = escaped.IndexOf("**", first + 2, StringComparison.Ordinal);
+            if (second == -1) break;
+
+            var boldText = escaped.Substring(first + 2, second - (first + 2));
+            escaped = escaped.Substring(0, first) + "<strong>" + boldText + "</strong>" + escaped.Substring(second + 2);
+        }
+        return escaped;
+    }
+}
+
