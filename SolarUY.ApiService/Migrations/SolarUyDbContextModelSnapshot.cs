@@ -22,6 +22,73 @@ namespace SolarUY.ApiService.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.Alert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("AcknowledgedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("AttendedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("DismissedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EquipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EquipmentName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("EquipmentType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("LastOccurrenceAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("OccurrenceCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<string>("ParkName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SolarParkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolarParkId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Severity", "EquipmentType", "EquipmentId", "LastOccurrenceAtUtc");
+
+                    b.ToTable("Alerts", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>
                 {
                     b.Property<Guid>("Id")
@@ -311,6 +378,17 @@ namespace SolarUY.ApiService.Migrations
                         .IsUnique();
 
                     b.ToTable("Technicians", (string)null);
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.Alert", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
+                        .WithMany()
+                        .HasForeignKey("SolarParkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SolarPark");
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>

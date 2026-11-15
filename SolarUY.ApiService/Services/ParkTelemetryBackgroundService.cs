@@ -68,6 +68,7 @@ public class ParkTelemetryBackgroundService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var parkRepo = scope.ServiceProvider.GetRequiredService<ISolarParkRepository>();
         var parks = parkRepo.GetAll();
+        var alertPublisher = scope.ServiceProvider.GetRequiredService<IAlertPublisher>();
 
         var localTime = GetUruguayLocalTime();
         var localHour = localTime.Hour + (localTime.Minute / 60.0);
@@ -98,6 +99,9 @@ public class ParkTelemetryBackgroundService : BackgroundService
             await _hubContext.Clients
                 .Group(groupName)
                 .SendAsync(ParkTelemetryHub.ReceiveEventName, telemetry, cancellationToken);
+
+            // Spec 031: si la generación cae bajo el umbral con sol, se registra y emite la alerta.
+            await alertPublisher.PublishAsync(AlertDetectionRules.FromParkTelemetry(telemetry), cancellationToken);
         }
     }
 

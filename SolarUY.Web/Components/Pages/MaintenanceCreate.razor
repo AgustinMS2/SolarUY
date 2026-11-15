@@ -135,6 +135,13 @@
 </div>
 
 @code {
+    // Spec 031 (RF-4): el botón "Agendar Mantenimiento" de una alerta abre esta pantalla con el panel y el motivo cargados.
+    [SupplyParameterFromQuery(Name = "panelId")]
+    public Guid? PrefilledPanelId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "description")]
+    public string? PrefilledDescription { get; set; }
+
     private List<SolarPanelDto> _activePanels = [];
     private List<TechnicianDto> _activeTechnicians = [];
     private bool _isLoading = true;
@@ -163,6 +170,17 @@
                 .OrderBy(p => p.SolarParkName)
                 .ThenBy(p => p.SerieNumber)
                 .ToList();
+
+            if (PrefilledPanelId is { } prefilledPanelId && _activePanels.Any(p => p.Id == prefilledPanelId))
+            {
+                _selectedPanelId = prefilledPanelId.ToString();
+            }
+
+            if (!string.IsNullOrWhiteSpace(PrefilledDescription))
+            {
+                var prefilled = PrefilledDescription.Trim();
+                _description = prefilled.Length > 500 ? prefilled[..500] : prefilled;
+            }
 
             var techniciansResult = await TechnicianApiClient.GetAllAsync();
             if (techniciansResult.Success && techniciansResult.Value != null)

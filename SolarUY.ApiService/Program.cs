@@ -21,6 +21,10 @@ builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarU
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITechnicianRepository, SolarUY.ApiService.Repositories.TechnicianRepository>();
 // Mantenimientos (specs 020-021): repositorio real, reemplaza el placeholder EmptyMaintenanceRepository.
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.MaintenanceRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IAlertRepository, SolarUY.ApiService.Repositories.AlertRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IAlertService, SolarUY.ApiService.Services.AlertService>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IAlertPublisher, SolarUY.ApiService.Services.AlertPublisher>();
+builder.Services.AddHostedService<SolarUY.ApiService.Services.AlertPurgeBackgroundService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ITechnicianService, SolarUY.ApiService.Services.TechnicianService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IMaintenanceService, SolarUY.ApiService.Services.MaintenanceService>();
 
@@ -136,6 +140,7 @@ app.MapHub<SolarUY.ApiService.Hubs.ParkTelemetryHub>(SolarUY.ApiService.Hubs.Par
 app.MapHub<SolarUY.ApiService.Hubs.NodeTelemetryHub>(SolarUY.ApiService.Hubs.NodeTelemetryHub.HubUrl);
 app.MapHub<SolarUY.ApiService.Hubs.PanelTelemetryHub>(SolarUY.ApiService.Hubs.PanelTelemetryHub.HubUrl);
 app.MapHub<SolarUY.ApiService.Hubs.ParkHealthHub>(SolarUY.ApiService.Hubs.ParkHealthHub.HubUrl);
+app.MapHub<SolarUY.ApiService.Hubs.AlertsHub>(SolarUY.ApiService.Hubs.AlertsHub.HubUrl);
 
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
 

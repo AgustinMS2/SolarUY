@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Hubs;
+using SolarUY.ApiService.Repositories;
 
 namespace SolarUY.ApiService.Services;
 
@@ -68,6 +70,36 @@ public class ParkHealthBackgroundService : BackgroundService
             await _hubContext.Clients
                 .Group(ParkHealthHub.GetGroupName(update.ParkId))
                 .SendAsync(ParkHealthHub.ReceiveEventName, update, cancellationToken);
+
+            await PublishCriticalPanelAlertsAsync(scope.ServiceProvider, update, cancellationToken);
+        }
+    }
+
+    // Spec 031: cada panel en Falla Crítica (menos del 10 % de lo esperado con sol) genera una alerta Crítica.
+    private static async Task PublishCriticalPanelAlertsAsync(IServiceProvider services, ParkHealthUpdateDto update, CancellationToken cancellationToken)
+    {
+        var critical = update.Panels.Where(r => r.State == PanelHealthState.Critical).ToList();
+        if (critical.Count == 0)
+        {
+            return;
+        }
+
+        var park = services.GetRequiredService<ISolarParkRepository>().GetById(update.ParkId);
+        var panels = services.GetRequiredService<ISolarPanelRepository>()
+            .GetByIds(critical.Select(r => r.PanelId).ToList())
+            .ToDictionary(p => p.Id);
+        var alertPublisher = services.GetRequiredService<IAlertPublisher>();
+
+        foreach (var reading in critical)
+        {
+            if (!panels.TryGetValue(reading.PanelId, out var panel))
+            {
+                continue;
+            }
+
+            await alertPublisher.PublishAsync(
+                AlertDetectionRules.FromPanelHealth(reading, update.ParkId, park?.Name ?? string.Empty, panel.SerieNumber),
+                cancellationToken);
         }
     }
 }

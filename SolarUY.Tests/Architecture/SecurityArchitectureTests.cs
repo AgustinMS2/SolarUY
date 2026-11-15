@@ -38,7 +38,8 @@ public class SecurityArchitectureTests
     // is expected to allow exactly Administrador and Técnico (Roles.Any). Keep this list as short as possible.
     private static readonly HashSet<string> TechnicianAllowedMutations =
     [
-        "MaintenancesController.ConfirmMaintenance" // Spec 026: the technician confirms the maintenance he performed.
+        "MaintenancesController.ConfirmMaintenance", // Spec 026: the technician confirms the maintenance he performed.
+        "AlertsController.Acknowledge" // Spec 031: any user acknowledges an alert; the state is global.
     ];
 
     private static IEnumerable<MethodInfo> MutatingEndpoints()

@@ -7,6 +7,9 @@
 
 main {
     flex: 1;
+    /* Sin esto el área de contenido no se achica por debajo de su tabla más ancha: la página se ensancha y la barra
+       superior (con "Cerrar sesión") queda fuera de la ventana. Con 0, las tablas se deslizan dentro de su tarjeta. */
+    min-width: 0;
     display: flex;
     flex-direction: column;
     background-color: #F8FAFC;

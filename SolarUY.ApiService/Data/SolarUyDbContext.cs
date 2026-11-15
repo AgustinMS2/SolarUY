@@ -16,6 +16,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<Technician> Technicians => Set<Technician>();
 
     public DbSet<MaintenanceOrder> MaintenanceOrders => Set<MaintenanceOrder>();
+    public DbSet<Alert> Alerts => Set<Alert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -121,5 +122,26 @@ public class SolarUyDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // Spec 031: alertas de falla.
+        modelBuilder.Entity<Alert>(entity =>
+        {
+            entity.ToTable("Alerts");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ParkName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EquipmentName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.OccurrenceCount).IsRequired().HasDefaultValue(1);
+            entity.Property(e => e.CreatedAtUtc).IsRequired();
+            entity.Property(e => e.LastOccurrenceAtUtc).IsRequired();
+            // Contador de la campana (alertas Pendientes).
+            entity.HasIndex(e => e.Status);
+            // Deduplicado (RF-2) y consolidación (RF-6): alertas recientes de la misma severidad y equipo.
+            entity.HasIndex(e => new { e.Severity, e.EquipmentType, e.EquipmentId, e.LastOccurrenceAtUtc });
+            entity.HasIndex(e => e.SolarParkId);
+            entity.HasOne(e => e.SolarPark)
+                .WithMany()
+                .HasForeignKey(e => e.SolarParkId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

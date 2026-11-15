@@ -1,0 +1,549 @@
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.SignalR.Client
+@using SolarUY.ApiService.Domain
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Services
+@using SolarUY.Web.Security
+@using SolarUY.Web.Services
+@inject AlertsApiClient AlertsClient
+@inject IConfiguration Configuration
+@inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject KeycloakTokenService TokenService
+@inject NavigationManager Navigation
+@inject ILogger<AlertBell> Logger
+
+<div class="position-relative">
+    <button type="button" class="btn btn-light border rounded-circle position-relative d-inline-flex align-items-center justify-content-center alert-bell-button"
+            aria-label="@BellLabel" title="@BellLabel" data-testid="alert-bell" @onclick="TogglePanel">
+        <span class="bi @(_unread > 0 ? "bi-bell-fill text-warning" : "bi-bell")" aria-hidden="true"></span>
+        @if (_unread > 0)
+        {
+            <span class="alert-bell-badge badge rounded-pill bg-danger" data-testid="alert-unread">@(_unread > 99 ? "99+" : _unread.ToString())</span>
+        }
+    </button>
+
+    @if (_isPanelOpen)
+    {
+        <div class="alert-backdrop" @onclick="ClosePanel"></div>
+        <div class="alert-panel card shadow border-0" role="dialog" aria-label="Centro de alertas">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                <div class="fw-bold">
+                    Alertas
+                    @if (_unread > 0)
+                    {
+                        <span class="badge bg-danger ms-1">@_unread sin leer</span>
+                    }
+                </div>
+                <button type="button" class="btn-close" aria-label="Cerrar" @onclick="ClosePanel"></button>
+            </div>
+
+            <div class="alert-panel-list list-group list-group-flush">
+                @if (_alerts.Count == 0)
+                {
+                    <div class="text-muted small p-3">No hay alertas.</div>
+                }
+
+                @foreach (var alert in _alerts)
+                {
+                    <button type="button" @key="alert.Id"
+                            class="list-group-item list-group-item-action alert-item @SeverityCss(alert.Severity) @(alert.Status == AlertStatus.Pending ? "unread" : "")"
+                            @onclick="() => OpenAlertAsync(alert)">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="@(alert.Status == AlertStatus.Pending ? "fw-bold" : "")">
+                                @EquipmentTypeLabel(alert.EquipmentType) @alert.EquipmentName
+                                @if (alert.OccurrenceCount > 1)
+                                {
+                                    <span class="badge bg-secondary ms-1" title="Instancias de la falla">×@alert.OccurrenceCount</span>
+                                }
+                            </div>
+                            <span class="badge @SeverityBadge(alert.Severity) flex-shrink-0">@SeverityLabel(alert.Severity)</span>
+                        </div>
+                        <div class="small text-muted text-break">@alert.Description</div>
+                        <div class="small text-muted d-flex justify-content-between">
+                            <span>@alert.ParkName</span>
+                            <span>@FormatLocal(alert.LastOccurrenceAtUtc) · @StatusLabel(alert.Status)</span>
+                        </div>
+                    </button>
+                }
+            </div>
+
+            <div class="card-footer bg-white small text-muted py-1">@ConnectionText</div>
+        </div>
+    }
+</div>
+
+<!-- RF-8: avisos que desaparecen solos a los 8 segundos -->
+<div class="alert-toasts" aria-live="polite">
+    @foreach (var item in _toasts)
+    {
+        <div class="alert-toast card shadow border-0 @SeverityCss(item.Toast.Severity)" role="status" @key="item.Id" @onclick="() => OpenToastAsync(item)">
+            <div class="card-body py-2 px-3 d-flex justify-content-between align-items-start gap-2">
+                <div>
+                    <span class="badge @SeverityBadge(item.Toast.Severity) me-1">@SeverityLabel(item.Toast.Severity)</span>
+                    <span class="small text-break">@item.Toast.Message</span>
+                    @if (item.Toast.AlertId != null)
+                    {
+                        <div class="small text-muted">@item.Toast.ParkName</div>
+                    }
+                </div>
+                <button type="button" class="btn-close" aria-label="Cerrar aviso" @onclick="() => DismissToast(item)" @onclick:stopPropagation="true"></button>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- RF-4: detalle de la alerta -->
+@if (_selected is { } selected)
+{
+    <div class="modal-backdrop fade show" style="z-index: 1100;"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-label="Detalle de la alerta" style="z-index: 1110;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 class="modal-title h5 mb-0">
+                        <span class="badge @SeverityBadge(selected.Severity) me-2">@SeverityLabel(selected.Severity)</span>
+                        @EquipmentTypeLabel(selected.EquipmentType) @selected.EquipmentName
+                    </h2>
+                    <button type="button" class="btn-close" aria-label="Cerrar" @onclick="CloseDetail"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(_detailError))
+                    {
+                        <div class="alert alert-danger py-2" role="alert">@_detailError</div>
+                    }
+
+                    <p class="mb-3 text-break">@selected.Description</p>
+
+                    <dl class="row small mb-0">
+                        <dt class="col-5 text-secondary fw-normal">Parque</dt>
+                        <dd class="col-7">@selected.ParkName</dd>
+                        <dt class="col-5 text-secondary fw-normal">Estado</dt>
+                        <dd class="col-7">@StatusLabel(selected.Status)</dd>
+                        <dt class="col-5 text-secondary fw-normal">Detectada</dt>
+                        <dd class="col-7">@FormatLocal(selected.CreatedAtUtc)</dd>
+                        @if (selected.OccurrenceCount > 1)
+                        {
+                            <dt class="col-5 text-secondary fw-normal">Instancias</dt>
+                            <dd class="col-7">@selected.OccurrenceCount (última: @FormatLocal(selected.LastOccurrenceAtUtc))</dd>
+                        }
+                        @if (selected.AcknowledgedAtUtc is { } acknowledged)
+                        {
+                            <dt class="col-5 text-secondary fw-normal">Reconocida</dt>
+                            <dd class="col-7">@FormatLocal(acknowledged)</dd>
+                        }
+                    </dl>
+                </div>
+                <div class="modal-footer flex-wrap gap-2">
+                    @if (_isAdmin && selected.EquipmentType == AlertEquipmentType.Panel)
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="() => ScheduleMaintenance(selected)" disabled="@_isBusy">
+                            <span class="bi bi-wrench-adjustable me-1"></span> Agendar Mantenimiento
+                        </button>
+                    }
+                    @if (_isAdmin && selected.Status == AlertStatus.Acknowledged)
+                    {
+                        <button type="button" class="btn btn-outline-danger" @onclick="() => DismissAsync(selected)" disabled="@_isBusy">
+                            <span class="bi bi-x-circle me-1"></span> Descartar
+                        </button>
+                    }
+                    <button type="button" class="btn btn-outline-secondary ms-auto" @onclick="CloseDetail">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const int ListSize = 50;
+    private const int ToastSeconds = 8;
+    private const int FlushDelayMs = 1000;
+
+    private static readonly string[] UruguayTimeZoneIds = ["America/Montevideo", "Montevideo Standard Time"];
+
+    private sealed class ToastItem
+    {
+        public Guid Id { get; } = Guid.NewGuid();
+        public required AlertToast Toast { get; init; }
+    }
+
+    private List<AlertDto> _alerts = new();
+    private readonly List<AlertArrival> _arrivals = new();
+    private readonly List<ToastItem> _toasts = new();
+    private readonly HashSet<string> _shownToasts = new();
+    private HubConnection? _hubConnection;
+    private AlertDto? _selected;
+    private string? _detailError;
+    private int _unread;
+    private bool _isPanelOpen;
+    private bool _isAdmin;
+    private bool _isBusy;
+    private bool _flushScheduled;
+    private bool _disposed;
+
+    private string BellLabel => _unread > 0 ? $"Alertas: {_unread} sin leer" : "Alertas";
+
+    private string ConnectionText => _hubConnection?.State switch
+    {
+        HubConnectionState.Connected => "Conectado en vivo",
+        HubConnectionState.Reconnecting => "Reconectando con el servidor de alertas...",
+        _ => "Sin conexión en vivo"
+    };
+
+    // Los datos y la conexión se cargan una sola vez, ya interactivo (no durante el prerenderizado).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            _isAdmin = authState.User.IsInRole(AppRoles.Administrator);
+
+            await ReloadAsync();
+            await ConnectAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "No se pudo inicializar la campana de alertas");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task ReloadAsync()
+    {
+        var list = await AlertsClient.GetRecentAsync(ListSize);
+        if (list == null)
+        {
+            return;
+        }
+
+        _alerts = list.Alerts.ToList();
+        _unread = list.UnreadCount;
+    }
+
+    private async Task ConnectAsync()
+    {
+        var apiBaseUrl = Configuration["services:apiservice:https:0"]
+            ?? Configuration["services:apiservice:http:0"]
+            ?? "http://apiservice";
+
+        _hubConnection = new HubConnectionBuilder()
+            .WithUrl($"{apiBaseUrl.TrimEnd('/')}/hubs/alerts", options =>
+            {
+                options.HttpMessageHandlerFactory = _ => HttpMessageHandlerFactory.CreateHandler();
+                options.AccessTokenProvider = async () =>
+                {
+                    var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                    var key = UserTokenStore.GetKey(authState.User);
+                    if (key == null) return null;
+                    return await TokenService.GetValidAccessTokenAsync(key, CancellationToken.None);
+                };
+            })
+            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+            .Build();
+
+        _hubConnection.On<AlertEventDto>("ReceiveAlertEvent", alertEvent => InvokeAsync(() => HandleEvent(alertEvent)));
+
+        _hubConnection.Reconnecting += _ => InvokeAsync(StateHasChanged);
+        _hubConnection.Reconnected += async _ =>
+        {
+            // Se pudo perder algún evento mientras estaba caída: se vuelve a cargar la lista.
+            await ReloadAsync();
+            await InvokeAsync(StateHasChanged);
+        };
+        _hubConnection.Closed += _ => InvokeAsync(StateHasChanged);
+
+        try
+        {
+            await _hubConnection.StartAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "No se pudo conectar con el hub de alertas");
+        }
+    }
+
+    private void HandleEvent(AlertEventDto alertEvent)
+    {
+        _unread = alertEvent.UnreadCount;
+        Upsert(alertEvent.Alert, removeSameKey: alertEvent.Kind == AlertEventKind.Updated);
+
+        if (_selected?.Id == alertEvent.Alert.Id)
+        {
+            _selected = alertEvent.Alert;
+        }
+
+        // RF-8: las alertas nuevas o consolidadas generan aviso; los cambios de estado solo actualizan la campana.
+        if (alertEvent.Kind != AlertEventKind.StatusChanged)
+        {
+            _arrivals.Add(new AlertArrival(alertEvent.Alert, DateTime.UtcNow));
+            ScheduleFlush();
+        }
+
+        StateHasChanged();
+    }
+
+    // Una consolidada reemplaza a las alertas que fusionó: se quitan las otras de la misma clave.
+    private void Upsert(AlertDto alert, bool removeSameKey)
+    {
+        if (removeSameKey)
+        {
+            _alerts.RemoveAll(a => a.Id != alert.Id
+                                   && a.Severity == alert.Severity
+                                   && a.EquipmentType == alert.EquipmentType
+                                   && a.EquipmentId == alert.EquipmentId);
+        }
+
+        var index = _alerts.FindIndex(a => a.Id == alert.Id);
+        if (index >= 0)
+        {
+            _alerts[index] = alert;
+        }
+        else
+        {
+            _alerts.Add(alert);
+        }
+
+        _alerts = _alerts.OrderByDescending(a => a.LastOccurrenceAtUtc).Take(ListSize).ToList();
+    }
+
+    private void ScheduleFlush()
+    {
+        if (_flushScheduled)
+        {
+            return;
+        }
+
+        _flushScheduled = true;
+        _ = FlushAfterDelayAsync();
+    }
+
+    // Se espera un instante para juntar las alertas que llegan en la misma tanda antes de decidir los avisos.
+    private async Task FlushAfterDelayAsync()
+    {
+        await Task.Delay(FlushDelayMs);
+        if (_disposed)
+        {
+            return;
+        }
+
+        await InvokeAsync(() =>
+        {
+            var now = DateTime.UtcNow;
+            _arrivals.RemoveAll(a => now - a.ArrivedAtUtc > AlertNotificationGrouping.BurstWindow);
+
+            var latestById = _arrivals.GroupBy(a => a.Alert.Id).ToDictionary(g => g.Key, g => g.Last().Alert);
+
+            foreach (var toast in AlertNotificationGrouping.Group(_arrivals, now))
+            {
+                var key = toast.AlertId is { } id
+                    ? $"{id}:{latestById[id].OccurrenceCount}"
+                    : $"burst:{toast.ParkId}:{toast.Count}";
+
+                if (!_shownToasts.Add(key))
+                {
+                    continue;
+                }
+
+                // Una ráfaga que crece reemplaza al aviso agrupado anterior del mismo parque.
+                if (toast.AlertId is null)
+                {
+                    _toasts.RemoveAll(t => t.Toast.AlertId is null && t.Toast.ParkId == toast.ParkId);
+                }
+
+                var item = new ToastItem { Toast = toast };
+                _toasts.Add(item);
+                _ = HideToastLaterAsync(item);
+            }
+
+            if (_shownToasts.Count > 500)
+            {
+                _shownToasts.Clear();
+            }
+
+            _flushScheduled = false;
+            StateHasChanged();
+        });
+    }
+
+    private async Task HideToastLaterAsync(ToastItem item)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(ToastSeconds));
+        if (_disposed)
+        {
+            return;
+        }
+
+        await InvokeAsync(() =>
+        {
+            _toasts.Remove(item);
+            StateHasChanged();
+        });
+    }
+
+    private void DismissToast(ToastItem item) => _toasts.Remove(item);
+
+    private async Task OpenToastAsync(ToastItem item)
+    {
+        _toasts.Remove(item);
+
+        if (item.Toast.AlertId is { } id)
+        {
+            var alert = _alerts.FirstOrDefault(a => a.Id == id);
+            if (alert != null)
+            {
+                await OpenAlertAsync(alert);
+                return;
+            }
+        }
+
+        _isPanelOpen = true;
+    }
+
+    private void TogglePanel() => _isPanelOpen = !_isPanelOpen;
+
+    private void ClosePanel() => _isPanelOpen = false;
+
+    // RF-4: abrir una alerta la marca como Reconocida (si estaba Pendiente) y muestra su detalle.
+    private async Task OpenAlertAsync(AlertDto alert)
+    {
+        _isPanelOpen = false;
+        _detailError = null;
+        _selected = alert;
+
+        if (alert.Status != AlertStatus.Pending)
+        {
+            return;
+        }
+
+        var result = await AlertsClient.AcknowledgeAsync(alert.Id);
+        if (result.Success && result.Value != null)
+        {
+            _selected = result.Value;
+            Upsert(result.Value, removeSameKey: false);
+            _unread = Math.Max(0, _unread - 1);
+        }
+        else
+        {
+            _detailError = result.ErrorMessage;
+        }
+    }
+
+    // RF-7: solo el Administrador, sobre una alerta Reconocida.
+    private async Task DismissAsync(AlertDto alert)
+    {
+        _isBusy = true;
+        _detailError = null;
+
+        var result = await AlertsClient.DismissAsync(alert.Id);
+        _isBusy = false;
+
+        if (result.Success && result.Value != null)
+        {
+            Upsert(result.Value, removeSameKey: false);
+            _selected = null;
+            return;
+        }
+
+        _detailError = result.ErrorMessage;
+    }
+
+    // RF-4: abre la reserva de la spec 021 con el panel y el motivo pre-cargados.
+    private void ScheduleMaintenance(AlertDto alert)
+    {
+        var description = $"Falla detectada: {alert.Description}";
+        if (description.Length > 500)
+        {
+            description = description[..500];
+        }
+
+        var url = Navigation.GetUriWithQueryParameters("/mantenimientos/nuevo", new Dictionary<string, object?>
+        {
+            ["panelId"] = alert.EquipmentId,
+            ["description"] = description
+        });
+
+        _selected = null;
+        Navigation.NavigateTo(url);
+    }
+
+    private void CloseDetail()
+    {
+        _selected = null;
+        _detailError = null;
+    }
+
+    private static string SeverityCss(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => "sev-critical",
+        AlertSeverity.Warning => "sev-warning",
+        _ => "sev-info"
+    };
+
+    private static string SeverityBadge(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => "bg-danger",
+        AlertSeverity.Warning => "bg-warning text-dark",
+        _ => "bg-info text-dark"
+    };
+
+    private static string SeverityLabel(AlertSeverity severity) => severity switch
+    {
+        AlertSeverity.Critical => "Crítico",
+        AlertSeverity.Warning => "Advertencia",
+        _ => "Informativo"
+    };
+
+    private static string StatusLabel(AlertStatus status) => status switch
+    {
+        AlertStatus.Pending => "Pendiente",
+        AlertStatus.Acknowledged => "Reconocida",
+        AlertStatus.Dismissed => "Descartada",
+        _ => "Atendida"
+    };
+
+    private static string EquipmentTypeLabel(AlertEquipmentType type) => type switch
+    {
+        AlertEquipmentType.Park => "Parque",
+        AlertEquipmentType.Node => "Nodo",
+        _ => "Panel"
+    };
+
+    // Las fechas llegan en UTC y solo se convierten a hora de Uruguay para mostrarlas.
+    private static string FormatLocal(DateTime utc)
+    {
+        var value = DateTime.SpecifyKind(utc, DateTimeKind.Utc);
+
+        foreach (var id in UruguayTimeZoneIds)
+        {
+            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var timeZone) && timeZone != null)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(value, timeZone).ToString("dd/MM HH:mm");
+            }
+        }
+
+        return value.AddHours(-3).ToString("dd/MM HH:mm");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+
+        if (_hubConnection != null)
+        {
+            try
+            {
+                await _hubConnection.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Error cerrando la conexión del hub de alertas");
+            }
+        }
+    }
+}

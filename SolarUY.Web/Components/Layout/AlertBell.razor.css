@@ -1,0 +1,76 @@
+/* Campana de alertas de la barra superior (spec 031). Colores: rojo crítico, ámbar advertencia, azul informativo. */
+.alert-bell-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+}
+
+.alert-bell-badge {
+    position: absolute;
+    top: -0.35rem;
+    right: -0.35rem;
+    font-size: 0.65rem;
+    min-width: 1.15rem;
+}
+
+.alert-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1040;
+}
+
+.alert-panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: 380px;
+    max-height: min(70vh, 520px);
+    z-index: 1050;
+    display: flex;
+    flex-direction: column;
+}
+
+.alert-panel-list {
+    overflow-y: auto;
+}
+
+.alert-item {
+    border-left: 4px solid transparent;
+    border-radius: 0;
+    text-align: left;
+    white-space: normal;
+}
+
+.alert-item.unread {
+    background-color: #f8fafc;
+}
+
+.sev-critical { border-left-color: #dc2626; }
+.sev-warning { border-left-color: #f59e0b; }
+.sev-info { border-left-color: #0284c7; }
+
+.alert-toasts {
+    position: fixed;
+    top: 4.75rem;
+    right: 1rem;
+    z-index: 1090;
+    width: min(360px, calc(100vw - 2rem));
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.alert-toast {
+    border-left: 4px solid transparent;
+    cursor: pointer;
+}
+
+@media (max-width: 575.98px) {
+    .alert-panel {
+        position: fixed;
+        top: 4.5rem;
+        left: 0.5rem;
+        right: 0.5rem;
+        width: auto;
+    }
+}

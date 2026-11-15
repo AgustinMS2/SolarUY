@@ -69,6 +69,7 @@ public class NodeTelemetryBackgroundService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var nodeRepo = scope.ServiceProvider.GetRequiredService<ISolarNodeRepository>();
         var inverterRepo = scope.ServiceProvider.GetRequiredService<IInverterRepository>();
+        var alertPublisher = scope.ServiceProvider.GetRequiredService<IAlertPublisher>();
 
         var activeNodes = nodeRepo.GetAll().Where(n => n.Status == SolarNodeStatus.Active).ToList();
         var invertersByNode = inverterRepo
@@ -99,6 +100,11 @@ public class NodeTelemetryBackgroundService : BackgroundService
             await _hubContext.Clients
                 .Group(groupName)
                 .SendAsync(NodeTelemetryHub.ReceiveEventName, telemetry, cancellationToken);
+
+            // Spec 031: si el inversor supera los 75 °C, se registra y emite la alerta.
+            await alertPublisher.PublishAsync(
+                AlertDetectionRules.FromNodeTelemetry(telemetry, node.SolarParkId, node.SolarPark?.Name ?? string.Empty),
+                cancellationToken);
         }
     }
 

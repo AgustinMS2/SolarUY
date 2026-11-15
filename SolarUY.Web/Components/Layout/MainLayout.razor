@@ -18,6 +18,7 @@
             <div class="d-flex align-items-center gap-2">
                 <AuthorizeView>
                     <Authorized>
+                        <AlertBell @rendermode="InteractiveServer" />
                         <div class="user-chip">
                             <span class="user-avatar" aria-hidden="true">
                                 @GetInitial(context.User.Identity?.Name)
