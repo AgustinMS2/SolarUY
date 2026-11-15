@@ -20,7 +20,7 @@ public class PanelHealthService : IPanelHealthService
         _telemetryService = telemetryService;
     }
 
-    public PanelHealthReadingDto ClassifyHealth(SolarPanel panel, bool hasActiveNode, double activePowerW, double localHour)
+    public PanelHealthReadingDto ClassifyHealth(SolarPanel panel, bool hasActiveNode, double activePowerW, DateTime localTime)
     {
         ArgumentNullException.ThrowIfNull(panel);
 
@@ -41,7 +41,7 @@ public class PanelHealthService : IPanelHealthService
         }
 
         var activePower = Math.Max(0.0, activePowerW);
-        var expectedPower = _telemetryService.CalculateExpectedPowerW(panel.PowerW, localHour);
+        var expectedPower = _telemetryService.CalculateExpectedPowerW(panel.PowerW, localTime);
 
         // De noche no hay referencia para evaluar el rendimiento.
         if (expectedPower <= 0.0)

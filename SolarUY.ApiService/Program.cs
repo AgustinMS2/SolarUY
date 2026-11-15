@@ -36,7 +36,16 @@ builder.Services.AddScoped<SolarUY.ApiService.Services.IMaintenanceService, Sola
 // Generación histórica (spec 034).
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IParkGenerationRepository, SolarUY.ApiService.Repositories.ParkGenerationRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IParkHistoricalGenerationService, SolarUY.ApiService.Services.ParkHistoricalGenerationService>();
-builder.Services.AddScoped<SolarUY.ApiService.Services.IHistoricalGenerationSeeder, SolarUY.ApiService.Services.HistoricalGenerationSeeder>();
+
+// Simulación única de lecturas e historia (spec 036): un motor determinista que alimenta las lecturas en vivo y la historia
+// (por minuto y por hora, esta última en la tabla de la spec 034).
+builder.Services.Configure<SolarUY.ApiService.Simulation.SimulationOptions>(
+    builder.Configuration.GetSection(SolarUY.ApiService.Simulation.SimulationOptions.SectionName));
+builder.Services.AddSingleton<SolarUY.ApiService.Simulation.ISolarSimulationEngine, SolarUY.ApiService.Simulation.SolarSimulationEngine>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IInverterMinuteReadingRepository, SolarUY.ApiService.Repositories.InverterMinuteReadingRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IHistoryCatchUpLock, SolarUY.ApiService.Repositories.HistoryCatchUpLock>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.ISimulationHistoryService, SolarUY.ApiService.Services.SimulationHistoryService>();
+builder.Services.AddHostedService<SolarUY.ApiService.Services.SimulationHistoryBackgroundService>();
 
 // Access to the Keycloak Admin API for user role management (spec 017).
 builder.Services.TryAddSingleton(TimeProvider.System);
@@ -132,8 +141,6 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Data.SolarUyDbContext>();
     context.Database.Migrate();
     SolarUY.ApiService.Data.DbInitializer.Seed(context);
-    var historicalSeeder = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Services.IHistoricalGenerationSeeder>();
-    historicalSeeder.SeedIfEmpty();
 }
 
 // Configure the HTTP request pipeline.

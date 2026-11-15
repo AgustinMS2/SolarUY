@@ -134,6 +134,62 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("Inverters", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.InverterMinuteReading", b =>
+                {
+                    b.Property<Guid>("InverterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("MinuteUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("AnomalousSamples")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("AvgAcVoltageV")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("AvgDcCurrentA")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("AvgDcVoltageV")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("AvgFrequencyHz")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("AvgPowerKw")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("AvgTemperatureC")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("EnergyKwh")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("MaxPowerKw")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("MaxTemperatureC")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SolarNodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SolarParkId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("InverterId", "MinuteUtc");
+
+                    b.HasIndex("SolarNodeId", "MinuteUtc");
+
+                    b.HasIndex("SolarParkId", "MinuteUtc");
+
+                    b.ToTable("InverterMinuteReadings", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.MaintenanceOrder", b =>
                 {
                     b.Property<Guid>("Id")

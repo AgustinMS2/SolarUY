@@ -26,10 +26,10 @@
 ## Lógica de Dominio y Reglas de Negocio (Puras)
 
 - `IPanelTelemetryService`:
-  - `double CalculateExpectedPowerW(int nominalPowerW, double localHour)`
-  - `PanelTelemetryDto CalculateMetrics(SolarPanel panel, string? parkName, string? nodeName, double activePowerW, double localHour, DateTime timestampUtc)`
+  - `double CalculateExpectedPowerW(int nominalPowerW, DateTime localTime)` (spec 036: recibe la fecha y la hora locales)
+  - `PanelTelemetryDto CalculateMetrics(SolarPanel panel, string? parkName, string? nodeName, double activePowerW, DateTime localTime, DateTime timestampUtc)`
 - **Potencia esperada** (misma curva solar que las simulaciones de las specs 027 y 028):
-  - Entre las 6:00 y las 20:00 (hora Uruguay): `esperada = PowerW × sen(π × (hora − 6) / 14)`.
+  - Entre el amanecer y el atardecer de la fecha (hora Uruguay, calendario de la spec 036): `esperada = PowerW × sen(π × (hora − amanecer) / (atardecer − amanecer))`.
   - Fuera de ese horario: `esperada = 0`.
 - **Porcentaje de la placa**: `activa / PowerW × 100`.
 - **Eficiencia instantánea estimada**: `Efficiency × (activa / esperada)`; `null` si `esperada = 0`.
@@ -68,7 +68,7 @@
 ## Estrategia de Testing
 
 - **Unit tests en `PanelTelemetryServiceTests.cs` (TDD, rojo → verde)**:
-  - Curva esperada: 0 W a las 6:00, a las 20:00 y de noche; la potencia de placa a las 13:00; simétrica respecto de las 13:00.
+  - Curva esperada: 0 W de noche y fuera del amanecer y el atardecer de la fecha (en invierno el sol sale más tarde que en verano); la potencia de placa al mediodía solar (12:45); simétrica respecto del mediodía solar.
   - Porcentaje de la placa y eficiencia estimada; eficiencia nula cuando la esperada es 0 (sin división por cero).
   - Rendimiento bajo: alerta por debajo del 40 %, sin alerta con el 40 % exacto o por encima, sin alerta de noche.
 - **Tests de arquitectura**: `SecurityArchitectureTests` debe seguir en verde (el hub exige rol).

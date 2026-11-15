@@ -17,7 +17,7 @@ Permitir el monitoreo granular a nivel de módulo o string de panel fotovoltaico
 | Métrica | Unidad | Cálculo |
 | :--- | :--- | :--- |
 | Potencia actual | W | Lectura instantánea del panel. |
-| Potencia esperada a la hora actual | W | Potencia de placa × sen(π × (hora − 6) / 14) entre las 6:00 y las 20:00 (hora Uruguay); 0 W fuera de ese horario. Es la misma curva solar que usan las simulaciones de las specs 027 y 028. |
+| Potencia esperada a la hora actual | W | Potencia de placa × sen(π × (hora − amanecer) / (atardecer − amanecer)) entre el amanecer y el atardecer de la fecha (hora Uruguay, calendario de la spec 036); 0 W fuera de ese horario. Es la misma curva solar que usan las simulaciones de las specs 027 y 028. |
 | Porcentaje de la placa | % | (Potencia actual / Potencia de placa) × 100. |
 | Eficiencia instantánea estimada | % | Eficiencia de placa × (Potencia actual / Potencia esperada). Si la potencia esperada es 0 W, se muestra "—". |
 | Estado del enlace SignalR | - | Conectado (verde) / Reconectando (amarillo) / Desconectado (rojo). |

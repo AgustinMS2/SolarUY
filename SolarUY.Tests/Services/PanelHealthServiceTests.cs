@@ -7,9 +7,12 @@ namespace SolarUY.Tests.Services;
 
 public class PanelHealthServiceTests
 {
-    // Panel de 400 W: a las 13:00 (mediodía solar) la potencia esperada es exactamente 400 W.
-    private const double Noon = 13.0;
+    // Panel de 400 W: a las 12:45 (mediodía solar) la potencia esperada es exactamente 400 W.
+    // Se usa el 30 de octubre (amanecer a las 06:00 y atardecer a las 19:30, spec 036).
+    private const double Noon = 12.75;
     private const double Night = 23.0;
+
+    private static DateTime Local(double hour) => new DateTime(2026, 10, 30).AddHours(hour);
 
     private readonly PanelHealthService _service = new(new PanelTelemetryService());
 
@@ -35,7 +38,7 @@ public class PanelHealthServiceTests
     }
 
     private PanelHealthReadingDto Classify(double activePowerW, double hour = Noon, SolarPanel? panel = null, bool hasActiveNode = true)
-        => _service.ClassifyHealth(panel ?? CreatePanel(), hasActiveNode, activePowerW, hour);
+        => _service.ClassifyHealth(panel ?? CreatePanel(), hasActiveNode, activePowerW, Local(hour));
 
     // ---------- Clasificación por generación (con sol) ----------
 
@@ -79,7 +82,7 @@ public class PanelHealthServiceTests
     {
         var panel = CreatePanel();
 
-        var reading = _service.ClassifyHealth(panel, true, 300.0, Noon);
+        var reading = _service.ClassifyHealth(panel, true, 300.0, Local(Noon));
 
         Assert.Equal(panel.Id, reading.PanelId);
         Assert.Equal(300.0, reading.ActivePowerW);
@@ -141,6 +144,27 @@ public class PanelHealthServiceTests
         Assert.Null(reading.EstimatedEfficiencyPercent);
     }
 
+    // ---------- Época del año (spec 036) ----------
+
+    [Fact]
+    public void ClassifyHealth_InWinterAtHalfPastSixInTheMorning_IsNoSunBecauseTheSunHasNotRisen()
+    {
+        // 21 de junio: el sol sale a las 07:42.
+        var reading = _service.ClassifyHealth(CreatePanel(), true, 0.0, new DateTime(2026, 6, 21, 6, 30, 0));
+
+        Assert.Equal(PanelHealthState.NoSun, reading.State);
+    }
+
+    [Fact]
+    public void ClassifyHealth_InSummerAtHalfPastSixInTheMorning_IsEvaluatedByGeneration()
+    {
+        // 21 de diciembre: el sol sale a las 05:36, por lo que un panel sin generar a esa hora ya es crítico.
+        var reading = _service.ClassifyHealth(CreatePanel(), true, 0.0, new DateTime(2026, 12, 21, 6, 30, 0));
+
+        Assert.Equal(PanelHealthState.Critical, reading.State);
+        Assert.True(reading.ExpectedPowerW > 0.0);
+    }
+
     // ---------- Inactivo / sin lecturas ----------
 
     [Fact]
@@ -186,7 +210,7 @@ public class PanelHealthServiceTests
     [Fact]
     public void ClassifyHealth_WithNullPanel_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => _service.ClassifyHealth(null!, true, 100, Noon));
+        Assert.Throws<ArgumentNullException>(() => _service.ClassifyHealth(null!, true, 100, Local(Noon)));
     }
 
     [Fact]

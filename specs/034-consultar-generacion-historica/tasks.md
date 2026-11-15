@@ -6,8 +6,9 @@
 - [x] **T2. Repositorio `IParkGenerationRepository`, DTOs y servicio `ParkHistoricalGenerationService` con tests unitarios (tests primero).** RF-2, RF-3, RF-4, RF-5, RF-8
   - Hecho cuando: las suites de tests unitarios para agregación de Día (24 h), Mes (días en kWh), Año (12 meses en MWh), cálculo de HSP, pico de potencia y comparativas pasen en verde con `dotnet test`.
 
-- [x] **T3. Precarga de datos históricos (`HistoricalGenerationSeeder`) y cableado en DI.**
-  - Hecho cuando: el seeder genere datos históricos deterministas basados en la curva solar de Uruguay para los parques existentes y quede registrado en el pipeline de inicialización.
+- [x] **T3. Precarga de datos históricos y cableado en DI.**
+  - Hecho cuando: la tabla se precargue con datos históricos deterministas de los parques existentes al iniciar el sistema.
+  - Actualizada el 2026-11-15 (spec 036, opción A): el cargador propio (`HistoricalGenerationSeeder`) se reemplazó por la historia horaria calculada con el motor único de simulación, que se completa en segundo plano al arrancar (`SimulationHistoryService`); el repositorio incorporó `AddMissing` y `GetLastHourByPark`.
 
 - [x] **T4. Endpoints REST en `SolarParksController` (`daily`, `monthly`, `yearly`) con seguridad.** RF-1, RF-9
   - Hecho cuando: los endpoints estén expuestos, protegidos con `[Authorize(Roles = Roles.Any)]` y los tests de arquitectura sigan en verde.

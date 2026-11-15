@@ -131,7 +131,7 @@ public static class DbInitializer
             NominalCapacityKw = 110.0,
             Endpoint = "https://inverter-sg-01.local/api",
             SolarNodeId = nodeSgNorte.Id,
-            CreatedAtUtc = now.AddMonths(-5)
+            CreatedAtUtc = now.AddYears(-2)
         };
 
         var invSg02 = new Inverter
@@ -143,7 +143,7 @@ public static class DbInitializer
             NominalCapacityKw = 100.0,
             Endpoint = "https://inverter-sg-02.local/api",
             SolarNodeId = nodeSgSur.Id,
-            CreatedAtUtc = now.AddMonths(-5)
+            CreatedAtUtc = now.AddYears(-2)
         };
 
         var invCm01 = new Inverter
@@ -155,7 +155,7 @@ public static class DbInitializer
             NominalCapacityKw = 50.0,
             Endpoint = "https://inverter-cm-01.local/api",
             SolarNodeId = nodeCmCentral.Id,
-            CreatedAtUtc = now.AddMonths(-4)
+            CreatedAtUtc = now.AddYears(-2)
         };
 
         var invCm02 = new Inverter
@@ -167,7 +167,7 @@ public static class DbInitializer
             NominalCapacityKw = 50.0,
             Endpoint = "https://inverter-cm-02.local/api",
             SolarNodeId = nodeCmEste.Id,
-            CreatedAtUtc = now.AddMonths(-4)
+            CreatedAtUtc = now.AddYears(-2)
         };
 
         context.Inverters.AddRange(invSg01, invSg02, invCm01, invCm02);

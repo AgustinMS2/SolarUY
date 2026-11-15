@@ -9,6 +9,8 @@ public interface IParkTelemetryService
         SolarPark park,
         double currentPowerKw,
         double energyTodayKwh,
-        DateTime localTimeUruguay);
+        DateTime localTimeUruguay,
+        bool hasEquipment = true,
+        DateTime? timestampUtc = null);
 }
 

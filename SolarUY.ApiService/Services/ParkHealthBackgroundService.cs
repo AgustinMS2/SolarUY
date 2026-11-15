@@ -1,71 +1,43 @@
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Hubs;
 using SolarUY.ApiService.Repositories;
+using SolarUY.ApiService.Simulation;
 
 namespace SolarUY.ApiService.Services;
 
 /// <summary>
 /// Servicio en segundo plano que emite periódicamente el estado de salud de los paneles de cada
-/// parque activo a través de SignalR: un solo evento por parque y ciclo (Spec 030, RF-5).
+/// parque activo a través de SignalR: un solo evento por parque y ciclo (Spec 030, RF-5). Las lecturas salen del
+/// motor de simulación (spec 036), en los mismos instantes que el resto de las pantallas en vivo.
 /// </summary>
-public class ParkHealthBackgroundService : BackgroundService
+public class ParkHealthBackgroundService : SimulationEmitterBackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHubContext<ParkHealthHub> _hubContext;
-    private readonly ILogger<ParkHealthBackgroundService> _logger;
-    private readonly TimeSpan _interval = TimeSpan.FromSeconds(3);
 
     public ParkHealthBackgroundService(
         IServiceScopeFactory scopeFactory,
         IHubContext<ParkHealthHub> hubContext,
+        IOptions<SimulationOptions> options,
+        TimeProvider timeProvider,
         ILogger<ParkHealthBackgroundService> logger)
+        : base(options, timeProvider, logger)
     {
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
-        _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("ParkHealthBackgroundService iniciado con intervalo de {Interval}s", _interval.TotalSeconds);
+    protected override string ServiceName => nameof(ParkHealthBackgroundService);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await EmitHealthCycleAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error durante el ciclo de emisión del mapa de salud de parques");
-            }
-
-            try
-            {
-                await Task.Delay(_interval, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-        }
-
-        _logger.LogInformation("ParkHealthBackgroundService detenido");
-    }
-
-    private async Task EmitHealthCycleAsync(CancellationToken cancellationToken)
+    protected override async Task EmitCycleAsync(DateTime instantUtc, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var builder = scope.ServiceProvider.GetRequiredService<IParkHealthSnapshotBuilder>();
 
-        foreach (var update in builder.BuildUpdatesForActiveParks())
+        foreach (var update in builder.BuildUpdatesForActiveParks(instantUtc))
         {
             await _hubContext.Clients
                 .Group(ParkHealthHub.GetGroupName(update.ParkId))

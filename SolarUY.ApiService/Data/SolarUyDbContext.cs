@@ -19,6 +19,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<PanelControlEvent> PanelControlEvents => Set<PanelControlEvent>();
     public DbSet<ParkHourlyGeneration> ParkHourlyGenerations => Set<ParkHourlyGeneration>();
+    public DbSet<InverterMinuteReading> InverterMinuteReadings => Set<InverterMinuteReading>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -184,6 +185,18 @@ public class SolarUyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.SolarParkId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Spec 036: historia por minuto de cada inversor. Sin llaves foráneas: es una tabla de solo agregado y su
+        // historia no debe borrarse ni bloquear la baja de un inversor, un nodo o un parque.
+        modelBuilder.Entity<InverterMinuteReading>(entity =>
+        {
+            entity.ToTable("InverterMinuteReadings");
+            entity.HasKey(e => new { e.InverterId, e.MinuteUtc });
+            entity.Property(e => e.MinuteUtc).IsRequired();
+            // Consultas por período de la spec 034: por parque y por nodo.
+            entity.HasIndex(e => new { e.SolarParkId, e.MinuteUtc });
+            entity.HasIndex(e => new { e.SolarNodeId, e.MinuteUtc });
         });
     }
 }

@@ -10,16 +10,16 @@ namespace SolarUY.ApiService.Services;
 public interface IPanelTelemetryService
 {
     /// <summary>
-    /// Potencia que el panel debería entregar a la hora local dada (hora decimal, Uruguay):
-    /// potencia de placa × sen(π × (hora − 6) / 14) entre las 6:00 y las 20:00; 0 W fuera de ese horario.
+    /// Potencia que el panel debería entregar en la fecha y hora locales dadas (Uruguay): potencia de placa × la curva
+    /// del calendario solar (spec 036), con sol entre el amanecer y el atardecer de esa fecha; 0 W fuera de ese horario.
     /// </summary>
-    double CalculateExpectedPowerW(int nominalPowerW, double localHour);
+    double CalculateExpectedPowerW(int nominalPowerW, DateTime localTime);
 
     PanelTelemetryDto CalculateMetrics(
         SolarPanel panel,
         string? parkName,
         string? nodeName,
         double activePowerW,
-        double localHour,
+        DateTime localTime,
         DateTime timestampUtc);
 }

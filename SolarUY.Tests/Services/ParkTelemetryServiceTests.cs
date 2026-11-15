@@ -97,5 +97,94 @@ public class ParkTelemetryServiceTests
 
         Assert.Equal(0.0, result.CapacityPercentage);
     }
-}
 
+    // ---------- Horas de sol según la época del año (spec 036) ----------
+
+    [Fact]
+    public void CalculateMetrics_InWinterBeforeSunrise_IsStillNightAndSuppressesAlert()
+    {
+        // 21 de junio: el sol sale a las 07:42, por lo que a las 07:00 todavía es de noche.
+        var park = CreateActivePark(maxCapacityKw: 500, thresholdKw: 250);
+
+        var result = _service.CalculateMetrics(park, currentPowerKw: 80, energyTodayKwh: 0, new DateTime(2026, 6, 21, 7, 0, 0));
+
+        Assert.Equal(0.0, result.CurrentPowerKw);
+        Assert.False(result.IsAlertActive);
+    }
+
+    [Fact]
+    public void CalculateMetrics_InSummerAtTheSameHour_IsAlreadyDaylight()
+    {
+        // 21 de diciembre: el sol sale a las 05:36, por lo que a las 07:00 ya hay sol y la generación baja alerta.
+        var park = CreateActivePark(maxCapacityKw: 500, thresholdKw: 250);
+
+        var result = _service.CalculateMetrics(park, currentPowerKw: 80, energyTodayKwh: 0, new DateTime(2026, 12, 21, 7, 0, 0));
+
+        Assert.Equal(80.0, result.CurrentPowerKw);
+        Assert.True(result.IsAlertActive);
+    }
+
+    [Fact]
+    public void CalculateMetrics_InSummerAfterEightPm_IsStillDaylightUntilSunset()
+    {
+        // 21 de diciembre: el sol se pone a las 19:54.
+        var park = CreateActivePark(maxCapacityKw: 500, thresholdKw: 250);
+
+        var beforeSunset = _service.CalculateMetrics(park, 40, 3000, new DateTime(2026, 12, 21, 19, 45, 0));
+        var afterSunset = _service.CalculateMetrics(park, 40, 3000, new DateTime(2026, 12, 21, 20, 5, 0));
+
+        Assert.Equal(40.0, beforeSunset.CurrentPowerKw);
+        Assert.True(beforeSunset.IsAlertActive);
+        Assert.Equal(0.0, afterSunset.CurrentPowerKw);
+        Assert.False(afterSunset.IsAlertActive);
+    }
+
+    [Fact]
+    public void CalculateMetrics_InWinterAfterFivePm_IsNightFromTheSunsetOnwards()
+    {
+        // 21 de junio: el sol se pone a las 17:48.
+        var park = CreateActivePark(maxCapacityKw: 500, thresholdKw: 250);
+
+        var result = _service.CalculateMetrics(park, currentPowerKw: 30, energyTodayKwh: 1200, new DateTime(2026, 6, 21, 18, 0, 0));
+
+        Assert.Equal(0.0, result.CurrentPowerKw);
+        Assert.False(result.IsAlertActive);
+    }
+
+    // ---------- Parque sin equipos que generen (spec 036) ----------
+
+    [Fact]
+    public void CalculateMetrics_ParkWithoutEquipment_DoesNotRaiseTheLowGenerationAlertDuringDaylight()
+    {
+        var park = CreateActivePark(maxCapacityKw: 250, thresholdKw: 40);
+        var midday = new DateTime(2026, 11, 12, 12, 30, 0);
+
+        var result = _service.CalculateMetrics(park, currentPowerKw: 0, energyTodayKwh: 0, midday, hasEquipment: false);
+
+        Assert.Equal(0.0, result.CurrentPowerKw);
+        Assert.Equal(0.0, result.CapacityPercentage);
+        Assert.False(result.IsAlertActive);
+    }
+
+    [Fact]
+    public void CalculateMetrics_ParkWithEquipmentAndNoPowerDuringDaylight_StillRaisesTheAlert()
+    {
+        var park = CreateActivePark(maxCapacityKw: 250, thresholdKw: 40);
+        var midday = new DateTime(2026, 11, 12, 12, 30, 0);
+
+        var result = _service.CalculateMetrics(park, currentPowerKw: 0, energyTodayKwh: 0, midday, hasEquipment: true);
+
+        Assert.True(result.IsAlertActive);
+    }
+
+    [Fact]
+    public void CalculateMetrics_TimestampIsTheOneGiven()
+    {
+        var park = CreateActivePark();
+        var instant = new DateTime(2026, 11, 12, 15, 0, 5, DateTimeKind.Utc);
+
+        var result = _service.CalculateMetrics(park, 300, 1000, new DateTime(2026, 11, 12, 12, 0, 5), timestampUtc: instant);
+
+        Assert.Equal(instant, result.TimestampUtc);
+    }
+}

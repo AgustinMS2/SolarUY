@@ -40,7 +40,7 @@ Permitir a los usuarios analizar la evolución de la energía generada (kWh y MW
 ## Requisitos no funcionales
 - **Visualización (SolarOps Clean)**: Gráficas vectoriales interactivas SVG nativas de Blazor, responsivas y accesibles (WCAG AA), con paleta de colores del sistema (`#0284c7`, `#f59e0b`, `#10b981`).
 - **Zona Horaria Estricta**: Todas las agrupaciones horarias, diarias y mensuales deben calcularse en el huso horario oficial de Uruguay (`America/Montevideo` / UTC-3), sin desfasajes en días bisiestos o bordes de medianoche.
-- **Eficiencia y Persistencia**: Consultas agregadas indexadas en PostgreSQL sobre la tabla `ParkHourlyGenerations`, precargada con datos históricos representativos en el arranque del sistema.
+- **Eficiencia y Persistencia**: Consultas agregadas indexadas en PostgreSQL sobre la tabla `ParkHourlyGenerations`, precargada con la historia horaria que genera la simulación (spec 036) al arrancar el sistema.
 - **Rendimiento**: Tiempo de respuesta de consulta de agregación < 200 ms.
 
 ## Casos límite

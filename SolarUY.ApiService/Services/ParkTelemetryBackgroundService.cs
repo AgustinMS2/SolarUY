@@ -1,121 +1,87 @@
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using SolarUY.ApiService.Domain;
 using SolarUY.ApiService.Hubs;
 using SolarUY.ApiService.Repositories;
+using SolarUY.ApiService.Simulation;
 
 namespace SolarUY.ApiService.Services;
 
 /// <summary>
-/// Servicio en segundo plano que genera y emite periÃ³dicamente telemetrÃ­a en tiempo real
-/// para parques solares a travÃ©s de SignalR (Spec 027, RF-2).
+/// Servicio en segundo plano que emite periódicamente la telemetría en tiempo real de los parques solares por
+/// SignalR (Spec 027, RF-2). La potencia y la energía del día salen del motor de simulación (spec 036): la potencia es
+/// la suma de los inversores de los nodos activos del parque.
 /// </summary>
-public class ParkTelemetryBackgroundService : BackgroundService
+public class ParkTelemetryBackgroundService : SimulationEmitterBackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHubContext<ParkTelemetryHub> _hubContext;
     private readonly IParkTelemetryService _telemetryService;
-    private readonly ILogger<ParkTelemetryBackgroundService> _logger;
-    private readonly TimeSpan _interval = TimeSpan.FromSeconds(3);
+    private readonly ISolarSimulationEngine _engine;
 
     public ParkTelemetryBackgroundService(
         IServiceScopeFactory scopeFactory,
         IHubContext<ParkTelemetryHub> hubContext,
         IParkTelemetryService telemetryService,
+        ISolarSimulationEngine engine,
+        IOptions<SimulationOptions> options,
+        TimeProvider timeProvider,
         ILogger<ParkTelemetryBackgroundService> logger)
+        : base(options, timeProvider, logger)
     {
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
         _telemetryService = telemetryService;
-        _logger = logger;
+        _engine = engine;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        _logger.LogInformation("ParkTelemetryBackgroundService iniciado con intervalo de {Interval}s", _interval.TotalSeconds);
+    protected override string ServiceName => nameof(ParkTelemetryBackgroundService);
 
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            try
-            {
-                await EmitTelemetryCycleAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error durante el ciclo de emisiÃ³n de telemetrÃ­a de parques");
-            }
-
-            try
-            {
-                await Task.Delay(_interval, stoppingToken);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-        }
-
-        _logger.LogInformation("ParkTelemetryBackgroundService detenido");
-    }
-
-    private async Task EmitTelemetryCycleAsync(CancellationToken cancellationToken)
+    protected override async Task EmitCycleAsync(DateTime instantUtc, CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
         var parkRepo = scope.ServiceProvider.GetRequiredService<ISolarParkRepository>();
-        var parks = parkRepo.GetAll();
+        var nodeRepo = scope.ServiceProvider.GetRequiredService<ISolarNodeRepository>();
+        var inverterRepo = scope.ServiceProvider.GetRequiredService<IInverterRepository>();
         var alertPublisher = scope.ServiceProvider.GetRequiredService<IAlertPublisher>();
 
-        var localTime = GetUruguayLocalTime();
-        var localHour = localTime.Hour + (localTime.Minute / 60.0);
-
-        foreach (var park in parks.Where(p => p.Status == SolarParkStatus.Active))
+        var activeParks = parkRepo.GetAll().Where(p => p.Status == SolarParkStatus.Active).ToList();
+        if (activeParks.Count == 0)
         {
-            double simulatedPower = 0.0;
-            double simulatedEnergy = 0.0;
+            return;
+        }
 
-            if (localHour >= 6.0 && localHour < 20.0)
-            {
-                // Curva senoidal solar centrada a las 13:00 con variaciÃ³n suave (+- 3%)
-                var solarAngle = ((localHour - 6.0) / 14.0) * Math.PI;
-                var baseSolarFactor = Math.Sin(solarAngle);
+        // Inversores de los nodos activos, por parque.
+        var activeNodes = nodeRepo.GetAll().Where(n => n.Status == SolarNodeStatus.Active).ToList();
+        var inverters = inverterRepo.GetByNodeIds(activeNodes.Select(n => n.Id).ToList());
+        var parkByNode = activeNodes.ToDictionary(n => n.Id, n => n.SolarParkId);
+        var invertersByPark = inverters
+            .Where(i => parkByNode.ContainsKey(i.SolarNodeId))
+            .GroupBy(i => parkByNode[i.SolarNodeId])
+            .ToDictionary(g => g.Key, g => g.Select(i => new SimulatedInverter(i.Id, i.NominalCapacityKw)).ToList());
 
-                // VariaciÃ³n suave pseudo-aleatoria pero acotada
-                var jitter = 0.97 + (Random.Shared.NextDouble() * 0.06);
-                simulatedPower = Math.Round(park.MaxCapacityKw * baseSolarFactor * jitter, 1);
-                simulatedPower = Math.Clamp(simulatedPower, 0.0, park.MaxCapacityKw);
+        var localTime = SolarCalendar.ToLocal(instantUtc);
 
-                var progressRatio = (localHour - 6.0) / 14.0;
-                simulatedEnergy = Math.Round(park.MaxCapacityKw * 5.0 * progressRatio, 1);
-            }
+        foreach (var park in activeParks)
+        {
+            invertersByPark.TryGetValue(park.Id, out var parkInverters);
+            parkInverters ??= [];
 
-            var telemetry = _telemetryService.CalculateMetrics(park, simulatedPower, simulatedEnergy, localTime);
+            var powerKw = Math.Round(_engine.ReadParkPowerKw(park.Id, parkInverters, instantUtc), 1);
+            var energyKwh = Math.Round(_engine.EnergyTodayKwh(park.Id, parkInverters, instantUtc), 1);
 
-            var groupName = ParkTelemetryHub.GetGroupName(park.Id);
+            var telemetry = _telemetryService.CalculateMetrics(
+                park, powerKw, energyKwh, localTime,
+                hasEquipment: parkInverters.Count > 0,
+                timestampUtc: instantUtc);
+
             await _hubContext.Clients
-                .Group(groupName)
+                .Group(ParkTelemetryHub.GetGroupName(park.Id))
                 .SendAsync(ParkTelemetryHub.ReceiveEventName, telemetry, cancellationToken);
 
             // Spec 031: si la generación cae bajo el umbral con sol, se registra y emite la alerta.
             await alertPublisher.PublishAsync(AlertDetectionRules.FromParkTelemetry(telemetry), cancellationToken);
         }
     }
-
-    private static DateTime GetUruguayLocalTime()
-    {
-        var uruguayZones = new[] { "America/Montevideo", "Montevideo Standard Time" };
-        foreach (var id in uruguayZones)
-        {
-            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var tz) && tz != null)
-            {
-                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            }
-        }
-        return DateTime.UtcNow.AddHours(-3);
-    }
 }
-

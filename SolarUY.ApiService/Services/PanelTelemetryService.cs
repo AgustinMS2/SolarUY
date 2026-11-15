@@ -1,29 +1,24 @@
 using SolarUY.ApiService.Domain;
 using SolarUY.ApiService.Dtos;
+using SolarUY.ApiService.Simulation;
 
 namespace SolarUY.ApiService.Services;
 
 /// <summary>
 /// Calcula la telemetría de un panel y evalúa las reglas de la Spec 029: potencia esperada
-/// según la curva solar del día, eficiencia instantánea estimada y rendimiento bajo
+/// según la curva del calendario solar de la fecha (spec 036), eficiencia instantánea estimada y rendimiento bajo
 /// (RF-3: potencia actual inferior al 40 % de la esperada a esa hora).
 /// </summary>
 public class PanelTelemetryService : IPanelTelemetryService
 {
-    // Misma curva solar que usan las simulaciones de las specs 027 y 028.
-    private const double SunriseHour = 6.0;
-    private const double SunsetHour = 20.0;
     private const double LowPerformanceRatio = 0.40;
 
-    public double CalculateExpectedPowerW(int nominalPowerW, double localHour)
+    public double CalculateExpectedPowerW(int nominalPowerW, DateTime localTime)
     {
-        if (nominalPowerW <= 0 || localHour <= SunriseHour || localHour >= SunsetHour)
-        {
-            return 0.0;
-        }
-
-        var solarAngle = (localHour - SunriseHour) / (SunsetHour - SunriseHour) * Math.PI;
-        return Math.Round(nominalPowerW * Math.Sin(solarAngle), 1);
+        // Misma curva y mismo amanecer y atardecer que usa el motor de simulación (spec 036).
+        return nominalPowerW <= 0
+            ? 0.0
+            : Math.Round(nominalPowerW * SolarCalendar.Factor(localTime), 1);
     }
 
     public PanelTelemetryDto CalculateMetrics(
@@ -31,13 +26,13 @@ public class PanelTelemetryService : IPanelTelemetryService
         string? parkName,
         string? nodeName,
         double activePowerW,
-        double localHour,
+        DateTime localTime,
         DateTime timestampUtc)
     {
         ArgumentNullException.ThrowIfNull(panel);
 
         var activePower = Math.Max(0.0, activePowerW);
-        var expectedPower = CalculateExpectedPowerW(panel.PowerW, localHour);
+        var expectedPower = CalculateExpectedPowerW(panel.PowerW, localTime);
 
         var percentOfNominal = panel.PowerW > 0
             ? Math.Round(activePower / panel.PowerW * 100.0, 1)

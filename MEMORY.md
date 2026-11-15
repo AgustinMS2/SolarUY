@@ -35,7 +35,7 @@
 | | Activar / Desactivar Inyección a la Red | Administrador | Borrador (`033`) |
 | **Históricos** | Consultar Generación (Día, Mes, Año) | Todos | **Implementada** (`034`) |
 | | Consultar en Lenguaje Natural (LLM) | Todos | Borrador (`035`) |
-| **Simulador** | Simular Lecturas del Inversor | Sistema (Background) | Borrador (`036`) |
+| **Simulador** | Simular Lecturas del Inversor | Sistema (Background) | `036` implementada (T1–T8); siguiente: spec 037 (inyección de fallas) |
 | | Simular Fallas de Paneles | Sistema (Mock) | Borrador (`037`) |
 
 ---
@@ -79,7 +79,7 @@
 | 033-activar-desactivar-inyeccion-red | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | `034-consultar-generacion-historica` | **Implementada** | Completada | 6 / 6 | T1–T6 completadas (485 tests en verde). T1: Entidad `ParkHourlyGeneration` y migración; T2: `ParkHistoricalGenerationService` con 8 tests TDD (Día 24h, Mes, Año MWh, HSP, picos y comparativas); T3: precarga determinista; T4: Endpoints REST en `SolarParksController`; T5: `ParkHistoricalApiClient`, navegación en `NavMenu` y página `/historicos`; T6: gráfica interactiva SVG con tooltips y exportación a CSV UTF-8 BOM. Siguiente: **Spec 033** o **035**. |
 | 035-consulta-lenguaje-natural-llm | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
-| 036-simular-lecturas-inversor | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
+| `036-simular-lecturas-inversor` | **Aprobada** | Validación | 8 / 8 | Motor único determinista dentro de la API (calendario solar estacional, ruido reproducible, lecturas de inversor, panel y parque). Historia por minuto de cada inversor (30 días) e historia horaria del parque desde el año anterior (tabla de la spec 034, cuyo cargador se reemplazó), completadas en segundo plano al arrancar, sin duplicados con dos copias (candado de PostgreSQL). Las pantallas de las specs 027 a 030 salen del mismo motor y emiten en los mismos instantes (cada 5 s, `Simulation:IntervalSeconds`), con el horario de sol de la fecha; rótulo "En vivo". Hechas T1–T8, 634 tests en verde y comprobado con base real y navegador (37/37). Falta avisar a Gastón (027 y 034) y a Cacacacaiii (028) de los cambios. |
 | 037-simular-fallas-paneles | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 
 ---

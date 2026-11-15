@@ -10,7 +10,7 @@ namespace SolarUY.ApiService.Services;
 public interface IPanelHealthService
 {
     /// <param name="hasActiveNode">Indica si el nodo del panel existe y está activo.</param>
-    PanelHealthReadingDto ClassifyHealth(SolarPanel panel, bool hasActiveNode, double activePowerW, double localHour);
+    PanelHealthReadingDto ClassifyHealth(SolarPanel panel, bool hasActiveNode, double activePowerW, DateTime localTime);
 
     ParkHealthSummaryDto BuildSummary(IEnumerable<PanelHealthState> states);
 

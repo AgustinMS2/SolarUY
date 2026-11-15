@@ -1,6 +1,8 @@
 using SolarUY.ApiService.Domain;
+using Microsoft.Extensions.Options;
 using SolarUY.ApiService.Dtos;
 using SolarUY.ApiService.Repositories;
+using SolarUY.ApiService.Simulation;
 
 namespace SolarUY.ApiService.Services;
 
@@ -12,20 +14,26 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
     private readonly ISolarPanelRepository _panelRepository;
     private readonly IMaintenanceRepository _maintenanceRepository;
     private readonly IPanelHealthService _healthService;
-    private readonly IPanelTelemetryService _telemetryService;
+    private readonly ISolarSimulationEngine _engine;
+    private readonly IOptions<SimulationOptions> _options;
+    private readonly TimeProvider _timeProvider;
 
     public ParkHealthSnapshotBuilder(
         ISolarParkRepository parkRepository,
         ISolarPanelRepository panelRepository,
         IMaintenanceRepository maintenanceRepository,
         IPanelHealthService healthService,
-        IPanelTelemetryService telemetryService)
+        ISolarSimulationEngine engine,
+        IOptions<SimulationOptions> options,
+        TimeProvider timeProvider)
     {
         _parkRepository = parkRepository;
         _panelRepository = panelRepository;
         _maintenanceRepository = maintenanceRepository;
         _healthService = healthService;
-        _telemetryService = telemetryService;
+        _engine = engine;
+        _options = options;
+        _timeProvider = timeProvider;
     }
 
     public ServiceResult<ParkHealthSnapshotDto> BuildSnapshot(Guid parkId)
@@ -44,8 +52,9 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
         });
         var lastMaintenance = _healthService.LatestCompletedByPanel(completedOrders);
 
-        var localHour = GetUruguayLocalHour();
-        var readings = panels.ToDictionary(p => p.Id, p => ReadPanel(p, localHour));
+        // Carga inicial: las lecturas del ciclo en curso, las mismas que las demás pantallas en vivo.
+        var instant = SimulationClock.Snap(_timeProvider.GetUtcNow().UtcDateTime, _options.Value.IntervalSeconds);
+        var readings = panels.ToDictionary(p => p.Id, p => ReadPanel(p, instant));
 
         var nodes = panels
             .GroupBy(p => p.SolarNodeId)
@@ -74,32 +83,29 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
         {
             ParkId = park.Id,
             ParkName = park.Name,
-            TimestampUtc = DateTime.UtcNow,
+            TimestampUtc = instant,
             Summary = _healthService.BuildSummary(readings.Values.Select(r => r.State)),
             Nodes = nodes
         });
     }
 
-    public IReadOnlyList<ParkHealthUpdateDto> BuildUpdatesForActiveParks()
+    public IReadOnlyList<ParkHealthUpdateDto> BuildUpdatesForActiveParks(DateTime instantUtc)
     {
         var activeParkIds = _parkRepository.GetAll()
             .Where(p => p.Status == SolarParkStatus.Active)
             .Select(p => p.Id)
             .ToHashSet();
 
-        var localHour = GetUruguayLocalHour();
-        var timestamp = DateTime.UtcNow;
-
         return _panelRepository.GetAll()
             .Where(p => activeParkIds.Contains(p.SolarParkId))
             .GroupBy(p => p.SolarParkId)
             .Select(group =>
             {
-                var readings = group.Select(p => ReadPanel(p, localHour)).ToList();
+                var readings = group.Select(p => ReadPanel(p, instantUtc)).ToList();
                 return new ParkHealthUpdateDto
                 {
                     ParkId = group.Key,
-                    TimestampUtc = timestamp,
+                    TimestampUtc = instantUtc,
                     Summary = _healthService.BuildSummary(readings.Select(r => r.State)),
                     Panels = readings
                 };
@@ -107,31 +113,11 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
             .ToList();
     }
 
-    private PanelHealthReadingDto ReadPanel(SolarPanel panel, double localHour)
+    private PanelHealthReadingDto ReadPanel(SolarPanel panel, DateTime instantUtc)
     {
         var hasActiveNode = panel.SolarNode is { Status: SolarNodeStatus.Active };
-        var expectedPowerW = _telemetryService.CalculateExpectedPowerW(panel.PowerW, localHour);
-        var activePowerW = PanelReadingSimulator.SimulateActivePowerW(expectedPowerW);
+        var activePowerW = Math.Round(_engine.ReadPanelPowerW(panel.Id, panel.SolarParkId, panel.PowerW, instantUtc), 1);
 
-        return _healthService.ClassifyHealth(panel, hasActiveNode, activePowerW, localHour);
-    }
-
-    private static double GetUruguayLocalHour()
-    {
-        var local = GetUruguayLocalTime();
-        return local.Hour + (local.Minute / 60.0);
-    }
-
-    private static DateTime GetUruguayLocalTime()
-    {
-        foreach (var id in new[] { "America/Montevideo", "Montevideo Standard Time" })
-        {
-            if (TimeZoneInfo.TryFindSystemTimeZoneById(id, out var tz) && tz != null)
-            {
-                return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
-            }
-        }
-
-        return DateTime.UtcNow.AddHours(-3);
+        return _healthService.ClassifyHealth(panel, hasActiveNode, activePowerW, SolarCalendar.ToLocal(instantUtc));
     }
 }

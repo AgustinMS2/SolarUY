@@ -13,7 +13,7 @@
   - `Services/ParkHealthSnapshotBuilder.cs` (con interfaz): orquestación sin reglas de negocio; lee parque, paneles y órdenes completadas, simula las lecturas y arma el snapshot y el update.
   - `Services/PanelReadingSimulator.cs`: simulación de la potencia de un panel (misma fórmula que `PanelTelemetryBackgroundService` de la spec 029: esperada × variación del ±3 %, con ~5 % de caídas fuertes). Se duplica a propósito para no tocar la 029; se unificará en la spec 036.
   - `Hubs/ParkHealthHub.cs`: hub SignalR en `/hubs/park-health`, protegido con `[Authorize(Roles = Roles.Any)]`, con `SubscribeToPark(Guid parkId)` y `UnsubscribeFromPark(Guid parkId)`; grupo `park-health-{parkId}`.
-  - `Services/ParkHealthBackgroundService.cs`: `BackgroundService` que cada 3 s emite un `ParkHealthUpdateDto` por cada parque activo al grupo correspondiente.
+  - `Services/ParkHealthBackgroundService.cs`: `BackgroundService` que en cada ciclo (intervalo de `Simulation:IntervalSeconds`, spec 036) emite un `ParkHealthUpdateDto` por cada parque activo al grupo correspondiente.
   - `Controllers/SolarParksController.cs`: `GET /api/solar-parks/{id}/panel-health` (200 con el snapshot, 404 "El parque solicitado no existe."); solo lectura, hereda `[Authorize(Roles = Roles.Any)]`.
   - `Program.cs`: registro de servicios y mapeo del hub. La autenticación por `access_token` en query string ya cubre cualquier ruta bajo `/hubs`.
 - `SolarUY.Web`:
@@ -55,7 +55,7 @@
 
 - **Carga inicial**: `GET /api/solar-parks/{id}/panel-health` devuelve la estructura (nodos y paneles), el último mantenimiento y una primera lectura de cada panel.
 - **Hub `ParkHealthHub`** (`/hubs/park-health`): grupo `park-health-{parkId}`; evento `ReceiveParkHealth(ParkHealthUpdateDto)`.
-- **`ParkHealthBackgroundService`**: cada 3 s, por parque activo, arma el update con una lectura simulada por panel y lo envía al grupo. Un solo mensaje por parque y ciclo.
+- **`ParkHealthBackgroundService`**: en cada ciclo (intervalo de `Simulation:IntervalSeconds`), por parque activo, arma el update con la lectura del motor de simulación (spec 036) por panel y lo envía al grupo. Un solo mensaje por parque y ciclo.
 - Limitación conocida: igual que las specs 027 a 029, el servicio calcula todos los parques activos aunque nadie esté suscrito; con parques de 2000 paneles conviene medirlo (spec 036 o posterior).
 
 ---

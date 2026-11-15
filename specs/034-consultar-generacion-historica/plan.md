@@ -7,11 +7,11 @@
   - `Data/SolarUyDbContext.cs`: `DbSet<ParkHourlyGeneration>`, configuración de tabla, claves foráneas e índices únicos compuestos por `(SolarParkId, DateLocal, HourLocal)`.
   - `Migrations/`: Migración EF Core `AddParkHourlyGeneration`.
   - `Repositories/IParkGenerationRepository.cs` y `ParkGenerationRepository.cs`: Métodos de consulta de rangos de fechas por parque y persistencia por lote.
-  - `Services/IHistoricalGenerationSeeder.cs` y `HistoricalGenerationSeeder.cs`: Precarga determinista de datos históricos del último año para parques existentes en base a la curva solar astronómica de Uruguay (`America/Montevideo`).
+  - Precarga de datos históricos: originalmente `HistoricalGenerationSeeder`; desde la spec 036 (opción A, 2026-11-15) la tabla la completa en segundo plano `SimulationHistoryService` con el motor único de simulación (curva solar estacional de Uruguay), desde el 1 de enero del año anterior.
   - `Dtos/HistoricalGenerationDtos.cs`: `HistoricalGenerationReportDto`, `HistoricalDataPointDto`, `HistoricalSummaryMetricsDto`.
   - `Services/IParkHistoricalGenerationService.cs` y `ParkHistoricalGenerationService.cs`: Lógica de negocio de agregación temporal (Día, Mes, Año), cálculo de Horas de Sol Equivalente (HSP), picos de potencia y comparativas porcentuales con períodos anteriores.
   - `Controllers/SolarParksController.cs` (o `ParkHistoricalController.cs`): Endpoints `GET /api/solar-parks/{id:guid}/history/daily`, `/monthly`, `/yearly` protegidos con `[Authorize(Roles = Roles.Any)]`.
-  - `Program.cs`: Registro de repositorio, servicios y ejecución del seeder al inicio.
+  - `Program.cs`: Registro de repositorio y servicios.
 - `SolarUY.Web`:
   - `Services/ParkHistoricalApiClient.cs`: Cliente HTTP para consultar los reportes históricos.
   - `Components/Pages/ParkHistoricalGeneration.razor`: Página completa en `/historicos` y `/parques/{parkId:guid}/historico` con selector de parque, pestañas (Día, Mes, Año), tarjetas de métricas resumen, gráfica SVG nativa interactiva con hover tooltips y botón de exportación CSV con codificación UTF-8 con BOM.
