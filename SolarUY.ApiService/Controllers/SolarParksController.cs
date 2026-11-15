@@ -14,15 +14,18 @@ public class SolarParksController : ControllerBase
     private readonly ISolarParkService _service;
     private readonly IParkHealthSnapshotBuilder _healthSnapshotBuilder;
     private readonly IParkHistoricalGenerationService _historicalService;
+    private readonly IGridInjectionService _injectionService;
 
     public SolarParksController(
         ISolarParkService service,
         IParkHealthSnapshotBuilder healthSnapshotBuilder,
-        IParkHistoricalGenerationService historicalService)
+        IParkHistoricalGenerationService historicalService,
+        IGridInjectionService injectionService)
     {
         _service = service;
         _healthSnapshotBuilder = healthSnapshotBuilder;
         _historicalService = historicalService;
+        _injectionService = injectionService;
     }
 
     [Authorize(Roles = Roles.Administrator)]
@@ -181,4 +184,52 @@ public class SolarParksController : ControllerBase
 
         return NoContent();
     }
+
+    // Spec 033 (RF-1/RF-2): corte administrativo de la inyección a la red de todo el parque; solo Administradores (RF-6).
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPost("{id:guid}/cut-injection")]
+    public IActionResult CutInjection(Guid id, [FromBody] CutInjectionRequest request)
+    {
+        var result = _injectionService.CutParkInjection(id, request.ConfirmationText, GetOrderedBy(), GetRemoteIp(), request.Reason);
+        return InjectionResponse(result, "Detenida");
+    }
+
+    // Spec 033 (RF-5): reanudación de la inyección a la red del parque; solo Administradores (RF-6).
+    [Authorize(Roles = Roles.Administrator)]
+    [HttpPost("{id:guid}/resume-injection")]
+    public IActionResult ResumeInjection(Guid id, [FromBody] CutInjectionRequest request)
+    {
+        var result = _injectionService.ResumeParkInjection(id, request.ConfirmationText, GetOrderedBy(), GetRemoteIp(), request.Reason);
+        return InjectionResponse(result, "Activa");
+    }
+
+    // Spec 033: traduce el resultado del servicio a la respuesta HTTP (el cuerpo siempre lleva "message" en los errores).
+    private IActionResult InjectionResponse(ServiceResult result, string status)
+    {
+        if (result.Success)
+        {
+            return Ok(new { status });
+        }
+
+        return result.ErrorType switch
+        {
+            ServiceErrorType.Validation or ServiceErrorType.ConfirmationRequired => BadRequest(new { message = result.ErrorMessage }),
+            ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+            ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+            // Caso límite: pérdida de comunicación con el inversor.
+            ServiceErrorType.Unavailable => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.ErrorMessage }),
+            _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
+        };
+    }
+
+    // Bitácora (spec 033, RF-6): usuario autenticado que ordena la acción.
+    private string GetOrderedBy()
+    {
+        return User.FindFirst("preferred_username")?.Value
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            ?? User.Identity?.Name
+            ?? "desconocido";
+    }
+
+    private string? GetRemoteIp() => HttpContext.Connection.RemoteIpAddress?.ToString();
 }
