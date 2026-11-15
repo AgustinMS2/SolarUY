@@ -39,7 +39,8 @@ public class SecurityArchitectureTests
     private static readonly HashSet<string> TechnicianAllowedMutations =
     [
         "MaintenancesController.ConfirmMaintenance", // Spec 026: the technician confirms the maintenance he performed.
-        "AlertsController.Acknowledge" // Spec 031: any user acknowledges an alert; the state is global.
+        "AlertsController.Acknowledge", // Spec 031: any user acknowledges an alert; the state is global.
+        "ChatController.Query" // Spec 035: operators (administrator or technician) submit queries to the AI assistant.
     ];
 
     private static IEnumerable<MethodInfo> MutatingEndpoints()

@@ -38,6 +38,11 @@ builder.Services.AddScoped<SolarUY.ApiService.Repositories.IParkGenerationReposi
 builder.Services.AddScoped<SolarUY.ApiService.Services.IParkHistoricalGenerationService, SolarUY.ApiService.Services.ParkHistoricalGenerationService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IHistoricalGenerationSeeder, SolarUY.ApiService.Services.HistoricalGenerationSeeder>();
 
+// Asistente Inteligente IA (Spec 035).
+builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarUyDomainContextRetriever, SolarUY.ApiService.Services.SolarUyDomainContextRetriever>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.SolarUyKnowledgeAssistant>();
+builder.Services.AddHttpClient<SolarUY.ApiService.Services.ISolarUyLlmService, SolarUY.ApiService.Services.GeminiLlmService>();
+
 // Access to the Keycloak Admin API for user role management (spec 017).
 builder.Services.TryAddSingleton(TimeProvider.System);
 if (builder.Environment.IsDevelopment())
