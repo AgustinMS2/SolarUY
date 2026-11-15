@@ -45,6 +45,14 @@ public class FakeMaintenanceRepository : IMaintenanceRepository
             o.ScheduledDateUtc < endUtc);
     }
 
+    // Spec 032 (RF-5): cualquier orden Pendiente del panel, sin importar la fecha.
+    public bool HasPendingOrderForPanel(Guid panelId)
+    {
+        return PersistedOrders.Any(o =>
+            o.SolarPanelId == panelId &&
+            o.Status == MaintenanceStatus.Pending);
+    }
+
     public MaintenanceOrder? GetById(Guid orderId)
     {
         return PersistedOrders.FirstOrDefault(o => o.Id == orderId);

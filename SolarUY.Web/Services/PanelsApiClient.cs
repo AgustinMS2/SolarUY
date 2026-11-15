@@ -119,6 +119,50 @@ public class PanelsApiClient(HttpClient httpClient)
         }
     }
 
+    // Spec 032 (RF-1/RF-2): orden remota de corte eléctrico; solo Administrador.
+    public async Task<PanelApiResponse> DeactivateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsync($"/api/panels/{id}/deactivate", content: null, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new PanelApiResponse { Success = true };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"No se pudo enviar la orden de desactivación ({response.StatusCode}).";
+            return new PanelApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
+    // Spec 032 (RF-3/RF-4): orden remota de reconexión; solo Administrador.
+    public async Task<PanelApiResponse> ActivateAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await httpClient.PostAsync($"/api/panels/{id}/activate", content: null, cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return new PanelApiResponse { Success = true };
+            }
+
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>(cancellationToken: cancellationToken);
+            var errorMessage = error?.Message ?? $"No se pudo enviar la orden de activación ({response.StatusCode}).";
+            return new PanelApiResponse { Success = false, ErrorMessage = errorMessage };
+        }
+        catch (Exception ex)
+        {
+            return new PanelApiResponse { Success = false, ErrorMessage = $"No se pudo comunicar con el servicio: {ex.Message}" };
+        }
+    }
+
     private sealed record CreatePanelSuccessResponse(Guid Id);
     private sealed record ErrorResponse(string? Message);
 }

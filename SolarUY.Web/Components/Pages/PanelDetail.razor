@@ -1,0 +1,203 @@
+@page "/paneles/{Id:guid}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@using SolarUY.Web.Services
+@inject PanelsApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Detalle del Panel Solar — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/paneles">Paneles Solares</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Detalle</li>
+        </ol>
+    </nav>
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
+            <span class="bi bi-check-circle-fill me-2"></span>
+            <div>@_successMessage</div>
+            <button type="button" class="btn-close" @onclick="() => _successMessage = null" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span class="text-muted">Cargando detalle del panel...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <span class="bi bi-exclamation-triangle-fill me-2 fs-5"></span>
+            <div>@_errorMessage</div>
+        </div>
+    }
+    else if (_panel == null)
+    {
+        <div class="card border-0 shadow-sm text-center py-5">
+            <div class="card-body">
+                <div class="mb-3 text-muted">
+                    <span class="bi bi-inbox fs-1" aria-hidden="true"></span>
+                </div>
+                <h5 class="card-title text-secondary">El panel solicitado no existe.</h5>
+                <a href="/paneles" class="btn btn-outline-primary">
+                    <span class="bi bi-arrow-left me-1"></span> Volver al listado
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h1 class="h4 mb-0 d-flex align-items-center">
+                    <span class="bi bi-sim me-2 text-primary" aria-hidden="true"></span>
+                    <span class="font-monospace">@_panel.SerieNumber</span>
+                </h1>
+                <div class="d-flex align-items-center gap-2">
+                    @if (_panel.Status == "Activo")
+                    {
+                        <span class="badge bg-success px-2 py-1">Activo</span>
+                    }
+                    else if (_panel.Status == "Desactivado")
+                    {
+                        <span class="badge bg-warning text-dark px-2 py-1">Desactivado</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-secondary px-2 py-1">Inactivo</span>
+                    }
+                    @if (_panel.Status == "Activo")
+                    {
+                        <a href="/paneles/@_panel.Id/monitoreo" class="btn btn-sm btn-outline-info d-inline-flex align-items-center">
+                            <span class="bi bi-activity me-1"></span> Monitorear
+                        </a>
+                    }
+                </div>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 col-lg-3">Número de serie</dt>
+                    <dd class="col-sm-8 col-lg-9 font-monospace">@_panel.SerieNumber</dd>
+
+                    <dt class="col-sm-4 col-lg-3">Parque solar</dt>
+                    <dd class="col-sm-8 col-lg-9">@_panel.SolarParkName</dd>
+
+                    <dt class="col-sm-4 col-lg-3">Nodo</dt>
+                    <dd class="col-sm-8 col-lg-9">@(string.IsNullOrEmpty(_panel.SolarNodeName) ? "Sin asignar" : _panel.SolarNodeName)</dd>
+
+                    <dt class="col-sm-4 col-lg-3">Potencia</dt>
+                    <dd class="col-sm-8 col-lg-9">@($"{_panel.PowerW} W")</dd>
+
+                    <dt class="col-sm-4 col-lg-3">Eficiencia</dt>
+                    <dd class="col-sm-8 col-lg-9">@($"{_panel.Efficiency:0.##}%")</dd>
+
+                    <dt class="col-sm-4 col-lg-3">Estado</dt>
+                    <dd class="col-sm-8 col-lg-9">
+                        @if (_panel.Status == "Activo")
+                        {
+                            <span class="badge bg-success px-2 py-1">Activo</span>
+                        }
+                        else if (_panel.Status == "Desactivado")
+                        {
+                            <span class="badge bg-warning text-dark px-2 py-1">Desactivado</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary px-2 py-1">Inactivo</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+            <div class="card-footer bg-white">
+                <AuthorizeView Roles="@AppRoles.Administrator">
+                    <div class="d-flex flex-wrap gap-2">
+                        @if (_panel.Status == "Activo")
+                        {
+                            <button type="button" class="btn btn-danger d-inline-flex align-items-center" @onclick="() => OpenModal(isDeactivation: true)">
+                                <span class="bi bi-power me-1" aria-hidden="true"></span> Desactivar panel
+                            </button>
+                        }
+                        else if (_panel.Status == "Desactivado")
+                        {
+                            <button type="button" class="btn btn-success d-inline-flex align-items-center" @onclick="() => OpenModal(isDeactivation: false)">
+                                <span class="bi bi-arrow-repeat me-1" aria-hidden="true"></span> Activar panel
+                            </button>
+                        }
+                    </div>
+                </AuthorizeView>
+            </div>
+        </div>
+    }
+</div>
+
+@if (_showModal && _panel != null)
+{
+    <PanelControlModal PanelId="@_panel.Id"
+                       PanelSerie="@_panel.SerieNumber"
+                       IsDeactivation="@_isDeactivation"
+                       OnClose="CloseModal"
+                       OnSuccess="OnControlSuccessAsync" />
+}
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private SolarPanelDto? _panel;
+    private bool _isLoading = true;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _showModal;
+    private bool _isDeactivation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPanelAsync();
+    }
+
+    private async Task LoadPanelAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _panel = await ApiClient.GetByIdAsync(Id);
+        }
+        catch (Exception)
+        {
+            _errorMessage = "No se pudo cargar el detalle del panel. Intentá nuevamente.";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void OpenModal(bool isDeactivation)
+    {
+        _isDeactivation = isDeactivation;
+        _showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        _showModal = false;
+    }
+
+    private async Task OnControlSuccessAsync(string message)
+    {
+        _showModal = false;
+        _successMessage = message;
+        await LoadPanelAsync();
+    }
+}

@@ -44,6 +44,14 @@ public class MaintenanceRepository : IMaintenanceRepository
             o.ScheduledDateUtc < endUtc);
     }
 
+    // Spec 032 (RF-5): cualquier orden Pendiente del panel, sin importar la fecha.
+    public bool HasPendingOrderForPanel(Guid panelId)
+    {
+        return _context.MaintenanceOrders.Any(o =>
+            o.SolarPanelId == panelId &&
+            o.Status == MaintenanceStatus.Pending);
+    }
+
     // Spec 022: para precargar la edición se necesita el nombre técnico y la serie del panel.
     public MaintenanceOrder? GetById(Guid orderId)
     {

@@ -21,6 +21,11 @@ builder.Services.AddScoped<SolarUY.ApiService.Services.ISolarNodeService, SolarU
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITechnicianRepository, SolarUY.ApiService.Repositories.TechnicianRepository>();
 // Mantenimientos (specs 020-021): repositorio real, reemplaza el placeholder EmptyMaintenanceRepository.
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.MaintenanceRepository>();
+// Bitácora de órdenes de control sobre paneles (spec 032).
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IPanelControlEventRepository, SolarUY.ApiService.Repositories.PanelControlEventRepository>();
+// Control remoto de paneles (spec 032): stub del envío al inversor hasta la spec 036.
+builder.Services.AddSingleton<SolarUY.ApiService.Services.IInverterCommandSender, SolarUY.ApiService.Services.InMemoryInverterCommandSender>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IPanelControlService, SolarUY.ApiService.Services.PanelControlService>();
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IAlertRepository, SolarUY.ApiService.Repositories.AlertRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IAlertService, SolarUY.ApiService.Services.AlertService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IAlertPublisher, SolarUY.ApiService.Services.AlertPublisher>();

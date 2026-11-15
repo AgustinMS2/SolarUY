@@ -1,6 +1,6 @@
 # Spec 032 — Activar y Desactivar Panel
 
-Estado: aprobada (aclarada y confirmada por el usuario el 2026-11-15)
+Estado: implementada (2026-11-15)
 Depende de: Spec 005 (Alta Panel), Spec 013 (Inversor a Nodo)
 
 ## Contexto y objetivo

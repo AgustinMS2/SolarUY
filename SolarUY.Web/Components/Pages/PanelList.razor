@@ -103,12 +103,19 @@
                                     {
                                         <span class="badge bg-success px-2 py-1">Activo</span>
                                     }
+                                    else if (panel.Status == "Desactivado")
+                                    {
+                                        <span class="badge bg-warning text-dark px-2 py-1">Desactivado</span>
+                                    }
                                     else
                                     {
                                         <span class="badge bg-secondary px-2 py-1">Inactivo</span>
                                     }
                                 </td>
                                 <td class="pe-3 text-end text-nowrap">
+                                    <a href="/paneles/@panel.Id" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center me-1" title="Ver detalle del panel">
+                                        <span class="bi bi-eye me-1"></span> Ver detalle
+                                    </a>
                                     @if (panel.Status == "Activo")
                                     {
                                         <a href="/paneles/@panel.Id/monitoreo" class="btn btn-sm btn-outline-info d-inline-flex align-items-center me-1" title="Monitoreo en tiempo real del panel">

@@ -5,7 +5,7 @@
 - **Arquitectura base**: Solución .NET 9 (todos los proyectos en `net9.0`; Aspire 13 igual necesita tener instalado el SDK de .NET 10 para compilar el AppHost) con .NET Aspire (`SolarUY.AppHost`), Web Frontend (`SolarUY.Web` - Blazor Server), API de negocio (`SolarUY.ApiService`), y librerías compartidas (`SolarUY.ServiceDefaults`).
 - **Persistencia**: PostgreSQL con EF Core (planificado soporte TimescaleDB para telemetría de series de tiempo).
 - **Autenticación**: Keycloak OIDC containerizado en Aspire (Roles: `Administrador`, `Técnico`).
-- **Fase actual**: SDD en marcha. Specs 001–031 implementadas y verificadas; rediseño "SolarOps Clean" integrado; 466 tests en verde.
+- **Fase actual**: SDD en marcha. Specs 001–032 implementadas y verificadas; rediseño "SolarOps Clean" integrado; 477 tests en verde.
 
 ---
 
@@ -31,7 +31,7 @@
 | | Ver Mis Mantenimientos / Confirmar Mantenimiento | Técnico | `025` y `026` implementadas |
 | **Monitoreo** | Ver Generación Tiempo Real (Parque, Nodo, Panel) | Todos (SignalR) | `027` y `028` implementadas; `029` implementada |
 | | Ver Estado de Salud de Paneles / Recibir Alerta de Falla | Todos | `030` implementada; `031` implementada |
-| **Control Inversor** | Activar / Desactivar Panel | Administrador | Borrador (`032`) |
+| **Control Inversor** | Activar / Desactivar Panel | Administrador | **Implementada** (`032`) |
 | | Activar / Desactivar Inyección a la Red | Administrador | Borrador (`033`) |
 | **Históricos** | Consultar Generación (Día, Mes, Año) | Todos | Borrador (`034`) |
 | | Consultar en Lenguaje Natural (LLM) | Todos | Borrador (`035`) |
@@ -75,7 +75,7 @@
 | `029-ver-generacion-tiempo-real-panel` | **Implementada** | Completada | 5 / 5 | Monitoreo del panel en `/paneles/{id}/monitoreo` (botón en `/paneles`): potencia en vivo, eficiencia estimada y aviso de rendimiento bajo (< 40 % de lo esperado a esa hora; curva solar de 6 a 20 h). "Desactivado manualmente" queda para la 032 y "En Falla" para la 037. Sin migraciones. |
 | `030-ver-estado-salud-paneles` | **Implementada** | Completada | 5 / 5 | Mapa de salud del parque en `/parques/{id}/salud` (botón "Salud"): paneles por nodo coloreados (Normal ≥ 80 %, Degradado 10–80 %, Falla < 10 % de lo esperado, "Sin sol" de noche, gris inactivo), contadores, tarjeta de detalle y actualización por SignalR. **Provisorio**: se amplía con las specs 031 y 037. Sin migraciones. |
 | `031-recibir-alerta-falla` | **Implementada** | Completada | 8 / 8 | Alertas de falla: tabla `Alerts` (migración `AddAlerts`), deduplicado de 60 s, consolidación a la tercera detección en 5 min, purga horaria, campana con contador en vivo, avisos de 8 s (ráfagas agrupadas) y detalle con "Agendar Mantenimiento" (Administrador) y "Descartar". Hoy genera: inversor > 75 °C (028), parque bajo su umbral (027) y panel en Falla Crítica (030); **provisorio**, se amplía con las specs 037 y 033. Sin disparador de pruebas: la alerta crítica solo se probó con tests. |
-| 032-activar-desactivar-panel | Pendiente | Plan aprobado, `tasks.md` redactado (T1–T8) | 0 / 8 | Implementar T1–T3 (máx. tres a la vez) |
+| 032-activar-desactivar-panel | **Implementada** | Completada | 8 / 8 | T1–T8 completas (477 tests en verde). Verificada en navegador el 2026-11-15 como `admin` (RF-1 a RF-4, RF-5 con PANEL-SG-002, bitácora en BD, caso panel sin nodo con PANEL-SG-005) y como `tecnico` (RF-6: sin botones). Monitoreo 029 muestra "desactivado manualmente". Continuar con siguiente spec del backlog (`033`, en borrador). |
 | 033-activar-desactivar-inyeccion-red | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | 034-consultar-generacion-historica | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | 035-consulta-lenguaje-natural-llm | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |

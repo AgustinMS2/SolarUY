@@ -128,7 +128,9 @@ public class SolarPanelService : ISolarPanelService
                 p.PowerW,
                 p.Efficiency,
                 p.SolarPark?.Name ?? string.Empty,
-                p.Status == SolarPanelStatus.Active ? "Activo" : "Inactivo",
+                p.Status == SolarPanelStatus.Active ? "Activo"
+                    : p.Status == SolarPanelStatus.Deactivated ? "Desactivado"
+                    : "Inactivo",
                 p.SolarParkId,
                 p.SolarNode?.Name,
                 p.SolarNodeId
@@ -150,7 +152,9 @@ public class SolarPanelService : ISolarPanelService
             panel.PowerW,
             panel.Efficiency,
             panel.SolarPark?.Name ?? string.Empty,
-            panel.Status == SolarPanelStatus.Active ? "Activo" : "Inactivo",
+            panel.Status == SolarPanelStatus.Active ? "Activo"
+                : panel.Status == SolarPanelStatus.Deactivated ? "Desactivado"
+                : "Inactivo",
             panel.SolarParkId,
             panel.SolarNode?.Name,
             panel.SolarNodeId

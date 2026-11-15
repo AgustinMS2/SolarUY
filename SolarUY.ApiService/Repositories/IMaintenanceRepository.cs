@@ -27,6 +27,12 @@ public interface IMaintenanceRepository
     bool HasPendingForPanel(Guid panelId, DateTime dateUtc);
 
     /// <summary>
+    /// Indica si el panel tiene alguna orden en estado Pendiente (no completada ni
+    /// cancelada), sin importar la fecha (spec 032, RF-5: personal trabajando en el panel).
+    /// </summary>
+    bool HasPendingOrderForPanel(Guid panelId);
+
+    /// <summary>
     /// Recupera una orden por su identificador (spec 022).
     /// </summary>
     MaintenanceOrder? GetById(Guid orderId);

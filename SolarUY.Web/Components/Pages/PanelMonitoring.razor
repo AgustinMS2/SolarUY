@@ -247,6 +247,13 @@
 
             _panel = panel;
 
+            if (panel.Status == "Desactivado")
+            {
+                // Spec 032: panel desactivado mediante orden de control remoto.
+                _noTelemetryMessage = "El panel se encuentra desactivado manualmente.";
+                return;
+            }
+
             if (panel.Status != "Activo")
             {
                 _noTelemetryMessage = "El panel se encuentra inactivo.";

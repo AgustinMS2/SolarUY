@@ -25,6 +25,12 @@ public class EmptyMaintenanceRepository : IMaintenanceRepository
         return false;
     }
 
+    public bool HasPendingOrderForPanel(Guid panelId)
+    {
+        // Este stub no tiene almacenamiento: no hay órdenes que bloqueen.
+        return false;
+    }
+
     public MaintenanceOrder? GetById(Guid orderId)
     {
         // Este stub no tiene almacenamiento: no hay órdenes que recuperar.

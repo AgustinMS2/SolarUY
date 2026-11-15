@@ -17,6 +17,7 @@ public class SolarUyDbContext : DbContext
 
     public DbSet<MaintenanceOrder> MaintenanceOrders => Set<MaintenanceOrder>();
     public DbSet<Alert> Alerts => Set<Alert>();
+    public DbSet<PanelControlEvent> PanelControlEvents => Set<PanelControlEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,8 +125,7 @@ public class SolarUyDbContext : DbContext
 
         // Spec 031: alertas de falla.
         modelBuilder.Entity<Alert>(entity =>
-        {
-            entity.ToTable("Alerts");
+        {            entity.ToTable("Alerts");
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ParkName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.EquipmentName).IsRequired().HasMaxLength(200);
@@ -141,6 +141,24 @@ public class SolarUyDbContext : DbContext
             entity.HasOne(e => e.SolarPark)
                 .WithMany()
                 .HasForeignKey(e => e.SolarParkId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Spec 032: bitácora de órdenes de control sobre paneles.
+        modelBuilder.Entity<PanelControlEvent>(entity =>
+        {
+            entity.ToTable("PanelControlEvents");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Action).IsRequired();
+            entity.Property(e => e.OrderedBy).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.OrderedAtUtc).IsRequired();
+            entity.Property(e => e.OrderSentToInverter).IsRequired();
+            entity.Property(e => e.InverterSerieNumber).HasMaxLength(100);
+            // Historial de eventos por panel.
+            entity.HasIndex(e => e.SolarPanelId);
+            entity.HasOne(e => e.SolarPanel)
+                .WithMany()
+                .HasForeignKey(e => e.SolarPanelId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

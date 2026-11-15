@@ -1,0 +1,147 @@
+@using SolarUY.Web.Services
+@inject PanelsApiClient ApiClient
+
+<div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);" aria-modal="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow">
+            @if (IsDeactivation)
+            {
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <span class="bi bi-power me-1" aria-hidden="true"></span>
+                        Desactivar panel
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" @onclick="Close" disabled="@_isSending"></button>
+                </div>
+            }
+            else
+            {
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <span class="bi bi-arrow-repeat me-1" aria-hidden="true"></span>
+                        Activar panel
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" @onclick="Close" disabled="@_isSending"></button>
+                </div>
+            }
+
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">@_errorMessage</div>
+                }
+
+                @if (IsDeactivation)
+                {
+                    <p class="mb-2">
+                        ¿Confirmás la desconexión eléctrica del panel
+                        <strong class="font-monospace">"@PanelSerie"</strong>?
+                        La producción de este módulo se interrumpirá de inmediato.
+                    </p>
+                    <div class="alert alert-warning d-flex align-items-start mb-0" role="alert">
+                        <span class="bi bi-exclamation-triangle-fill me-2 fs-5" aria-hidden="true"></span>
+                        <div>La orden se enviará a la API del inversor y quedará registrada en la bitácora de control.</div>
+                    </div>
+                }
+                else
+                {
+                    <p class="mb-2">
+                        ¿Confirmás la reactivación del panel
+                        <strong class="font-monospace">"@PanelSerie"</strong>
+                        para reanudar su inyección?
+                    </p>
+                    <div class="alert alert-info d-flex align-items-start mb-0" role="alert">
+                        <span class="bi bi-info-circle-fill me-2 fs-5" aria-hidden="true"></span>
+                        <div>La orden se enviará a la API del inversor y quedará registrada en la bitácora de control.</div>
+                    </div>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="Close" disabled="@_isSending">Volver</button>
+                @if (IsDeactivation)
+                {
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmAsync" disabled="@_isSending">
+                        @if (_isSending)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Confirmar desconexión
+                    </button>
+                }
+                else
+                {
+                    <button type="button" class="btn btn-success" @onclick="ConfirmAsync" disabled="@_isSending">
+                        @if (_isSending)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        }
+                        Confirmar reactivación
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public Guid PanelId { get; set; }
+
+    [Parameter, EditorRequired]
+    public string PanelSerie { get; set; } = default!;
+
+    /// <summary>true = desactivación (RF-1); false = reactivación (RF-3).</summary>
+    [Parameter, EditorRequired]
+    public bool IsDeactivation { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Se dispara cuando la orden fue confirmada, con el mensaje de éxito (RF-2/RF-4).</summary>
+    [Parameter]
+    public EventCallback<string> OnSuccess { get; set; }
+
+    private bool _isSending;
+    private string? _errorMessage;
+
+    private void Close()
+    {
+        _errorMessage = null;
+        _isSending = false;
+        _ = OnClose.InvokeAsync();
+    }
+
+    private async Task ConfirmAsync()
+    {
+        _errorMessage = null;
+        _isSending = true;
+
+        try
+        {
+            var result = IsDeactivation
+                ? await ApiClient.DeactivateAsync(PanelId)
+                : await ApiClient.ActivateAsync(PanelId);
+
+            if (result.Success)
+            {
+                // RF-2 / RF-4: mensajes exactos de la spec; el padre recarga el panel.
+                var message = IsDeactivation
+                    ? "Orden de desconexión enviada correctamente. El panel ha sido desactivado."
+                    : "Panel reactivado correctamente. Generación reanudada.";
+                await OnSuccess.InvokeAsync(message);
+                return;
+            }
+
+            _errorMessage = result.ErrorMessage ?? "No se pudo enviar la orden al inversor.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _isSending = false;
+        }
+    }
+}

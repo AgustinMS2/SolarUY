@@ -193,6 +193,40 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("MaintenanceOrders", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.PanelControlEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InverterSerieNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("OrderSentToInverter")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("OrderedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OrderedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("SolarPanelId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolarPanelId");
+
+                    b.ToTable("PanelControlEvents", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -419,6 +453,17 @@ namespace SolarUY.ApiService.Migrations
                     b.Navigation("SolarPanel");
 
                     b.Navigation("Technician");
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.PanelControlEvent", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarPanel", "SolarPanel")
+                        .WithMany()
+                        .HasForeignKey("SolarPanelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SolarPanel");
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
