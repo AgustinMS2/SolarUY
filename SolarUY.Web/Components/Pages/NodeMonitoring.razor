@@ -115,6 +115,72 @@
             </div>
         }
 
+        <!-- Spec 033: resultado de la última orden de inyección del inversor -->
+        @if (!string.IsNullOrEmpty(_injectionMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-4" role="alert" data-testid="injection-success">
+                <span class="bi bi-check-circle-fill me-2" aria-hidden="true"></span>
+                <div>@_injectionMessage</div>
+                <button type="button" class="btn-close" aria-label="Cerrar" @onclick="() => _injectionMessage = null"></button>
+            </div>
+        }
+
+        <!-- Spec 033 (RF-4, caso límite): inyección del inversor detenida administrativamente -->
+        @if (!NodeHasNoInverter && _node.InverterGridInjectionEnabled == false)
+        {
+            <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert" data-testid="injection-banner">
+                <div class="d-flex align-items-center">
+                    <span class="bi bi-exclamation-triangle-fill fs-3 text-danger me-3"></span>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-0">INYECCIÓN A LA RED DETENIDA ADMINISTRATIVAMENTE</h6>
+                        <p class="mb-0 small text-muted">
+                            La inyección a la red del inversor fue desactivada por decisión administrativa. La potencia entregada se reporta en 0 kW.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Spec 033 (RF-1/RF-5): control de inyección del inversor (solo Administrador, nodo activo con inversor) -->
+        <AuthorizeView Roles="@AppRoles.Administrator">
+            @if (!NodeHasNoInverter && _node.Status == "Activo")
+            {
+                <div class="d-flex justify-content-end mb-3">
+                    @if (_node.InverterGridInjectionEnabled == false)
+                    {
+                        <button type="button" class="btn btn-success btn-sm" data-testid="injection-resume" @onclick="() => OpenInjectionModal(resume: true)">
+                            <span class="bi bi-lightning-charge"></span> Reanudar Inyección a Red
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-danger btn-sm" data-testid="injection-cut" @onclick="() => OpenInjectionModal(resume: false)">
+                            <span class="bi bi-power"></span> Corte de Inyección a Red
+                        </button>
+                    }
+                </div>
+            }
+        </AuthorizeView>
+
+        <!-- Spec 037: falla simulada vigente en el inversor -->
+        @if (_telemetry?.Fault is { } inverterFault)
+        {
+            var inverterFaultCritical = SolarUY.ApiService.Simulation.FaultCatalog.SeverityOf(inverterFault) == SolarUY.ApiService.Domain.AlertSeverity.Critical;
+            <div class="alert @(inverterFaultCritical ? "alert-danger border-danger-subtle" : "alert-warning border-warning-subtle") d-flex align-items-center mb-4 shadow-sm" role="alert" data-testid="node-fault">
+                <span class="bi bi-exclamation-octagon-fill fs-3 @(inverterFaultCritical ? "text-danger" : "text-warning") me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">
+                        <span class="badge @(inverterFaultCritical ? "bg-danger" : "bg-warning text-dark") me-2">En Falla</span>@_telemetry.FaultLabel
+                    </h6>
+                    <p class="mb-0 small">
+                        @(inverterFault == SolarUY.ApiService.Domain.SimulatedFaultType.InsulationFault
+                            ? "El inversor se apagó por la protección de fuga a tierra: no entrega potencia a la red. Falla simulada desde el simulador de fallas."
+                            : "Falla simulada desde el simulador de fallas (entorno de pruebas). Se quita desde \"Simulación de fallas\".")
+                    </p>
+                </div>
+            </div>
+        }
+
         <!-- RF-3 Alert: Sobretemperatura en inversor -->
         @if (_telemetry?.IsOverheating == true)
         {
@@ -359,6 +425,14 @@
     }
 </div>
 
+<GridInjectionModal Show="_injectionModalOpen"
+                    Resume="_injectionResume"
+                    Scope="GridInjectionScope.Inverter"
+                    TargetName="@_node?.InverterSerie"
+                    Submit="SubmitInjectionAsync"
+                    OnSuccess="OnInjectionSucceededAsync"
+                    OnClose="CloseInjectionModal" />
+
 @code {
     [Parameter]
     public Guid Id { get; set; }
@@ -371,6 +445,43 @@
     private readonly List<double> _powerHistory = new();
     private bool _isLoadingNode = true;
     private string? _errorMessage;
+
+    // Spec 033: corte y reanudación de la inyección a la red del inversor del nodo.
+    private bool _injectionModalOpen;
+    private bool _injectionResume;
+    private string? _injectionMessage;
+
+    private void OpenInjectionModal(bool resume)
+    {
+        _injectionResume = resume;
+        _injectionModalOpen = true;
+    }
+
+    private void CloseInjectionModal() => _injectionModalOpen = false;
+
+    private async Task<GridInjectionSubmitResult> SubmitInjectionAsync(string confirmationText, string? reason)
+    {
+        var result = _injectionResume
+            ? await NodeApiClient.ResumeInverterInjectionAsync(Id, confirmationText, reason)
+            : await NodeApiClient.CutInverterInjectionAsync(Id, confirmationText, reason);
+
+        return result.Success
+            ? new GridInjectionSubmitResult(true, _injectionResume
+                ? "Inyección a la red del inversor reanudada exitosamente."
+                : "Inyección a la red del inversor desactivada. El inversor no está entregando energía a la red.")
+            : new GridInjectionSubmitResult(false, result.ErrorMessage);
+    }
+
+    // Recarga el estado del nodo para que el banner y los botones reflejen la orden.
+    private async Task OnInjectionSucceededAsync(string message)
+    {
+        _injectionMessage = message;
+        var refreshed = await NodeApiClient.GetByIdAsync(Id);
+        if (refreshed.Success && refreshed.Value is not null)
+        {
+            _node = refreshed.Value;
+        }
+    }
 
     private bool NodeHasNoInverter => string.IsNullOrEmpty(_node?.InverterSerie);
 

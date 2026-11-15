@@ -47,6 +47,9 @@ builder.Services.Configure<SolarUY.ApiService.Simulation.SimulationOptions>(
     builder.Configuration.GetSection(SolarUY.ApiService.Simulation.SimulationOptions.SectionName));
 builder.Services.AddSingleton<SolarUY.ApiService.Simulation.ISolarSimulationEngine, SolarUY.ApiService.Simulation.SolarSimulationEngine>();
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IInverterMinuteReadingRepository, SolarUY.ApiService.Repositories.InverterMinuteReadingRepository>();
+// Fallas simuladas (spec 037).
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.ISimulatedFaultRepository, SolarUY.ApiService.Repositories.SimulatedFaultRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.ISimulationFaultService, SolarUY.ApiService.Services.SimulationFaultService>();
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IHistoryCatchUpLock, SolarUY.ApiService.Repositories.HistoryCatchUpLock>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.ISimulationHistoryService, SolarUY.ApiService.Services.SimulationHistoryService>();
 builder.Services.AddHostedService<SolarUY.ApiService.Services.SimulationHistoryBackgroundService>();

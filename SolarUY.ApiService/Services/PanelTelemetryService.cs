@@ -27,7 +27,8 @@ public class PanelTelemetryService : IPanelTelemetryService
         string? nodeName,
         double activePowerW,
         DateTime localTime,
-        DateTime timestampUtc)
+        DateTime timestampUtc,
+        SimulatedFaultType? fault = null)
     {
         ArgumentNullException.ThrowIfNull(panel);
 
@@ -56,6 +57,8 @@ public class PanelTelemetryService : IPanelTelemetryService
             PercentOfNominal = percentOfNominal,
             EstimatedEfficiencyPercent = estimatedEfficiency,
             IsLowPerformance = expectedPower > 0.0 && activePower < LowPerformanceRatio * expectedPower,
+            Fault = fault,
+            FaultLabel = fault.HasValue ? FaultCatalog.LabelOf(fault.Value) : null,
             TimestampUtc = timestampUtc
         };
     }

@@ -1,7 +1,8 @@
 # Spec 028 — Ver Generación en Tiempo Real del Nodo
 
 Estado: aprobada
-Depende de: Spec 010 (Listar Nodos), Spec 013 (Asignar Inversor a Nodo), Spec 027 (Monitoreo Parque)
+Depende de: Spec 010 (Listar Nodos), Spec 013 (Asignar Inversor a Nodo), Spec 027 (Monitoreo Parque), Spec 036 (Simulador)
+Actualizada el 2026-11-15 por las specs 033, 036 y 037 (ver "Cambios posteriores").
 
 ## Contexto y objetivo
 Proporcionar una vista detallada de telemetría a nivel de nodo e inversor, permitiendo analizar el voltaje, corriente, potencia activa, frecuencia de red y temperatura en tiempo real mediante SignalR, para diagnosticar el comportamiento eléctrico y térmico de un sector puntual del parque solar.
@@ -17,11 +18,11 @@ Proporcionar una vista detallada de telemetría a nivel de nodo e inversor, perm
 | Métrica | Unidad | Rango esperado | Descripción |
 | :--- | :--- | :--- | :--- |
 | Potencia activa | kW | 0 a capacidad nominal del inversor | Potencia instantánea suministrada por el inversor |
-| Voltaje DC de entrada | V | 200 a 1000 V | Tensión continua entregada por las ramas de paneles |
+| Voltaje DC de entrada | V | 200 a 1000 V de día; de noche, un voltaje residual de unos pocos voltios (spec 036) | Tensión continua entregada por las ramas de paneles |
 | Corriente DC | A | 0 a 100 A | Corriente continua suministrada al inversor |
 | Voltaje AC de salida | V | 220 / 380 V | Tensión alterna inyectada |
 | Frecuencia de red | Hz | 49.5 a 50.5 Hz | Frecuencia de red (nominal 50 Hz en Uruguay) |
-| Temperatura interna | °C | 20 a 85 °C | Temperatura en el disipador/electrónica del inversor |
+| Temperatura interna | °C | 20 a 85 °C (86 a 90 °C con la falla simulada de sobretemperatura, spec 037) | Temperatura en el disipador/electrónica del inversor |
 | Estado del enlace SignalR | - | Conectado / Reconectando / Desconectado | Conectividad con el hub de telemetría |
 
 ## Requisitos funcionales (EARS)
@@ -33,6 +34,7 @@ Proporcionar una vista detallada de telemetría a nivel de nodo e inversor, perm
 - **RF-5**: SI el nodo no tiene inversor asignado, ENTONCES EL SISTEMA mostrará un mensaje "Este nodo no posee un inversor configurado." y no intentará abrir la conexión de telemetría en vivo.
 - **RF-6**: SI se pierde la conexión con el hub de SignalR, ENTONCES EL SISTEMA mostrará "Reconectando con el inversor..." y mantendrá visible la última lectura recibida con una indicación visual de advertencia.
 - **RF-7**: CUANDO el usuario navegue a otra pantalla, EL SISTEMA cerrará la suscripción al grupo SignalR del nodo para optimizar recursos del servidor.
+- **RF-8** *(agregado por la spec 037)*: SI el inversor del nodo tiene una falla simulada vigente, ENTONCES EL SISTEMA mostrará un banner "En Falla" con el tipo de falla; con la falla de aislamiento, el inversor figura apagado (potencia, corriente, tensión de red y frecuencia en cero) y no se muestran las alarmas de sobretemperatura ni de frecuencia.
 
 ## Requisitos no funcionales
 - Rendimiento fluido y adaptable en navegadores móviles (diseño responsive "SolarOps Clean").
@@ -43,6 +45,13 @@ Proporcionar una vista detallada de telemetría a nivel de nodo e inversor, perm
 - Nodo sin inversor asignado: cartel informativo bloqueando el intento de enlace SignalR.
 - Nodo inactivo: valores en cero e indicación de inactividad operativa.
 - Desconexión del inversor o enlace: valores marcados con advertencia y mensaje de reconexión.
+- Inyección a la red detenida administrativamente (spec 033): el inversor no entrega potencia, por lo que se reportan los valores eléctricos en cero y sin alarmas, igual que un nodo inactivo.
+- De noche la potencia es 0 kW y el voltaje DC es residual; el amanecer y el atardecer dependen de la fecha (spec 036).
+
+## Cambios posteriores (2026-11-15)
+- **Spec 036 (simulador)**: las lecturas del nodo dejaron de inventarse en este servicio y salen del motor único de simulación (`ISolarSimulationEngine`), con la curva solar según la fecha. Se emiten cada `Simulation:IntervalSeconds` (5 segundos por defecto, antes 3) en los mismos instantes que las pantallas de parque, panel y salud, por lo que muestran los mismos valores. El rótulo "Actualización 3s" pasó a "En vivo".
+- **Spec 033 (inyección a la red)**: con la inyección detenida el nodo se reporta en cero (ver casos límite).
+- **Spec 037 (simulador de fallas)**: agrega RF-8 y el campo `Fault` de la telemetría.
 
 ## Fuera de alcance
 - Detener o reiniciar el inversor (spec 032).

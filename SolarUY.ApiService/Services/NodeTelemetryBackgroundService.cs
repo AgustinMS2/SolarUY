@@ -44,6 +44,7 @@ public class NodeTelemetryBackgroundService : SimulationEmitterBackgroundService
         var nodeRepo = scope.ServiceProvider.GetRequiredService<ISolarNodeRepository>();
         var inverterRepo = scope.ServiceProvider.GetRequiredService<IInverterRepository>();
         var alertPublisher = scope.ServiceProvider.GetRequiredService<IAlertPublisher>();
+        var faults = FaultTimeline.From(scope.ServiceProvider.GetRequiredService<ISimulatedFaultRepository>().GetAll());
 
         var activeNodes = nodeRepo.GetAll().Where(n => n.Status == SolarNodeStatus.Active).ToList();
         var invertersByNode = inverterRepo
@@ -58,7 +59,7 @@ public class NodeTelemetryBackgroundService : SimulationEmitterBackgroundService
                 continue;
             }
 
-            var reading = _engine.ReadInverter(inverter.Id, node.SolarParkId, inverter.NominalCapacityKw, instantUtc);
+            var reading = _engine.ReadInverter(inverter.Id, node.SolarParkId, inverter.NominalCapacityKw, instantUtc, faults);
 
             var telemetry = _telemetryService.CalculateMetrics(
                 node, inverter,
@@ -68,7 +69,8 @@ public class NodeTelemetryBackgroundService : SimulationEmitterBackgroundService
                 Math.Round(reading.AcVoltageV, 1),
                 Math.Round(reading.FrequencyHz, 2),
                 Math.Round(reading.TemperatureC, 1),
-                timestampUtc: instantUtc);
+                timestampUtc: instantUtc,
+                fault: faults.EffectiveFault(inverter.Id, instantUtc));
 
             await _hubContext.Clients
                 .Group(NodeTelemetryHub.GetGroupName(node.Id))

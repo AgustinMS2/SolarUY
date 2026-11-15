@@ -1,5 +1,6 @@
 using SolarUY.ApiService.Domain;
 using SolarUY.ApiService.Dtos;
+using SolarUY.ApiService.Simulation;
 
 namespace SolarUY.ApiService.Services;
 
@@ -24,16 +25,19 @@ public class NodeTelemetryService : INodeTelemetryService
         double acVoltage,
         double frequencyHz,
         double temperatureC,
-        DateTime timestampUtc)
+        DateTime timestampUtc,
+        SimulatedFaultType? fault = null)
     {
         ArgumentNullException.ThrowIfNull(node);
 
         // Nodo inactivo, sin inversor o con la inyección a la red detenida administrativamente
         // (spec 033): el inversor no entrega potencia, por lo que se reportan los valores
         // eléctricos en cero y se suprimen alarmas espurias.
+        // Con la falla de aislamiento (spec 037) el inversor se apagó por la protección de fuga a tierra: igual que detenido.
         var isOperating = node.Status == SolarNodeStatus.Active
             && inverter is not null
-            && inverter.GridInjectionEnabled;
+            && inverter.GridInjectionEnabled
+            && fault != SimulatedFaultType.InsulationFault;
 
         return new NodeTelemetryDto
         {
@@ -50,6 +54,8 @@ public class NodeTelemetryService : INodeTelemetryService
             IsOverheating = isOperating && temperatureC > OverheatingThresholdC,
             IsGridFrequencyAnomaly = isOperating &&
                 (frequencyHz < MinGridFrequencyHz || frequencyHz > MaxGridFrequencyHz),
+            Fault = fault,
+            FaultLabel = fault.HasValue ? FaultCatalog.LabelOf(fault.Value) : null,
             TimestampUtc = timestampUtc
         };
     }

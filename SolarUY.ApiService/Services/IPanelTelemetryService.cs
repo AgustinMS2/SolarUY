@@ -21,5 +21,6 @@ public interface IPanelTelemetryService
         string? nodeName,
         double activePowerW,
         DateTime localTime,
-        DateTime timestampUtc);
+        DateTime timestampUtc,
+        SimulatedFaultType? fault = null);
 }

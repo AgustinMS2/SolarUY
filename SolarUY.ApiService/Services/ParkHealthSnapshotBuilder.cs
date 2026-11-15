@@ -15,6 +15,7 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
     private readonly IMaintenanceRepository _maintenanceRepository;
     private readonly IPanelHealthService _healthService;
     private readonly ISolarSimulationEngine _engine;
+    private readonly ISimulatedFaultRepository _faultRepository;
     private readonly IOptions<SimulationOptions> _options;
     private readonly TimeProvider _timeProvider;
 
@@ -24,6 +25,7 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
         IMaintenanceRepository maintenanceRepository,
         IPanelHealthService healthService,
         ISolarSimulationEngine engine,
+        ISimulatedFaultRepository faultRepository,
         IOptions<SimulationOptions> options,
         TimeProvider timeProvider)
     {
@@ -32,6 +34,7 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
         _maintenanceRepository = maintenanceRepository;
         _healthService = healthService;
         _engine = engine;
+        _faultRepository = faultRepository;
         _options = options;
         _timeProvider = timeProvider;
     }
@@ -54,7 +57,8 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
 
         // Carga inicial: las lecturas del ciclo en curso, las mismas que las demás pantallas en vivo.
         var instant = SimulationClock.Snap(_timeProvider.GetUtcNow().UtcDateTime, _options.Value.IntervalSeconds);
-        var readings = panels.ToDictionary(p => p.Id, p => ReadPanel(p, instant));
+        var faults = FaultTimeline.From(_faultRepository.GetAll());
+        var readings = panels.ToDictionary(p => p.Id, p => ReadPanel(p, instant, faults));
 
         var nodes = panels
             .GroupBy(p => p.SolarNodeId)
@@ -96,12 +100,14 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
             .Select(p => p.Id)
             .ToHashSet();
 
+        var faults = FaultTimeline.From(_faultRepository.GetAll());
+
         return _panelRepository.GetAll()
             .Where(p => activeParkIds.Contains(p.SolarParkId))
             .GroupBy(p => p.SolarParkId)
             .Select(group =>
             {
-                var readings = group.Select(p => ReadPanel(p, instantUtc)).ToList();
+                var readings = group.Select(p => ReadPanel(p, instantUtc, faults)).ToList();
                 return new ParkHealthUpdateDto
                 {
                     ParkId = group.Key,
@@ -113,11 +119,11 @@ public class ParkHealthSnapshotBuilder : IParkHealthSnapshotBuilder
             .ToList();
     }
 
-    private PanelHealthReadingDto ReadPanel(SolarPanel panel, DateTime instantUtc)
+    private PanelHealthReadingDto ReadPanel(SolarPanel panel, DateTime instantUtc, FaultTimeline faults)
     {
         var hasActiveNode = panel.SolarNode is { Status: SolarNodeStatus.Active };
-        var activePowerW = Math.Round(_engine.ReadPanelPowerW(panel.Id, panel.SolarParkId, panel.PowerW, instantUtc), 1);
+        var activePowerW = Math.Round(_engine.ReadPanelPowerW(panel.Id, panel.SolarParkId, panel.PowerW, instantUtc, faults), 1);
 
-        return _healthService.ClassifyHealth(panel, hasActiveNode, activePowerW, SolarCalendar.ToLocal(instantUtc));
+        return _healthService.ClassifyHealth(panel, hasActiveNode, activePowerW, SolarCalendar.ToLocal(instantUtc), faults.EffectiveFault(panel.Id, instantUtc));
     }
 }

@@ -1,3 +1,5 @@
+using SolarUY.ApiService.Domain;
+
 namespace SolarUY.ApiService.Dtos;
 
 /// <summary>
@@ -20,5 +22,11 @@ public class PanelTelemetryDto
     public double? EstimatedEfficiencyPercent { get; set; }
 
     public bool IsLowPerformance { get; set; }
+
+    /// <summary>Falla simulada vigente en el equipo (spec 037); nula si no tiene.</summary>
+    public SimulatedFaultType? Fault { get; set; }
+
+    /// <summary>Nombre de la falla simulada vigente (spec 037).</summary>
+    public string? FaultLabel { get; set; }
     public DateTime TimestampUtc { get; set; }
 }

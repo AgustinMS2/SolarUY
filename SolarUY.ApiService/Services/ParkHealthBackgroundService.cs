@@ -47,10 +47,13 @@ public class ParkHealthBackgroundService : SimulationEmitterBackgroundService
         }
     }
 
-    // Spec 031: cada panel en Falla Crítica (menos del 10 % de lo esperado con sol) genera una alerta Crítica.
+    // Spec 031: cada panel en Falla Crítica (menos del 10 % de lo esperado con sol) genera una alerta Crítica. Spec 037: un
+    // panel degradado por una falla simulada genera una Advertencia; la baja generación ocasional sin falla no alerta.
     private static async Task PublishCriticalPanelAlertsAsync(IServiceProvider services, ParkHealthUpdateDto update, CancellationToken cancellationToken)
     {
-        var critical = update.Panels.Where(r => r.State == PanelHealthState.Critical).ToList();
+        var critical = update.Panels
+            .Where(r => r.State == PanelHealthState.Critical || (r.State == PanelHealthState.Degraded && r.Fault.HasValue))
+            .ToList();
         if (critical.Count == 0)
         {
             return;

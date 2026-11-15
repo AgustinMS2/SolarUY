@@ -99,10 +99,20 @@
             </div>
         }
 
+        <!-- RF-2/RF-5: resultado de la última orden de inyección -->
+        @if (!string.IsNullOrEmpty(_injectionMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-4" role="alert" data-testid="injection-success">
+                <span class="bi bi-check-circle-fill me-2" aria-hidden="true"></span>
+                <div>@_injectionMessage</div>
+                <button type="button" class="btn-close" aria-label="Cerrar" @onclick="() => _injectionMessage = null"></button>
+            </div>
+        }
+
         <!-- RF-4: Banner de inyección administrativa a la red -->
         @if (_park.GridInjectionEnabled == false && _park.Status == "Activo")
         {
-            <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">
+            <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert" data-testid="injection-banner">
                 <div class="d-flex align-items-center">
                     <span class="bi bi-exclamation-triangle-fill fs-3 text-danger me-3"></span>
                     <div>
@@ -309,41 +319,37 @@
                 </div>
 
                 <!-- RF-1/RF-5: Botones de control de inyección (solo Administrador) -->
-                <AuthorizeView Roles="Administrador">
-                    <div class="d-flex gap-2 mt-2">
-                        @if (_park.GridInjectionEnabled == true)
-                        {
-                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmCutInjection('@_park.Id')">
-                                <span class="bi bi-power"></span> Corte Inyección
-                            </button>
-                        }
-                        else
-                        {
-                            <button type="button" class="btn btn-success btn-sm" onclick="confirmResumeInjection('@_park.Id')">
-                                <span class="bi bi-lightning-charge"></span> Reanudar Inyección
-                            </button>
-                        }
-                    </div>
+                <AuthorizeView Roles="@AppRoles.Administrator">
+                    @if (_park.Status == "Activo")
+                    {
+                        <div class="d-flex gap-2 mt-2">
+                            @if (_park.GridInjectionEnabled == true)
+                            {
+                                <button type="button" class="btn btn-danger btn-sm" data-testid="injection-cut" @onclick="() => OpenInjectionModal(resume: false)">
+                                    <span class="bi bi-power"></span> Corte de Inyección a Red
+                                </button>
+                            }
+                            else
+                            {
+                                <button type="button" class="btn btn-success btn-sm" data-testid="injection-resume" @onclick="() => OpenInjectionModal(resume: true)">
+                                    <span class="bi bi-lightning-charge"></span> Reanudar Inyección a Red
+                                </button>
+                            }
+                        </div>
+                    }
                 </AuthorizeView>
             </div>
         </div>
     }
 </div>
 
-<script>
-    function confirmCutInjection(parkId) {
-        if (confirm('¿Estás seguro de cortar la inyección a la red de este parque?\n\nLa potencia pasará a 0 kW inmediatamente.')) {
-            // API call handled separately or via modal
-            console.log('Corte de inyección solicitado para parque', parkId);
-        }
-    }
-
-    function confirmResumeInjection(parkId) {
-        if (confirm('¿Estás seguro de reanudar la inyección a la red de este parque?')) {
-            console.log('Reanudación de inyección solicitada para parque', parkId);
-        }
-    }
-</script>
+<GridInjectionModal Show="_injectionModalOpen"
+                    Resume="_injectionResume"
+                    Scope="GridInjectionScope.Park"
+                    TargetName="@_park?.Name"
+                    Submit="SubmitInjectionAsync"
+                    OnSuccess="OnInjectionSucceededAsync"
+                    OnClose="CloseInjectionModal" />
 
 @code {
     [Parameter]
@@ -354,6 +360,44 @@
     private HubConnection? _hubConnection;
     private bool _isLoadingPark = true;
     private string? _errorMessage;
+
+    // Spec 033: corte y reanudación de la inyección a la red del parque.
+    private bool _injectionModalOpen;
+    private bool _injectionResume;
+    private string? _injectionMessage;
+
+    private void OpenInjectionModal(bool resume)
+    {
+        _injectionResume = resume;
+        _injectionModalOpen = true;
+    }
+
+    private void CloseInjectionModal() => _injectionModalOpen = false;
+
+    private async Task<GridInjectionSubmitResult> SubmitInjectionAsync(string confirmationText, string? reason)
+    {
+        if (_park is null)
+        {
+            return new GridInjectionSubmitResult(false, "No se encontró el parque solar.");
+        }
+
+        var response = _injectionResume
+            ? await ParkApiClient.ResumeInjectionAsync(_park.Id, confirmationText, reason)
+            : await ParkApiClient.CutInjectionAsync(_park.Id, confirmationText, reason);
+
+        return response.Success
+            ? new GridInjectionSubmitResult(true, _injectionResume
+                ? "Inyección a la red reanudada exitosamente."
+                : "Inyección a la red desactivada. El parque no está entregando energía a la red.")
+            : new GridInjectionSubmitResult(false, response.ErrorMessage);
+    }
+
+    // Recarga el estado del parque para que el banner y los botones reflejen la orden (RF-4).
+    private async Task OnInjectionSucceededAsync(string message)
+    {
+        _injectionMessage = message;
+        _park = await ParkApiClient.GetByIdAsync(Id) ?? _park;
+    }
 
     private double CurrentPowerKw => _telemetry?.CurrentPowerKw ?? 0.0;
     private double CapacityPercentage => _telemetry?.CapacityPercentage ?? 0.0;

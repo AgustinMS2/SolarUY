@@ -45,6 +45,7 @@ public class ParkTelemetryBackgroundService : SimulationEmitterBackgroundService
         var nodeRepo = scope.ServiceProvider.GetRequiredService<ISolarNodeRepository>();
         var inverterRepo = scope.ServiceProvider.GetRequiredService<IInverterRepository>();
         var alertPublisher = scope.ServiceProvider.GetRequiredService<IAlertPublisher>();
+        var faults = FaultTimeline.From(scope.ServiceProvider.GetRequiredService<ISimulatedFaultRepository>().GetAll());
 
         var activeParks = parkRepo.GetAll().Where(p => p.Status == SolarParkStatus.Active).ToList();
         if (activeParks.Count == 0)
@@ -68,8 +69,8 @@ public class ParkTelemetryBackgroundService : SimulationEmitterBackgroundService
             invertersByPark.TryGetValue(park.Id, out var parkInverters);
             parkInverters ??= [];
 
-            var powerKw = Math.Round(_engine.ReadParkPowerKw(park.Id, parkInverters, instantUtc), 1);
-            var energyKwh = Math.Round(_engine.EnergyTodayKwh(park.Id, parkInverters, instantUtc), 1);
+            var powerKw = Math.Round(_engine.ReadParkPowerKw(park.Id, parkInverters, instantUtc, faults), 1);
+            var energyKwh = Math.Round(_engine.EnergyTodayKwh(park.Id, parkInverters, instantUtc, faults), 1);
 
             var telemetry = _telemetryService.CalculateMetrics(
                 park, powerKw, energyKwh, localTime,

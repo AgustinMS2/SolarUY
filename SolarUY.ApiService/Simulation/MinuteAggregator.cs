@@ -17,7 +17,8 @@ public static class MinuteAggregator
         Guid parkId,
         Guid nodeId,
         double nominalCapacityKw,
-        DateTime minuteStartUtc)
+        DateTime minuteStartUtc,
+        FaultTimeline? faults = null)
     {
         if (minuteStartUtc.Ticks % TimeSpan.TicksPerMinute != 0)
         {
@@ -30,7 +31,7 @@ public static class MinuteAggregator
 
         for (var i = 0; i < SolarSimulationEngine.SamplesPerMinute; i++)
         {
-            var sample = engine.ReadInverter(inverterId, parkId, nominalCapacityKw, minuteStartUtc.AddSeconds(i * SolarSimulationEngine.SampleSeconds));
+            var sample = engine.ReadInverter(inverterId, parkId, nominalCapacityKw, minuteStartUtc.AddSeconds(i * SolarSimulationEngine.SampleSeconds), faults);
 
             power += sample.PowerKw;
             maxPower = Math.Max(maxPower, sample.PowerKw);

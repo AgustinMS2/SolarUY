@@ -181,7 +181,7 @@
                                 <span class="fw-semibold">@StateLabel(selected.Panel.Reading.State)</span>
                                 @if (!string.IsNullOrEmpty(selected.Panel.Reading.StateReason))
                                 {
-                                    <div class="small text-muted mt-1">@selected.Panel.Reading.StateReason</div>
+                                    <div class="small mt-1 @(selected.Panel.Reading.Fault.HasValue ? "text-danger fw-semibold" : "text-muted")" data-testid="health-reason">@selected.Panel.Reading.StateReason</div>
                                 }
                                 @if (selected.Panel.Reading.IsLowPerformance)
                                 {

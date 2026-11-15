@@ -44,7 +44,7 @@ Permitir el monitoreo granular a nivel de módulo o string de panel fotovoltaico
 ## Fuera de alcance
 - Calibración de sensores de panel.
 - "Panel desactivado manualmente" con potencia 0 W: depende del activar/desactivar de la spec 032 y se implementa ahí (estaba como RF-4 en el borrador de esta spec).
-- Panel con falla reportada por el simulador y badge "En Falla": se implementa en la spec 037 (estaba en los casos límite del borrador).
+- Panel con falla reportada por el simulador y badge "En Falla": se implementa en la spec 037 (estaba en los casos límite del borrador). Con la spec 037 la pantalla muestra la insignia "En Falla" con el tipo de falla simulada.
 
 ## Criterios de finalización
 - Verificación interactiva en Blazor Server recibiendo eventos de SignalR.

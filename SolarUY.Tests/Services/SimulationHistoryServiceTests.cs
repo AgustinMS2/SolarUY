@@ -24,11 +24,12 @@ public class SimulationHistoryServiceTests
     private readonly FakeParkGenerationRepository _hours = new();
     private readonly SolarSimulationEngine _engine = new();
     private readonly FakeHistoryCatchUpLock _lock = new();
+    private readonly FakeSimulatedFaultRepository _faults = new();
     private readonly SimulationHistoryService _service;
 
     public SimulationHistoryServiceTests()
     {
-        _service = new SimulationHistoryService(_parks, _nodes, _inverters, _minutes, _hours, _engine, _lock);
+        _service = new SimulationHistoryService(_parks, _nodes, _inverters, _minutes, _hours, _engine, _lock, _faults);
     }
 
     private static DateTime Utc(int day, int hour, int minute = 0)
@@ -381,5 +382,91 @@ public class SimulationHistoryServiceTests
         var result = _service.CatchUp(Now, 30);
 
         Assert.Equal(60, result.MinuteRows);
+    }
+
+    // ---------- Fallas simuladas (spec 037) ----------
+
+    [Fact]
+    public void CatchUp_AnInsulationFaultStopsTheInverterFromItsStartInTheMinuteRows()
+    {
+        AddActiveEquipment(Utc(15, 17));
+        _faults.Faults.Add(new SimulatedFault
+        {
+            Id = Guid.NewGuid(),
+            FaultType = SimulatedFaultType.InsulationFault,
+            TargetType = SimulatedFaultTarget.Inverter,
+            TargetId = InverterA,
+            StartedAtUtc = Utc(15, 17, 30)
+        });
+
+        _service.CatchUp(Now, 30);
+
+        var before = _minutes.Readings.Where(r => r.MinuteUtc < Utc(15, 17, 30)).ToList();
+        var after = _minutes.Readings.Where(r => r.MinuteUtc >= Utc(15, 17, 30)).ToList();
+        Assert.Equal(30, before.Count);
+        Assert.All(before, r => Assert.True(r.AvgPowerKw > 0.0));
+        Assert.Equal(30, after.Count);
+        Assert.All(after, r =>
+        {
+            Assert.Equal(0.0, r.AvgPowerKw);
+            Assert.Equal(0.0, r.EnergyKwh);
+        });
+    }
+
+    [Fact]
+    public void CatchUp_AfterTheFaultIsClearedTheMinutesAreNormalAgain()
+    {
+        AddActiveEquipment(Utc(15, 17));
+        _faults.Faults.Add(new SimulatedFault
+        {
+            Id = Guid.NewGuid(),
+            FaultType = SimulatedFaultType.InsulationFault,
+            TargetType = SimulatedFaultTarget.Inverter,
+            TargetId = InverterA,
+            StartedAtUtc = Utc(15, 17, 10),
+            EndedAtUtc = Utc(15, 17, 20)
+        });
+
+        _service.CatchUp(Now, 30);
+
+        Assert.All(_minutes.Readings.Where(r => r.MinuteUtc >= Utc(15, 17, 10) && r.MinuteUtc < Utc(15, 17, 20)), r => Assert.Equal(0.0, r.AvgPowerKw));
+        Assert.All(_minutes.Readings.Where(r => r.MinuteUtc >= Utc(15, 17, 20)), r => Assert.True(r.AvgPowerKw > 0.0));
+    }
+
+    [Fact]
+    public void CatchUp_TheHourRowReflectsTheFaultAndStillMatchesTheMinuteRows()
+    {
+        AddActiveEquipment(Utc(15, 12));
+        var faultStart = Utc(15, 15, 30);
+        _faults.Faults.Add(new SimulatedFault
+        {
+            Id = Guid.NewGuid(),
+            FaultType = SimulatedFaultType.InsulationFault,
+            TargetType = SimulatedFaultTarget.Inverter,
+            TargetId = InverterA,
+            StartedAtUtc = faultStart
+        });
+
+        _service.CatchUp(Now, 30);
+
+        var hour = _hours.Records.Single(r => r.TimestampUtc == Utc(15, 15));
+        var minutes = _minutes.Readings.Where(r => r.MinuteUtc >= hour.TimestampUtc && r.MinuteUtc < hour.TimestampUtc.AddHours(1)).ToList();
+        Assert.Equal(minutes.Sum(m => m.EnergyKwh), hour.EnergyGeneratedKwh, 6);
+
+        var normal = _engine.SummarizeParkHour(ParkId, [new SimulatedInverter(InverterA, 110)], Utc(15, 15));
+        Assert.True(hour.EnergyGeneratedKwh < normal.EnergyKwh);
+        Assert.True(hour.EnergyGeneratedKwh > 0.0);
+    }
+
+    [Fact]
+    public void CatchUp_WithoutFaultsTheRowsAreTheSameAsBefore()
+    {
+        AddActiveEquipment(Utc(15, 17, 55));
+
+        _service.CatchUp(Now, 30);
+
+        var row = _minutes.Readings.Single(r => r.MinuteUtc == Utc(15, 17, 57));
+        var expected = MinuteAggregator.Build(_engine, InverterA, ParkId, NodeA, 110, Utc(15, 17, 57));
+        Assert.Equal(expected.AvgPowerKw, row.AvgPowerKw);
     }
 }

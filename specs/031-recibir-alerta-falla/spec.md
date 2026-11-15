@@ -15,14 +15,16 @@ Alertar de forma reactiva e inmediata a los operadores y técnicos conectados cu
 
 ## Tipos y niveles de alerta
 
-> **Eventos provisorios.** Hoy solo se generan alertas con los datos que ya existen (las lecturas simuladas de las specs 027, 028 y 030). Las demás fallas de la tabla las producirá la spec 037 (simulador de fallas) y los informativos la spec 033 (inyección a la red); **cuando existan, esta spec deberá ampliarse** para generarlas.
+> **Eventos provisorios.** Hoy solo se generan alertas con los datos que ya existen (las lecturas simuladas de las specs 027, 028 y 030). La spec 037 (simulador de fallas) ya agrega la falla de aislamiento del inversor (Crítico) y la degradación severa de un panel (Advertencia); el cortocircuito y el paro de emergencia no están en el simulador, y los informativos los producirá la spec 033 (inyección a la red); **cuando existan, esta spec deberá ampliarse** para generarlos.
 
 | Nivel | Severidad | Evento desencadenante | ¿Se genera hoy? |
 | :--- | :--- | :--- | :--- |
 | **Crítico** | Rojo | Panel sin generación con sol: menos del 10 % de lo esperado (la Falla Crítica de la spec 030). | Sí |
-| **Crítico** | Rojo | Cortocircuito, fallo de aislamiento, paro de emergencia del inversor. | No (spec 037) |
+| **Crítico** | Rojo | Fallo de aislamiento del inversor (falla simulada de la spec 037). | Sí (spec 037) |
+| **Crítico** | Rojo | Cortocircuito, paro de emergencia del inversor. | No |
 | **Advertencia** | Amarillo | Generación del parque por debajo de su umbral de alerta durante horas de sol (spec 027). | Sí |
 | **Advertencia** | Amarillo | Temperatura interna del inversor > 75 °C (spec 028). | Sí |
+| **Advertencia** | Amarillo | Degradación severa de un panel (falla simulada de la spec 037). | Sí (spec 037) |
 | **Informativo** | Azul | Desconexión programada, inicio/fin de inyección a red. | No (spec 033) |
 
 ## Estados de la alerta
@@ -61,7 +63,7 @@ Alertar de forma reactiva e inmediata a los operadores y técnicos conectados cu
 ## Fuera de alcance
 - Envío de SMS o emails automáticos (solo notificaciones in-app vía SignalR).
 - Notificaciones sonoras: la historia de usuario las menciona, pero ningún requisito las define.
-- Alertas por cortocircuito, fallo de aislamiento y paro de emergencia del inversor (spec 037) y alertas informativas (spec 033).
+- Alertas por cortocircuito y paro de emergencia del inversor, y alertas informativas (spec 033). El fallo de aislamiento y la degradación severa las agrega la spec 037.
 - Alertas por anomalía de frecuencia de red (spec 028) y por rendimiento bajo de un panel (spec 029): se excluyen porque con las lecturas simuladas actuales generarían una alerta por minuto y por equipo.
 - Un disparador de alertas de prueba solo para desarrollo: se dejó para más adelante.
 - Pasar las alertas a "Atendida": lo hace la tarea T5 de la spec 026, una vez creada la entidad de alertas.
@@ -69,7 +71,7 @@ Alertar de forma reactiva e inmediata a los operadores y técnicos conectados cu
 ## Criterios de finalización
 - Tests unitarios en verde para las reglas del servicio de alertas (registro, deduplicado, consolidación, contador, reconocer, descartar, purga y detección).
 - Verificación de la campana, el aviso y el centro de alertas en el navegador con las alertas que generen las lecturas simuladas (inversor > 75 °C cerca del mediodía; parque bajo su umbral al amanecer o al atardecer).
-- La alerta crítica y la ráfaga de avisos solo se prueban con tests hasta que exista el simulador de fallas (spec 037) o un disparador de prueba.
+- La alerta crítica y la ráfaga de avisos se prueban ahora en el navegador con el simulador de fallas (spec 037); antes solo con tests.
 - Tests de arquitectura en verde.
 
 ## Decisiones de la clarificación (2026-11-15)

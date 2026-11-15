@@ -371,6 +371,42 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("ParkHourlyGenerations", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.SimulatedFault", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("EndedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FaultType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SolarParkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("StartedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetId", "StartedAtUtc");
+
+                    b.ToTable("SimulatedFaults", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
                 {
                     b.Property<Guid>("Id")

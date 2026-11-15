@@ -7,6 +7,11 @@ public class FakeInverterRepository : IInverterRepository
 {
     public List<Inverter> Inverters { get; } = [];
 
+    public Inverter? GetById(Guid id)
+    {
+        return Inverters.FirstOrDefault(i => i.Id == id);
+    }
+
     public Inverter? GetBySerie(string normalizedSerie)
     {
         return Inverters.FirstOrDefault(i => i.NormalizedSerieNumber == normalizedSerie);

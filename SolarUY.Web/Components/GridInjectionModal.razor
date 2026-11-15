@@ -1,100 +1,146 @@
-@implements IDisposable
+@* Spec 033: modal de corte o reanudación de la inyección a la red de un parque o del inversor de un nodo.
+   La confirmación exige escribir exactamente "CONFIRMAR" (RF-3): sin Trim ni mayúsculas forzadas, igual que el servicio. *@
 
 @if (Show)
 {
-    <div class="panel panel-control-modal" role="dialog" aria-modal="true" aria-labelledby="grid-injection-modal-title">
-        <div class="panel-control-modal-header">
-            <h2 id="grid-injection-modal-title" class="panel-control-modal-title">
-                <span class="text-danger">¡Atención!</span> Estás a punto de cortar la inyección a la red de todo el parque "@ParkName".
-            </h2>
-        </div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, 0.5);"
+         aria-modal="true" aria-labelledby="grid-injection-modal-title" data-testid="grid-injection-modal">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content shadow">
+                <div class="modal-header @(Resume ? "bg-success" : "bg-danger") text-white">
+                    <h5 class="modal-title" id="grid-injection-modal-title">
+                        <span class="bi @(Resume ? "bi-lightning-charge-fill" : "bi-power") me-1" aria-hidden="true"></span>
+                        @(Resume ? "Reanudar inyección a la red" : "Corte de inyección a la red")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Cerrar" @onclick="CloseAsync" disabled="@_isSubmitting"></button>
+                </div>
 
-        <div class="panel-control-modal-body">
-            <p class="mt-2">
-                La potencia entregada pasará a 0 kW inmediatamente. Escribí <strong class="text-danger">CONFIRMAR</strong> para proceder.
-            </p>
+                <div class="modal-body">
+                    <p class="mb-3" data-testid="grid-injection-warning">
+                        @if (!Resume)
+                        {
+                            <span class="text-danger fw-bold">¡Atención!</span>
+                        }
+                        @WarningText
+                    </p>
 
-            <div class="form-group mb-3">
-                <label>Confirmación requerida</label>
-                <div class="form-check">
-                    <input class="form-check-input" type="text" @bind="_confirmationText" required />
-                    <small class="form-text text-muted">
-                        El botón enviará la orden solo si el texto coincide exactamente con "CONFIRMAR" (sin trim ni mayúsculas forzadas).
-                    </small>
+                    <div class="mb-3">
+                        <label for="grid-injection-confirm" class="form-label fw-semibold">Confirmación requerida</label>
+                        <input id="grid-injection-confirm" type="text" class="form-control" autocomplete="off" placeholder="CONFIRMAR"
+                               @bind="_confirmationText" @bind:event="oninput" disabled="@_isSubmitting" data-testid="grid-injection-confirm" />
+                        <div class="form-text">La orden solo se envía si el texto coincide exactamente con CONFIRMAR.</div>
+                    </div>
+
+                    <div class="mb-1">
+                        <label for="grid-injection-reason" class="form-label fw-semibold">Motivo <span class="text-muted fw-normal">(opcional)</span></label>
+                        <textarea id="grid-injection-reason" class="form-control" rows="2" maxlength="500"
+                                  @bind="_reason" @bind:event="oninput" disabled="@_isSubmitting" data-testid="grid-injection-reason"></textarea>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3 mb-0" role="alert" data-testid="grid-injection-error">@_errorMessage</div>
+                    }
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CloseAsync" disabled="@_isSubmitting">Cancelar</button>
+                    <button type="button" class="btn @(Resume ? "btn-success" : "btn-danger")" @onclick="SendOrderAsync"
+                            disabled="@(!CanSend || _isSubmitting)" data-testid="grid-injection-send">
+                        @if (_isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            <span>Enviando...</span>
+                        }
+                        else
+                        {
+                            <span>@(CanSend ? (Resume ? "Enviar orden de reanudación" : "Enviar orden de corte") : "Escribí CONFIRMAR para habilitar")</span>
+                        }
+                    </button>
                 </div>
             </div>
-
-            @if (!string.IsNullOrEmpty(_errorMessage))
-            {
-                <div class="alert alert-danger mt-3" role="alert">
-                    @_errorMessage
-                </div>
-            }
-
-            @if (_isSubmitting)
-            {
-                <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Enviando...</span>
-                </div>
-            }
-            else
-            {
-                <button type="button" class="btn btn-danger w-100 mt-3" @onclick="SendOrderAsync" disabled="!_canSend">
-                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                    @(_canSend ? "Enviar orden de corte" : "Esperando 'CONFIRMAR'")
-                </button>
-            }
         </div>
     </div>
 }
 
 @code {
-    [Parameter]
-    public string? ParkName { get; set; }
+    private const string ConfirmationWord = "CONFIRMAR";
 
-    [Parameter]
-    public EventCallback OnClose { get; set; }
+    /// <summary>Muestra u oculta el modal.</summary>
+    [Parameter] public bool Show { get; set; }
 
-    [Parameter]
-    public EventCallback<GridInjectionModalResult> OnResult { get; set; }
+    /// <summary>Reanudar (verdadero) o cortar (falso) la inyección.</summary>
+    [Parameter] public bool Resume { get; set; }
 
-    [Parameter]
-    public bool Show { get; set; }
+    [Parameter] public GridInjectionScope Scope { get; set; }
 
-    private string _confirmationText = "";
+    /// <summary>Nombre del parque, o serie del inversor.</summary>
+    [Parameter] public string? TargetName { get; set; }
+
+    /// <summary>Envía la orden con el texto de confirmación y el motivo opcional.</summary>
+    [Parameter] public Func<string, string?, Task<GridInjectionSubmitResult>>? Submit { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>Se invoca con el mensaje de éxito cuando el servidor aceptó la orden.</summary>
+    [Parameter] public EventCallback<string> OnSuccess { get; set; }
+
+    private string _confirmationText = string.Empty;
+    private string? _reason;
     private string? _errorMessage;
     private bool _isSubmitting;
-    private bool _canSend => _confirmationText == "CONFIRMAR";
+    private bool _wasShown;
 
-    public class GridInjectionModalResult
+    // RF-3: el botón está deshabilitado hasta que el texto coincida exactamente con "CONFIRMAR".
+    private bool CanSend => _confirmationText == ConfirmationWord;
+
+    // RF-1 (corte) y su equivalente para reanudar (RF-5).
+    private string WarningText => (Resume, Scope) switch
     {
-        public bool Confirmed { get; set; }
-        public string? Reason { get; set; }
-    }
+        (false, GridInjectionScope.Park) => $"Estás a punto de cortar la inyección a la red de todo el parque \"{TargetName}\". La potencia entregada pasará a 0 kW inmediatamente. Escribí 'CONFIRMAR' para proceder.",
+        (false, _) => $"Estás a punto de cortar la inyección a la red del inversor \"{TargetName}\". La potencia entregada pasará a 0 kW inmediatamente. Escribí 'CONFIRMAR' para proceder.",
+        (true, GridInjectionScope.Park) => $"Estás a punto de reanudar la inyección a la red de todo el parque \"{TargetName}\". Los inversores se sincronizarán con la red. Escribí 'CONFIRMAR' para proceder.",
+        _ => $"Estás a punto de reanudar la inyección a la red del inversor \"{TargetName}\". El inversor se sincronizará con la red. Escribí 'CONFIRMAR' para proceder."
+    };
 
     protected override void OnParametersSet()
     {
-        _confirmationText = "";
-        _errorMessage = null;
+        // Cada vez que se abre, el formulario empieza limpio.
+        if (Show && !_wasShown)
+        {
+            _confirmationText = string.Empty;
+            _reason = null;
+            _errorMessage = null;
+            _isSubmitting = false;
+        }
+
+        _wasShown = Show;
     }
 
     private async Task SendOrderAsync()
     {
-        if (!_canSend) return;
+        if (!CanSend || _isSubmitting || Submit is null)
+        {
+            return;
+        }
 
         _isSubmitting = true;
         _errorMessage = null;
 
         try
         {
-            var result = new GridInjectionModalResult
-            {
-                Confirmed = true,
-                Reason = _reasonText
-            };
+            var reason = string.IsNullOrWhiteSpace(_reason) ? null : _reason;
+            var result = await Submit(_confirmationText, reason);
 
-            await OnResult.InvokeAsync(result);
-            await OnClose.InvokeAsync();
+            if (result.Success)
+            {
+                await OnSuccess.InvokeAsync(result.Message ?? string.Empty);
+                await OnClose.InvokeAsync();
+            }
+            else
+            {
+                _errorMessage = result.Message ?? "No se pudo enviar la orden.";
+            }
         }
         catch (Exception ex)
         {
@@ -106,13 +152,11 @@
         }
     }
 
-    [Parameter]
-    public string? _reasonText { get; set; }
-
-    // RF-3: el botón está deshabilitado hasta que el texto coincida exactamente con "CONFIRMAR"
-    // La comparación es sin Trim y sin mayúsculas forzadas, tal como valida el servicio.
-
-    public void Dispose()
+    private async Task CloseAsync()
     {
+        if (!_isSubmitting)
+        {
+            await OnClose.InvokeAsync();
+        }
     }
 }

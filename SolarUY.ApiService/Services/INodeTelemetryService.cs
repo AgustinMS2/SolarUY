@@ -18,5 +18,6 @@ public interface INodeTelemetryService
         double acVoltage,
         double frequencyHz,
         double temperatureC,
-        DateTime timestampUtc);
+        DateTime timestampUtc,
+        SimulatedFaultType? fault = null);
 }

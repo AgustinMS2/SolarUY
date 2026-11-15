@@ -6,7 +6,7 @@
   - `Hubs/ParkTelemetryHub.cs`: Hub SignalR protegido con `[Authorize(Roles = Roles.Any)]` que gestiona grupos de suscripción por parque (`SubscribeToPark(Guid parkId)` y `UnsubscribeFromPark(Guid parkId)`).
   - `Dtos/ParkTelemetryDto.cs`: DTO con las métricas transmitidas (`ParkId`, `ParkName`, `CurrentPowerKw`, `MaxCapacityKw`, `CapacityPercentage`, `EnergyTodayKwh`, `AlertThresholdKw`, `IsAlertActive`, `TimestampUtc`).
   - `Services/IParkTelemetryService.cs` y `ParkTelemetryService.cs`: servicio de dominio puro con lógica de cálculo de métricas y evaluación del umbral de alerta según horario solar.
-  - `Services/ParkTelemetryBackgroundService.cs`: `BackgroundService` en segundo plano que periódicamente (cada 3-5 segundos) genera/emite lecturas al hub SignalR para los parques activos.
+  - `Services/ParkTelemetryBackgroundService.cs`: Servicio en segundo plano (hijo de `SimulationEmitterBackgroundService`, spec 036) que en cada ciclo (cada `Simulation:IntervalSeconds`, 5 segundos por defecto) toma del motor de simulación la potencia del parque (suma de sus inversores) y la energía del día, y emite la lectura al hub SignalR para los parques activos.
   - `Program.cs`: configuración y mapeo del hub SignalR (`builder.Services.AddSignalR()` y `app.MapHub<ParkTelemetryHub>("/hubs/park-telemetry")`).
 - `SolarUY.Web`:
   - `Components/Pages/ParkMonitoring.razor` (ruta `/parques/{id:guid}/monitoreo`): vista en tiempo real adaptada al diseño "SolarOps Clean", con gauge/tacómetro radial SVG, tarjetas de métricas, alertas reactivas y estado del enlace SignalR.
@@ -28,14 +28,14 @@
 ## Servicios y Lógica de Dominio Pura
 
 - `IParkTelemetryService` desacoplado de frameworks HTTP:
-  - `ParkTelemetryDto CalculateMetrics(SolarPark park, double currentPowerKw, double energyTodayKwh, DateTime localTimeUruguay)`
+  - `ParkTelemetryDto CalculateMetrics(SolarPark park, double currentPowerKw, double energyTodayKwh, DateTime localTimeUruguay, bool hasEquipment = true, DateTime? timestampUtc = null)`
 - **Reglas de cálculo (funciones puras)**:
   - **Porcentaje de capacidad**:
     $$\text{Percentage} = \frac{\text{CurrentPowerKw}}{\text{MaxCapacityKw}} \times 100$$
     (redondeado a 1 decimal, acotado entre 0% y 100%).
   - **Evaluación de umbral de alerta (RF-3)**:
-    - Se considera horario diurno en Uruguay entre las 06:00 y las 20:00 (hora local).
-    - `IsAlertActive = park.Status == Active && IsDaylightHour(localTimeUruguay) && currentPowerKw < park.PowerAlertThresholdKw`.
+    - Se considera horario diurno entre el amanecer y el atardecer de la fecha (calendario solar `SolarCalendar` de la spec 036, hora de Uruguay), no un horario fijo.
+    - `IsAlertActive = park.Status == Active && hasEquipment && IsDaylight(localTimeUruguay) && park.GridInjectionEnabled && currentPowerKw < park.PowerAlertThresholdKw` (spec 036 agrega `hasEquipment`; spec 033 agrega el corte de inyección).
   - **Parque inactivo o noche (Casos límite)**:
     - Si el parque no está en estado `Active` o es de noche, `CurrentPowerKw` se reporta en `0.0`.
 

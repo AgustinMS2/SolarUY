@@ -8,6 +8,7 @@
 
 - [x] **T3. `NodeTelemetryBackgroundService` para emisión periódica de lecturas.** RF-2
   - Hecho cuando: el servicio en segundo plano emita periódicamente (cada 3-5 s) la telemetría calculada a los grupos SignalR `node-{nodeId}` para nodos activos con inversor.
+  - Actualizada el 2026-11-15 (spec 036): el servicio emite cada `Simulation:IntervalSeconds` (5 s por defecto) con las lecturas del motor de simulación; con la spec 037 la telemetría incluye la falla simulada del inversor.
 
 - [x] **T4. Pantalla Blazor `/nodos/{id:guid}/monitoreo` (`NodeMonitoring.razor`).** RF-1, RF-2, RF-3, RF-4, RF-5, RF-6, RF-7
   - Hecho cuando: la página se conecte al hub, presente las 6 tarjetas eléctricas, renderice la mini-gráfica SVG de potencia reactiva, refleje alertas de sobretemperatura/frecuencia y gestione la desconexión.

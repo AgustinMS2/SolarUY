@@ -1,3 +1,5 @@
+using SolarUY.ApiService.Domain;
+
 namespace SolarUY.ApiService.Dtos;
 
 /// <summary>
@@ -19,8 +21,14 @@ public class PanelHealthReadingDto
     /// <summary>Generación inferior al 40 % de lo esperado (misma regla que la spec 029).</summary>
     public bool IsLowPerformance { get; set; }
 
-    /// <summary>Motivo cuando el panel no recibe lecturas (baja, sin nodo o nodo inactivo).</summary>
+    /// <summary>Motivo cuando el panel no recibe lecturas (baja, sin nodo o nodo inactivo) o tiene una falla simulada (spec 037).</summary>
     public string? StateReason { get; set; }
+
+    /// <summary>Falla simulada vigente en el equipo (spec 037); nula si no tiene.</summary>
+    public SimulatedFaultType? Fault { get; set; }
+
+    /// <summary>Nombre de la falla simulada vigente (spec 037).</summary>
+    public string? FaultLabel { get; set; }
 }
 
 /// <summary>Contadores de la cabecera del mapa de salud (RF-4).</summary>

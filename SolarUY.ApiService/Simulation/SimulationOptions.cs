@@ -13,4 +13,10 @@ public class SimulationOptions
 
     /// <summary>Días de historia por minuto que se generan al arrancar si no hay historia previa.</summary>
     public int BackfillDays { get; set; } = 30;
+
+    /// <summary>
+    /// Habilita el simulador de fallas (spec 037). Deshabilitado por defecto para no afectar a un entorno real; se activa
+    /// en desarrollo y en los entornos de prueba.
+    /// </summary>
+    public bool FaultInjectionEnabled { get; set; }
 }

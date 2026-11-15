@@ -1,5 +1,6 @@
 using SolarUY.ApiService.Domain;
 using SolarUY.ApiService.Dtos;
+using SolarUY.ApiService.Simulation;
 
 namespace SolarUY.ApiService.Services;
 
@@ -20,7 +21,7 @@ public class PanelHealthService : IPanelHealthService
         _telemetryService = telemetryService;
     }
 
-    public PanelHealthReadingDto ClassifyHealth(SolarPanel panel, bool hasActiveNode, double activePowerW, DateTime localTime)
+    public PanelHealthReadingDto ClassifyHealth(SolarPanel panel, bool hasActiveNode, double activePowerW, DateTime localTime, SimulatedFaultType? fault = null)
     {
         ArgumentNullException.ThrowIfNull(panel);
 
@@ -43,6 +44,10 @@ public class PanelHealthService : IPanelHealthService
         var activePower = Math.Max(0.0, activePowerW);
         var expectedPower = _telemetryService.CalculateExpectedPowerW(panel.PowerW, localTime);
 
+        // Falla simulada vigente (spec 037): se informa como motivo y como tipo, también de noche, cuando todavía no se nota.
+        var faultLabel = fault.HasValue ? FaultCatalog.LabelOf(fault.Value) : null;
+        var faultReason = faultLabel is null ? null : $"Falla simulada: {faultLabel}";
+
         // De noche no hay referencia para evaluar el rendimiento.
         if (expectedPower <= 0.0)
         {
@@ -53,7 +58,10 @@ public class PanelHealthService : IPanelHealthService
                 ActivePowerW = activePower,
                 ExpectedPowerW = 0.0,
                 EstimatedEfficiencyPercent = null,
-                IsLowPerformance = false
+                IsLowPerformance = false,
+                StateReason = faultReason,
+                Fault = fault,
+                FaultLabel = faultLabel
             };
         }
 
@@ -72,7 +80,10 @@ public class PanelHealthService : IPanelHealthService
             ActivePowerW = activePower,
             ExpectedPowerW = expectedPower,
             EstimatedEfficiencyPercent = Math.Round(panel.Efficiency * ratio, 1),
-            IsLowPerformance = ratio < LowPerformanceRatio
+            IsLowPerformance = ratio < LowPerformanceRatio,
+            StateReason = faultReason,
+            Fault = fault,
+            FaultLabel = faultLabel
         };
     }
 

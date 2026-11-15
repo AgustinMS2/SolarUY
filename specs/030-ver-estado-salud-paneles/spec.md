@@ -14,7 +14,7 @@ Ofrecer una vista panorámica (tipo mapa térmico o matriz de celdas) de todos l
 
 ## Estados de salud definidos
 
-> **Criterios provisorios.** Hoy el estado se calcula únicamente a partir de la generación contra lo esperado a esa hora. Los eventos de falla (circuito abierto, microinversor desconectado, reporte de avería) y la temperatura del panel se suman cuando existan las specs 031 (alertas) y 037 (simulador de fallas); esta spec deberá ampliarse entonces.
+> **Criterios provisorios.** Hoy el estado se calcula únicamente a partir de la generación contra lo esperado a esa hora. Los eventos de falla (circuito abierto, microinversor desconectado, reporte de avería) y la temperatura del panel se suman cuando existan las specs 031 (alertas) y 037 (simulador de fallas); esta spec deberá ampliarse entonces. Con la spec 037, un panel con falla simulada sigue coloreándose por su generación (el corte total queda en rojo y la degradación en ámbar) y la tarjeta de detalle muestra la falla como motivo ("Falla simulada: ...").
 
 La **potencia esperada** es la misma de la spec 029: potencia de placa × sen(π × (hora − amanecer) / (atardecer − amanecer)) entre el amanecer y el atardecer de la fecha (hora Uruguay, calendario de la spec 036); 0 W fuera de ese horario.
 

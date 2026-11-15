@@ -12,6 +12,11 @@ public class InverterRepository : IInverterRepository
         _context = context;
     }
 
+    public Inverter? GetById(Guid id)
+    {
+        return _context.Inverters.FirstOrDefault(i => i.Id == id);
+    }
+
     public Inverter? GetBySerie(string normalizedSerie)
     {
         return _context.Inverters.FirstOrDefault(i => i.NormalizedSerieNumber == normalizedSerie);

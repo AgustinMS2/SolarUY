@@ -101,6 +101,21 @@
             </div>
         }
 
+        <!-- Spec 037: falla simulada vigente en el panel ("En Falla") -->
+        @if (_telemetry?.Fault is { } panelFault)
+        {
+            var panelFaultCritical = SolarUY.ApiService.Simulation.FaultCatalog.SeverityOf(panelFault) == SolarUY.ApiService.Domain.AlertSeverity.Critical;
+            <div class="alert @(panelFaultCritical ? "alert-danger border-danger-subtle" : "alert-warning border-warning-subtle") d-flex align-items-center mb-4 shadow-sm" role="alert" data-testid="panel-fault">
+                <span class="bi bi-exclamation-octagon-fill fs-3 @(panelFaultCritical ? "text-danger" : "text-warning") me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">
+                        <span class="badge @(panelFaultCritical ? "bg-danger" : "bg-warning text-dark") me-2">En Falla</span>@_telemetry.FaultLabel
+                    </h6>
+                    <p class="mb-0 small">Falla simulada desde el simulador de fallas (entorno de pruebas). Se quita desde "Simulación de fallas".</p>
+                </div>
+            </div>
+        }
+
         <!-- RF-3: rendimiento bajo -->
         @if (_telemetry?.IsLowPerformance == true)
         {

@@ -1,3 +1,5 @@
+using SolarUY.ApiService.Domain;
+
 namespace SolarUY.ApiService.Simulation;
 
 /// <summary>Lectura instantánea de un inversor simulado.</summary>
@@ -18,29 +20,30 @@ public readonly record struct ParkHourSummary(double EnergyKwh, double PeakPower
 /// <summary>
 /// Motor único de simulación (Spec 036). Todas las lecturas son funciones puras del equipo y del instante: el mismo
 /// equipo en el mismo instante da siempre el mismo valor, en cualquier pantalla y en cualquier copia del servidor.
+/// Las fallas simuladas (spec 037) entran como una línea de tiempo opcional: sin ella, o vacía, no hay fallas.
 /// </summary>
 public interface ISolarSimulationEngine
 {
     /// <summary>Lectura del inversor en un instante UTC.</summary>
-    InverterReading ReadInverter(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime utc);
+    InverterReading ReadInverter(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime utc, FaultTimeline? faults = null);
 
     /// <summary>Potencia del panel en W (potencia de placa × curva solar × nubosidad del parque × variación propia).</summary>
-    double ReadPanelPowerW(Guid panelId, Guid parkId, int nominalPowerW, DateTime utc);
+    double ReadPanelPowerW(Guid panelId, Guid parkId, int nominalPowerW, DateTime utc, FaultTimeline? faults = null);
 
     /// <summary>Potencia del parque: la suma de la potencia de sus inversores (0 si no tiene).</summary>
-    double ReadParkPowerKw(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc);
+    double ReadParkPowerKw(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc, FaultTimeline? faults = null);
 
     /// <summary>Energía de un minuto de un inversor: la potencia de las 6 muestras (una cada 10 s) × 10 s.</summary>
-    double InverterMinuteEnergyKwh(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime minuteStartUtc);
+    double InverterMinuteEnergyKwh(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime minuteStartUtc, FaultTimeline? faults = null);
 
     /// <summary>
     /// Energía y potencia pico del parque en una hora completa (que debe empezar en una hora en punto): recorre las 360
     /// muestras de 10 s y suma la potencia de los inversores. La energía coincide con la suma de los minutos de la hora.
     /// </summary>
-    ParkHourSummary SummarizeParkHour(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime hourStartUtc);
+    ParkHourSummary SummarizeParkHour(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime hourStartUtc, FaultTimeline? faults = null);
 
     /// <summary>Energía acumulada del parque desde las 00:00 locales hasta el instante dado.</summary>
-    double EnergyTodayKwh(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc);
+    double EnergyTodayKwh(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc, FaultTimeline? faults = null);
 }
 
 public class SolarSimulationEngine : ISolarSimulationEngine
@@ -64,6 +67,7 @@ public class SolarSimulationEngine : ISolarSimulationEngine
     private const int ShadeDepthChannel = 9;
     private const int ResidualVoltageChannel = 10;
     private const int PanelOwnChannel = 11;
+    private const int OverTemperatureChannel = 12;
 
     private const double CloudAmplitude = 0.08;          // nubosidad pasajera de ±8 %
     private const int CloudPeriodSeconds = 180;
@@ -72,10 +76,25 @@ public class SolarSimulationEngine : ISolarSimulationEngine
     private const double AnomalousFrequencyChance = 0.04;
     private const double ShadeChance = 0.03;              // 3 % de los bloques de 10 minutos con sombreado
     private const int ShadeBlockSeconds = 600;
+    private const double DegradedEfficiencyRatio = 0.30;   // spec 037: degradación severa, 30 % de lo esperado
+    private const double OverTemperatureBaseC = 86.0;      // spec 037: sobretemperatura entre 86 y 90 °C
+    private const double OverTemperatureSpreadC = 2.0;
 
-    public InverterReading ReadInverter(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime utc)
+    public InverterReading ReadInverter(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime utc, FaultTimeline? faults = null)
     {
         var local = ToLocal(utc);
+        var fault = faults?.EffectiveFault(inverterId, utc);
+
+        // Temperatura ambiente del día: mínima a las 03:00 y máxima a las 15:00.
+        var ambient = 18.0 + (8.0 * Math.Sin(2.0 * Math.PI * (local.TimeOfDay.TotalHours - 9.0) / 24.0));
+
+        // Falla de aislamiento (spec 037): el inversor se apaga por la protección de fuga a tierra; queda solo el voltaje DC
+        // residual, sin tensión ni frecuencia de red, y se enfría hasta la temperatura ambiente.
+        if (fault == SimulatedFaultType.InsulationFault)
+        {
+            return new InverterReading(0.0, ResidualDcVoltage(inverterId, utc), 0.0, 0.0, 0.0, ambient);
+        }
+
         var curve = SolarCalendar.Factor(local);
 
         var cloud = CloudFactor(parkId, utc);
@@ -87,22 +106,31 @@ public class SolarSimulationEngine : ISolarSimulationEngine
 
         // De noche el inversor solo conserva un voltaje DC residual muy bajo.
         var dcVoltage = powerKw <= 0.0
-            ? 8.0 + (4.0 * DeterministicNoise.Smooth(inverterId, utc, 60, ResidualVoltageChannel))
+            ? ResidualDcVoltage(inverterId, utc)
             : Math.Clamp((740.0 - (180.0 * load)) * (1.0 + (0.02 * DeterministicNoise.Smooth(inverterId, utc, 45, DcVoltageChannel))), 200.0, 1000.0);
 
         var dcCurrent = powerKw > 0.0 ? powerKw * 1000.0 / dcVoltage : 0.0;
         var acVoltage = 380.0 * (1.0 + (0.01 * DeterministicNoise.Smooth(inverterId, utc, 40, AcVoltageChannel)));
 
-        // Temperatura: ambiente del día (mínima a las 03:00 y máxima a las 15:00) más el calentamiento por carga.
-        var ambient = 18.0 + (8.0 * Math.Sin(2.0 * Math.PI * (local.TimeOfDay.TotalHours - 9.0) / 24.0));
-        var temperature = ambient + (50.0 * load * (1.0 + (0.08 * DeterministicNoise.Smooth(inverterId, utc, 60, TemperatureChannel))));
+        // Temperatura: ambiente del día más el calentamiento por carga; con la falla de sobretemperatura (spec 037) sube de 85 °C.
+        var temperature = fault == SimulatedFaultType.InverterOverTemperature
+            ? OverTemperatureBaseC + (OverTemperatureSpreadC * (1.0 + DeterministicNoise.Smooth(inverterId, utc, 60, OverTemperatureChannel)))
+            : ambient + (50.0 * load * (1.0 + (0.08 * DeterministicNoise.Smooth(inverterId, utc, 60, TemperatureChannel))));
 
         return new InverterReading(powerKw, dcVoltage, dcCurrent, acVoltage, FrequencyAt(inverterId, utc), temperature);
     }
 
-    public double ReadPanelPowerW(Guid panelId, Guid parkId, int nominalPowerW, DateTime utc)
+    public double ReadPanelPowerW(Guid panelId, Guid parkId, int nominalPowerW, DateTime utc, FaultTimeline? faults = null)
     {
         if (nominalPowerW <= 0)
+        {
+            return 0.0;
+        }
+
+        var fault = faults?.EffectiveFault(panelId, utc);
+
+        // Corte total (spec 037): circuito abierto, la potencia cae a 0 W de forma instantánea.
+        if (fault == SimulatedFaultType.OpenCircuit)
         {
             return 0.0;
         }
@@ -115,6 +143,13 @@ public class SolarSimulationEngine : ISolarSimulationEngine
 
         var own = 1.0 + (PanelVariation * DeterministicNoise.Smooth(panelId, utc, 30, PanelOwnChannel));
 
+        // Degradación severa (spec 037): el 30 % de lo esperado, sin nubosidad ni sombreado, para que se vea siempre como
+        // rendimiento bajo (ámbar) y nunca como falla crítica.
+        if (fault == SimulatedFaultType.SevereDegradation)
+        {
+            return Math.Clamp(expected * DegradedEfficiencyRatio * own, 0.0, nominalPowerW);
+        }
+
         // Sombreado o suciedad ocasional, reproducible: en algunos bloques de 10 minutos el panel cae al 20–35 %.
         var block = (long)Math.Floor(SecondsSinceEpoch(utc) / ShadeBlockSeconds);
         var shade = DeterministicNoise.Unit(panelId, block, ShadeGateChannel) < ShadeChance
@@ -124,29 +159,29 @@ public class SolarSimulationEngine : ISolarSimulationEngine
         return Math.Clamp(expected * CloudFactor(parkId, utc) * own * shade, 0.0, nominalPowerW);
     }
 
-    public double ReadParkPowerKw(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc)
+    public double ReadParkPowerKw(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc, FaultTimeline? faults = null)
     {
         double total = 0.0;
         foreach (var inverter in inverters)
         {
-            total += ReadInverter(inverter.InverterId, parkId, inverter.NominalCapacityKw, utc).PowerKw;
+            total += ReadInverter(inverter.InverterId, parkId, inverter.NominalCapacityKw, utc, faults).PowerKw;
         }
 
         return total;
     }
 
-    public double InverterMinuteEnergyKwh(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime minuteStartUtc)
+    public double InverterMinuteEnergyKwh(Guid inverterId, Guid parkId, double nominalCapacityKw, DateTime minuteStartUtc, FaultTimeline? faults = null)
     {
         double energy = 0.0;
         for (var i = 0; i < SamplesPerMinute; i++)
         {
-            energy += ReadInverter(inverterId, parkId, nominalCapacityKw, minuteStartUtc.AddSeconds(i * SampleSeconds)).PowerKw * SampleSeconds / 3600.0;
+            energy += ReadInverter(inverterId, parkId, nominalCapacityKw, minuteStartUtc.AddSeconds(i * SampleSeconds), faults).PowerKw * SampleSeconds / 3600.0;
         }
 
         return energy;
     }
 
-    public ParkHourSummary SummarizeParkHour(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime hourStartUtc)
+    public ParkHourSummary SummarizeParkHour(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime hourStartUtc, FaultTimeline? faults = null)
     {
         if (hourStartUtc.Ticks % TimeSpan.TicksPerHour != 0)
         {
@@ -168,7 +203,7 @@ public class SolarSimulationEngine : ISolarSimulationEngine
             double power = 0.0;
             foreach (var inverter in inverters)
             {
-                power += ReadInverter(inverter.InverterId, parkId, inverter.NominalCapacityKw, sampleUtc).PowerKw;
+                power += ReadInverter(inverter.InverterId, parkId, inverter.NominalCapacityKw, sampleUtc, faults).PowerKw;
             }
 
             energy += power * SampleSeconds / 3600.0;
@@ -178,7 +213,7 @@ public class SolarSimulationEngine : ISolarSimulationEngine
         return new ParkHourSummary(energy, peak);
     }
 
-    public double EnergyTodayKwh(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc)
+    public double EnergyTodayKwh(Guid parkId, IReadOnlyCollection<SimulatedInverter> inverters, DateTime utc, FaultTimeline? faults = null)
     {
         if (inverters.Count == 0)
         {
@@ -195,7 +230,7 @@ public class SolarSimulationEngine : ISolarSimulationEngine
         {
             foreach (var inverter in inverters)
             {
-                energy += ReadInverter(inverter.InverterId, parkId, inverter.NominalCapacityKw, sample).PowerKw * SampleSeconds / 3600.0;
+                energy += ReadInverter(inverter.InverterId, parkId, inverter.NominalCapacityKw, sample, faults).PowerKw * SampleSeconds / 3600.0;
             }
         }
 
@@ -209,6 +244,10 @@ public class SolarSimulationEngine : ISolarSimulationEngine
         var startHour = local.TimeOfDay.TotalHours;
         return startHour + 1.0 <= SolarCalendar.SunriseHour(local) || startHour >= SolarCalendar.SunsetHour(local);
     }
+
+    // De noche (o apagado por una falla) el inversor solo conserva un voltaje DC residual muy bajo.
+    private static double ResidualDcVoltage(Guid inverterId, DateTime utc)
+        => 8.0 + (4.0 * DeterministicNoise.Smooth(inverterId, utc, 60, ResidualVoltageChannel));
 
     // La nubosidad es la misma para todos los equipos de un parque en un instante.
     private static double CloudFactor(Guid parkId, DateTime utc)

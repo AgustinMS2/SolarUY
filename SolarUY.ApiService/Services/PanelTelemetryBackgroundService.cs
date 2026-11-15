@@ -42,6 +42,7 @@ public class PanelTelemetryBackgroundService : SimulationEmitterBackgroundServic
     {
         using var scope = _scopeFactory.CreateScope();
         var panelRepo = scope.ServiceProvider.GetRequiredService<ISolarPanelRepository>();
+        var faults = FaultTimeline.From(scope.ServiceProvider.GetRequiredService<ISimulatedFaultRepository>().GetAll());
 
         var localTime = SolarCalendar.ToLocal(instantUtc);
 
@@ -53,7 +54,7 @@ public class PanelTelemetryBackgroundService : SimulationEmitterBackgroundServic
 
         foreach (var panel in panels)
         {
-            var activePowerW = Math.Round(_engine.ReadPanelPowerW(panel.Id, panel.SolarParkId, panel.PowerW, instantUtc), 1);
+            var activePowerW = Math.Round(_engine.ReadPanelPowerW(panel.Id, panel.SolarParkId, panel.PowerW, instantUtc, faults), 1);
 
             var telemetry = _telemetryService.CalculateMetrics(
                 panel,
@@ -61,7 +62,8 @@ public class PanelTelemetryBackgroundService : SimulationEmitterBackgroundServic
                 panel.SolarNode?.Name,
                 activePowerW,
                 localTime,
-                instantUtc);
+                instantUtc,
+                faults.EffectiveFault(panel.Id, instantUtc));
 
             await _hubContext.Clients
                 .Group(PanelTelemetryHub.GetGroupName(panel.Id))

@@ -21,6 +21,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<ParkHourlyGeneration> ParkHourlyGenerations => Set<ParkHourlyGeneration>();
     public DbSet<InverterMinuteReading> InverterMinuteReadings => Set<InverterMinuteReading>();
     public DbSet<GridInjectionEvent> GridInjectionEvents => Set<GridInjectionEvent>();
+    public DbSet<SimulatedFault> SimulatedFaults => Set<SimulatedFault>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -223,6 +224,19 @@ public class SolarUyDbContext : DbContext
             // Consultas por período de la spec 034: por parque y por nodo.
             entity.HasIndex(e => new { e.SolarParkId, e.MinuteUtc });
             entity.HasIndex(e => new { e.SolarNodeId, e.MinuteUtc });
+        });
+
+        // Spec 037: fallas simuladas con inicio y fin. Sin llaves foráneas: dar de baja un equipo no borra ni bloquea sus fallas.
+        modelBuilder.Entity<SimulatedFault>(entity =>
+        {
+            entity.ToTable("SimulatedFaults");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FaultType).IsRequired();
+            entity.Property(e => e.TargetType).IsRequired();
+            entity.Property(e => e.StartedAtUtc).IsRequired();
+            entity.Property(e => e.StartedBy).IsRequired().HasMaxLength(256);
+            // Línea de tiempo de un equipo.
+            entity.HasIndex(e => new { e.TargetId, e.StartedAtUtc });
         });
     }
 }

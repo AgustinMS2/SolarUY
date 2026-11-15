@@ -8,6 +8,7 @@
 
 - [x] **T3. `ParkTelemetryBackgroundService` para emisión periódica de lecturas.** RF-2
   - Hecho cuando: el servicio en segundo plano se ejecuta periódicamente (cada 3-5 s) y transmite las métricas calculadas a los grupos del hub SignalR.
+  - Actualizada el 2026-11-15 (spec 036): el servicio emite cada `Simulation:IntervalSeconds` (5 s por defecto) con la potencia y la energía del día calculadas por el motor de simulación.
 
 - [x] **T4. Pantalla Blazor `/parques/{id:guid}/monitoreo` (`ParkMonitoring.razor`).** RF-1, RF-2, RF-3, RF-4, RF-5
   - Hecho cuando: la página se conecta al hub, dibuja el tacómetro SVG reactivo, actualiza las tarjetas de métricas en vivo, muestra alertas ante caída bajo umbral, refleja el estado del enlace y se desuscribe al salir.

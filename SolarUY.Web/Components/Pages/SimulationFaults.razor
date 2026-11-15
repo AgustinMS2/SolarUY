@@ -1,0 +1,242 @@
+@page "/simulacion-fallas"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Administrator)]
+@using SolarUY.ApiService.Domain
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Simulation
+@using SolarUY.Web.Services
+@inject SimulationFaultApiClient ApiClient
+@inject IJSRuntime JS
+
+<PageTitle>Simulación de fallas — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h1 class="h3 mb-1 text-primary d-flex align-items-center">
+                <span class="bi bi-lightning-charge-fill me-2" aria-hidden="true"></span>
+                Simulación de fallas
+            </h1>
+            <p class="text-muted mb-0">Inyectá fallas en paneles e inversores para probar las alertas y el mantenimiento correctivo.</p>
+        </div>
+        <button type="button" class="btn btn-outline-danger d-flex align-items-center" data-testid="clear-all"
+                @onclick="ClearAllAsync" disabled="@(!CanOperate)">
+            <span class="bi bi-arrow-counterclockwise me-2" aria-hidden="true"></span>
+            <span>Restablecer todas las fallas</span>
+        </button>
+    </div>
+
+    <div class="alert alert-warning border-warning d-flex align-items-center mb-3 shadow-sm" role="alert" data-testid="sim-banner">
+        <span class="bi bi-exclamation-triangle-fill fs-4 me-3" aria-hidden="true"></span>
+        <div class="fw-bold text-uppercase">Entorno de simulación y pruebas</div>
+    </div>
+
+    @if (_overview is { Enabled: false })
+    {
+        <div class="alert alert-secondary d-flex align-items-center" role="alert" data-testid="sim-disabled">
+            <span class="bi bi-slash-circle me-2" aria-hidden="true"></span>
+            <div>El simulador de fallas no está habilitado en este entorno.</div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert" data-testid="sim-success">
+            <span class="bi bi-check-circle-fill me-2" aria-hidden="true"></span>
+            <div>@_successMessage</div>
+            <button type="button" class="btn-close" aria-label="Cerrar" @onclick="() => _successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert" data-testid="sim-error">
+            <span class="bi bi-exclamation-octagon-fill me-2" aria-hidden="true"></span>
+            <div>@_errorMessage</div>
+            <button type="button" class="btn-close" aria-label="Cerrar" @onclick="() => _errorMessage = null"></button>
+        </div>
+    }
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status"><span class="visually-hidden">Cargando...</span></div>
+            <span class="text-muted">Cargando equipos...</span>
+        </div>
+    }
+    else if (_overview is null)
+    {
+        <div class="alert alert-danger d-flex align-items-center justify-content-between" role="alert">
+            <div>No se pudo cargar el simulador de fallas.</div>
+            <button class="btn btn-outline-danger btn-sm" @onclick="LoadAsync">
+                <span class="bi bi-arrow-clockwise me-1"></span> Reintentar
+            </button>
+        </div>
+    }
+    else
+    {
+        @EquipmentCard("Paneles solares", "bi-grid-3x3-gap-fill", SimulatedFaultTarget.Panel, _overview.Panels, "panels")
+        @EquipmentCard("Inversores (uno por nodo)", "bi-cpu-fill", SimulatedFaultTarget.Inverter, _overview.Inverters, "inverters")
+    }
+</div>
+
+@code {
+    private SimulationFaultOverviewDto? _overview;
+    private bool _isLoading = true;
+    private string? _successMessage;
+    private string? _errorMessage;
+
+    // Tipo de falla elegido en cada fila (por id de equipo).
+    private readonly Dictionary<Guid, SimulatedFaultType> _selection = new();
+
+    private bool CanOperate => _overview is { Enabled: true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _overview = await ApiClient.GetOverviewAsync();
+        }
+        catch (Exception)
+        {
+            _overview = null;
+        }
+
+        _isLoading = false;
+    }
+
+    private SimulatedFaultType SelectedFor(SimulatedFaultTarget target, Guid id)
+        => _selection.TryGetValue(id, out var type) ? type : FaultCatalog.TypesFor(target)[0];
+
+    private void OnFaultSelected(Guid id, ChangeEventArgs e)
+    {
+        if (Enum.TryParse<SimulatedFaultType>(e.Value?.ToString(), out var type))
+        {
+            _selection[id] = type;
+        }
+    }
+
+    private async Task InjectAsync(SimulatedFaultTarget target, Guid id)
+    {
+        await RunAsync(() => ApiClient.InjectAsync(target, id, SelectedFor(target, id)));
+    }
+
+    private async Task ClearAsync(SimulatedFaultTarget target, Guid id)
+    {
+        await RunAsync(() => ApiClient.ClearTargetAsync(target, id));
+    }
+
+    private async Task ClearAllAsync()
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "¿Restablecer todas las fallas simuladas y devolver el parque a operación normal?");
+        if (confirmed)
+        {
+            await RunAsync(() => ApiClient.ClearAllAsync());
+        }
+    }
+
+    private async Task RunAsync(Func<Task<SimulationFaultResponse>> action)
+    {
+        _successMessage = null;
+        _errorMessage = null;
+
+        var result = await action();
+        if (result.Success)
+        {
+            _successMessage = result.Message;
+        }
+        else
+        {
+            _errorMessage = result.ErrorMessage;
+        }
+
+        await LoadAsync();
+    }
+
+    private static string SeverityBadge(AlertSeverity? severity) => severity switch
+    {
+        AlertSeverity.Critical => "bg-danger",
+        AlertSeverity.Warning => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+
+    private RenderFragment EquipmentCard(string title, string icon, SimulatedFaultTarget target, IReadOnlyList<SimulationFaultTargetDto> items, string key) => __builder =>
+    {
+        <div class="card border-0 shadow-sm rounded-3 mb-4" data-testid="@($"card-{key}")">
+            <div class="card-header bg-transparent border-0 pt-3 px-3 pb-0">
+                <h2 class="h5 mb-0 text-secondary fw-bold d-flex align-items-center">
+                    <span class="bi @icon me-2 text-primary" aria-hidden="true"></span> @title
+                    <span class="badge bg-light text-muted border ms-2">@items.Count</span>
+                </h2>
+            </div>
+            <div class="card-body px-3">
+                @if (items.Count == 0)
+                {
+                    <p class="text-muted mb-0">No hay equipos que emitan lecturas.</p>
+                }
+                else
+                {
+                    <div class="d-none d-lg-flex row g-2 text-secondary small fw-semibold text-uppercase border-bottom pb-2 mx-0">
+                        <div class="col-lg-3">Equipo</div>
+                        <div class="col-lg-2">Parque / nodo</div>
+                        <div class="col-lg-2">Falla activa</div>
+                        <div class="col-lg-5">Acciones</div>
+                    </div>
+                    @foreach (var item in items)
+                    {
+                        var typeOptions = FaultCatalog.TypesFor(target);
+                        <div class="row g-2 align-items-center py-2 mx-0 border-bottom" data-testid="@($"row-{item.SerieNumber}")">
+                            <div class="col-12 col-lg-3">
+                                <span class="font-monospace fw-semibold">@item.SerieNumber</span>
+                            </div>
+                            <div class="col-12 col-lg-2 small text-muted">
+                                @item.ParkName<br />@item.NodeName
+                            </div>
+                            <div class="col-12 col-lg-2">
+                                @if (item.ActiveFault.HasValue)
+                                {
+                                    <span class="badge @SeverityBadge(item.ActiveFaultSeverity)" data-testid="@($"fault-{item.SerieNumber}")">
+                                        @item.ActiveFaultLabel
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Sin falla</span>
+                                }
+                            </div>
+                            <div class="col-12 col-lg-5">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <select class="form-select form-select-sm" style="width:auto;max-width:100%" aria-label="Tipo de falla" disabled="@(!CanOperate)"
+                                            value="@SelectedFor(target, item.Id)" @onchange="e => OnFaultSelected(item.Id, e)"
+                                            data-testid="@($"select-{item.SerieNumber}")">
+                                        @foreach (var type in typeOptions)
+                                        {
+                                            <option value="@type">@FaultCatalog.LabelOf(type) (@(FaultCatalog.SeverityOf(type) == AlertSeverity.Critical ? "Crítico" : "Advertencia"))</option>
+                                        }
+                                    </select>
+                                    <button type="button" class="btn btn-sm btn-danger" disabled="@(!CanOperate)"
+                                            @onclick="() => InjectAsync(target, item.Id)" data-testid="@($"inject-{item.SerieNumber}")">
+                                        <span class="bi bi-lightning-fill me-1" aria-hidden="true"></span>Inyectar falla
+                                    </button>
+                                    @if (item.ActiveFault.HasValue)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success" disabled="@(!CanOperate)"
+                                                @onclick="() => ClearAsync(target, item.Id)" data-testid="@($"clear-{item.SerieNumber}")">
+                                            <span class="bi bi-wrench-adjustable me-1" aria-hidden="true"></span>Restablecer / Reparar Falla Simulada
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    };
+}
