@@ -16,7 +16,10 @@ public class ParkTelemetryService : IParkTelemetryService
         var isDaylight = IsDaylightHour(localTimeUruguay);
         var isActive = park.Status == SolarParkStatus.Active;
 
-        var effectivePower = (isDaylight && isActive)
+        // Spec 033: durante el corte administrativo el parque no entrega potencia a la red.
+        var isInjecting = park.GridInjectionEnabled;
+
+        var effectivePower = (isDaylight && isActive && isInjecting)
             ? Math.Max(0.0, currentPowerKw)
             : 0.0;
 
@@ -24,7 +27,8 @@ public class ParkTelemetryService : IParkTelemetryService
             ? Math.Round((effectivePower / park.MaxCapacityKw) * 100.0, 1)
             : 0.0;
 
-        var isAlertActive = isActive && isDaylight && effectivePower < park.PowerAlertThresholdKw;
+        // El corte administrativo no genera alertas de generación baja (mismo tratamiento que un parque inactivo).
+        var isAlertActive = isActive && isDaylight && isInjecting && effectivePower < park.PowerAlertThresholdKw;
 
         return new ParkTelemetryDto
         {

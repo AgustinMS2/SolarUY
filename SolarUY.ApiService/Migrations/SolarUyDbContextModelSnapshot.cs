@@ -89,6 +89,55 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("Alerts", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.GridInjectionEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("OrderedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OrderedBy")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("OrdersSent")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ParkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("RemoteIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParkId", "OrderedAtUtc");
+
+                    b.ToTable("GridInjectionEvents", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>
                 {
                     b.Property<Guid>("Id")
@@ -106,6 +155,11 @@ namespace SolarUY.ApiService.Migrations
                     b.Property<string>("Endpoint")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("GridInjectionEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<double>("NominalCapacityKw")
                         .HasColumnType("double precision");
@@ -321,6 +375,11 @@ namespace SolarUY.ApiService.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("GridInjectionEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<double>("Latitude")
                         .HasColumnType("double precision");
 
@@ -423,6 +482,17 @@ namespace SolarUY.ApiService.Migrations
                         .IsRequired();
 
                     b.Navigation("SolarPark");
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.GridInjectionEvent", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarPark", "Park")
+                        .WithMany()
+                        .HasForeignKey("ParkId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Park");
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.Inverter", b =>

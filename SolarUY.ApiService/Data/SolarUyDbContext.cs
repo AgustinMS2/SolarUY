@@ -18,6 +18,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<MaintenanceOrder> MaintenanceOrders => Set<MaintenanceOrder>();
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<PanelControlEvent> PanelControlEvents => Set<PanelControlEvent>();
+    public DbSet<GridInjectionEvent> GridInjectionEvents => Set<GridInjectionEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,8 @@ public class SolarUyDbContext : DbContext
             entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
             entity.Property(e => e.NormalizedName).IsRequired().HasMaxLength(100);
             entity.HasIndex(e => e.NormalizedName).IsUnique();
+            // Spec 033: estado administrativo de inyección con default true en la BD.
+            entity.Property(e => e.GridInjectionEnabled).IsRequired().HasDefaultValue(true);
         });
 
         modelBuilder.Entity<SolarPanel>(entity =>
@@ -79,6 +82,8 @@ public class SolarUyDbContext : DbContext
             // At most one inverter per node.
             entity.HasIndex(e => e.SolarNodeId).IsUnique();
             entity.HasOne(e => e.SolarNode).WithMany().HasForeignKey(e => e.SolarNodeId).OnDelete(DeleteBehavior.Restrict);
+            // Spec 033: estado administrativo de inyección con default true en la BD.
+            entity.Property(e => e.GridInjectionEnabled).IsRequired().HasDefaultValue(true);
         });
 
         modelBuilder.Entity<Technician>(entity =>
@@ -159,6 +164,27 @@ public class SolarUyDbContext : DbContext
             entity.HasOne(e => e.SolarPanel)
                 .WithMany()
                 .HasForeignKey(e => e.SolarPanelId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Spec 033: bitácora inmutable de órdenes de inyección a la red.
+        modelBuilder.Entity<GridInjectionEvent>(entity =>
+        {
+            entity.ToTable("GridInjectionEvents");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TargetType).IsRequired();
+            entity.Property(e => e.TargetName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Action).IsRequired();
+            entity.Property(e => e.OrderedBy).IsRequired().HasMaxLength(256);
+            entity.Property(e => e.OrderedAtUtc).IsRequired();
+            entity.Property(e => e.RemoteIp).HasMaxLength(45);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.OrdersSent).IsRequired();
+            // Historial de eventos por parque, en orden cronológico.
+            entity.HasIndex(e => new { e.ParkId, e.OrderedAtUtc });
+            entity.HasOne(e => e.Park)
+                .WithMany()
+                .HasForeignKey(e => e.ParkId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

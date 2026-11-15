@@ -55,4 +55,14 @@ public class FakeSolarNodeRepository : ISolarNodeRepository
             .ToList()
             .AsReadOnly();
     }
+
+    // Spec 033: nodos de un parque, para resolver los inversores a los que se envía la orden de inyección.
+    public IReadOnlyList<SolarNode> GetByParkId(Guid parkId)
+    {
+        return PersistedNodes
+            .Where(n => n.SolarParkId == parkId)
+            .OrderBy(n => n.NormalizedName, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            .AsReadOnly();
+    }
 }

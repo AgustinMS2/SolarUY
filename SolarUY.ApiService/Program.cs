@@ -23,9 +23,13 @@ builder.Services.AddScoped<SolarUY.ApiService.Repositories.ITechnicianRepository
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IMaintenanceRepository, SolarUY.ApiService.Repositories.MaintenanceRepository>();
 // Bitácora de órdenes de control sobre paneles (spec 032).
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IPanelControlEventRepository, SolarUY.ApiService.Repositories.PanelControlEventRepository>();
+// Bitácora de órdenes de inyección a la red (spec 033).
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IGridInjectionEventRepository, SolarUY.ApiService.Repositories.GridInjectionEventRepository>();
 // Control remoto de paneles (spec 032): stub del envío al inversor hasta la spec 036.
 builder.Services.AddSingleton<SolarUY.ApiService.Services.IInverterCommandSender, SolarUY.ApiService.Services.InMemoryInverterCommandSender>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IPanelControlService, SolarUY.ApiService.Services.PanelControlService>();
+// Control de inyección a la red (spec 033).
+builder.Services.AddScoped<SolarUY.ApiService.Services.IGridInjectionService, SolarUY.ApiService.Services.GridInjectionService>();
 builder.Services.AddScoped<SolarUY.ApiService.Repositories.IAlertRepository, SolarUY.ApiService.Repositories.AlertRepository>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IAlertService, SolarUY.ApiService.Services.AlertService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IAlertPublisher, SolarUY.ApiService.Services.AlertPublisher>();

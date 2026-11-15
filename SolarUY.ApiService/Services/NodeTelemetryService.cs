@@ -28,9 +28,12 @@ public class NodeTelemetryService : INodeTelemetryService
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        // Nodo inactivo o sin inversor: el inversor no opera, por lo que se
-        // reportan los valores eléctricos en cero y se suprimen alarmas espurias.
-        var isOperating = node.Status == SolarNodeStatus.Active && inverter is not null;
+        // Nodo inactivo, sin inversor o con la inyección a la red detenida administrativamente
+        // (spec 033): el inversor no entrega potencia, por lo que se reportan los valores
+        // eléctricos en cero y se suprimen alarmas espurias.
+        var isOperating = node.Status == SolarNodeStatus.Active
+            && inverter is not null
+            && inverter.GridInjectionEnabled;
 
         return new NodeTelemetryDto
         {

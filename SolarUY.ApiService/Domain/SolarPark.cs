@@ -10,6 +10,10 @@ public class SolarPark
     public double MaxCapacityKw { get; set; }
     public double PowerAlertThresholdKw { get; set; }
     public SolarParkStatus Status { get; set; }
+
+    // Spec 033: estado administrativo de la inyección a la red (independiente del estado operativo).
+    public bool GridInjectionEnabled { get; set; } = true;
+
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
 }

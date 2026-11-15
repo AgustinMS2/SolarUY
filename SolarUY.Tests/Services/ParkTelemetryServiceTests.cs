@@ -97,5 +97,21 @@ public class ParkTelemetryServiceTests
 
         Assert.Equal(0.0, result.CapacityPercentage);
     }
+
+    // Spec 033: durante el corte administrativo la potencia entregada se reporta en 0 kW
+    // y no se generan alertas de generación baja (de día y por debajo del umbral).
+    [Fact]
+    public void CalculateMetrics_WhenInjectionIsCut_SetsPowerToZeroAndSuppressesAlert()
+    {
+        var park = CreateActivePark(maxCapacityKw: 500, thresholdKw: 300);
+        park.GridInjectionEnabled = false;
+        var morning = new DateTime(2026, 11, 12, 10, 0, 0);
+
+        var result = _service.CalculateMetrics(park, currentPowerKw: 150, energyTodayKwh: 300, morning);
+
+        Assert.Equal(0.0, result.CurrentPowerKw);
+        Assert.Equal(0.0, result.CapacityPercentage);
+        Assert.False(result.IsAlertActive);
+    }
 }
 

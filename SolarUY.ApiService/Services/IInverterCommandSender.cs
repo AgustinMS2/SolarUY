@@ -10,4 +10,9 @@ public interface IInverterCommandSender
     bool SendDeactivate(string panelSerieNumber, string? inverterEndpoint);
 
     bool SendActivate(string panelSerieNumber, string? inverterEndpoint);
+
+    // Spec 033: órdenes de corte / reanudación de la inyección a la red sobre el inversor.
+    bool SendInjectionCut(string inverterSerieNumber, string? inverterEndpoint);
+
+    bool SendInjectionResume(string inverterSerieNumber, string? inverterEndpoint);
 }

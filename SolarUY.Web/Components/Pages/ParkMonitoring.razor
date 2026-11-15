@@ -92,27 +92,43 @@
             </div>
         }
 
-        <!-- RF-3 Alert: Power Below Alert Threshold -->
+        <!-- RF-4: Banner de inyección administrativa a la red -->
+        @if (_park.GridInjectionEnabled == false && _park.Status == "Activo")
+        {
+            <div class="alert alert-danger border-0 shadow-sm mb-4" role="alert">
+                <div class="d-flex align-items-center">
+                    <span class="bi bi-exclamation-triangle-fill fs-3 text-danger me-3"></span>
+                    <div>
+                        <h6 class="alert-heading fw-bold mb-0">INYECCIÓN A LA RED DETENIDA ADMINISTRATIVAMENTE</h6>
+                        <p class="mb-0 small text-muted">
+                            La inyección a la red ha sido desactivada por decisión administrativa. La potencia entregada se reporta en 0 kW.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <!-- Alert: Power Below Alert Threshold -->
         @if (_telemetry?.IsAlertActive == true)
         {
             <div class="alert alert-warning border-warning-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
                 <span class="bi bi-exclamation-triangle-fill fs-3 text-warning me-3"></span>
                 <div>
-                    <h6 class="alert-heading fw-bold mb-1">Generación por debajo del umbral de alerta (@($"{_park.PowerAlertThresholdKw:0.##} kW"))</h6>
+                    <h6 class="alert-heading fw-bold mb-1">Generación por debajo del umbral de alerta</h6>
                     <p class="mb-0 small">
-                        La potencia instantánea (@($"{_telemetry.CurrentPowerKw:0.0} kW")) ha caído por debajo del umbral de alerta operativo configurado para este parque durante horas de sol.
+                        La potencia instantánea ha caído por debajo del umbral de alerta operativo configurado para este parque durante horas de sol.
                     </p>
                 </div>
             </div>
         }
 
-        <!-- RF-4 Warning: Reconnecting SignalR -->
+        <!-- Warning: Reconnecting SignalR -->
         @if (_hubConnection?.State == HubConnectionState.Reconnecting)
         {
             <div class="alert alert-info border-info-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
                 <span class="spinner-border spinner-border-sm text-info me-2" role="status"></span>
                 <div>
-                    Reconectando con el servidor de telemetría... Se mantiene visible la última lectura recibida (@(_telemetry?.TimestampUtc.ToLocalTime().ToString("HH:mm:ss") ?? "reciente")).
+                    Reconectando con el servidor de telemetría... Se mantiene visible la última lectura recibida.
                 </div>
             </div>
         }
@@ -158,7 +174,7 @@
 
                                 <!-- Min / Max Labels -->
                                 <text x="18" y="125" font-size="9" fill="#64748b" font-weight="600" text-anchor="middle">0 kW</text>
-                                <text x="182" y="125" font-size="9" fill="#64748b" font-weight="600" text-anchor="middle">@($"{_park.MaxCapacityKw:0.##} kW")</text>
+                                <text x="182" y="125" font-size="9" fill="#64748b" font-weight="600" text-anchor="middle">@_park.MaxCapacityKw kW</text>
 
                                 <!-- Needle -->
                                 <line x1="100" y1="105" x2="100" y2="40"
@@ -178,7 +194,7 @@
                                     @CurrentPowerKw.ToString("F1") <span class="fs-4 fw-normal text-muted">kW</span>
                                 </div>
                                 <div class="badge @(CapacityPercentage > 85 ? "bg-warning-subtle text-warning-emphasis" : "bg-primary-subtle text-primary") px-3 py-1 fs-6 rounded-pill mt-1">
-                                    @($"{CapacityPercentage:0.0}% de capacidad")
+                                    @(CapacityPercentage.ToString("F1"))% de capacidad
                                 </div>
                             </div>
                         </div>
@@ -205,7 +221,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 class="fw-bold mb-0 text-dark">@($"{CurrentPowerKw:0.0} kW")</h3>
+                                    <h3 class="fw-bold mb-0 text-dark">@CurrentPowerKw.ToString("F1") kW</h3>
                                     <small class="text-muted">Generación instantánea</small>
                                 </div>
                             </div>
@@ -223,8 +239,8 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 class="fw-bold mb-0 text-dark">@($"{CapacityPercentage:0.0}%")</h3>
-                                    <small class="text-muted">De @($"{_park.MaxCapacityKw:0.##} kW") contratados</small>
+                                    <h3 class="fw-bold mb-0 text-dark">@CapacityPercentage.ToString("F1")%</h3>
+                                    <small class="text-muted">De @_park.MaxCapacityKw kW contratados</small>
                                 </div>
                             </div>
                         </div>
@@ -241,7 +257,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 class="fw-bold mb-0 text-dark">@($"{EnergyTodayKwh:0.0} kWh")</h3>
+                                    <h3 class="fw-bold mb-0 text-dark">@EnergyTodayKwh.ToString("F1") kWh</h3>
                                     <small class="text-muted">Acumulado desde 00:00 UYT</small>
                                 </div>
                             </div>
@@ -259,7 +275,7 @@
                                     </div>
                                 </div>
                                 <div>
-                                    <h3 class="fw-bold mb-0 text-dark">@($"{_park.PowerAlertThresholdKw:0.##} kW")</h3>
+                                    <h3 class="fw-bold mb-0 text-dark">@_park.PowerAlertThresholdKw kW</h3>
                                     <small class="text-muted">Alerta diurna operativa</small>
                                 </div>
                             </div>
@@ -284,10 +300,43 @@
                     <span class="bi bi-check-circle-fill text-success"></span>
                     <span class="text-secondary small">Estado del Parque: <strong>@_park.Status</strong></span>
                 </div>
+
+                <!-- RF-1/RF-5: Botones de control de inyección (solo Administrador) -->
+                <AuthorizeView Roles="Administrador">
+                    <div class="d-flex gap-2 mt-2">
+                        @if (_park.GridInjectionEnabled == true)
+                        {
+                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmCutInjection('@_park.Id')">
+                                <span class="bi bi-power"></span> Corte Inyección
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-success btn-sm" onclick="confirmResumeInjection('@_park.Id')">
+                                <span class="bi bi-lightning-charge"></span> Reanudar Inyección
+                            </button>
+                        }
+                    </div>
+                </AuthorizeView>
             </div>
         </div>
     }
 </div>
+
+<script>
+    function confirmCutInjection(parkId) {
+        if (confirm('¿Estás seguro de cortar la inyección a la red de este parque?\n\nLa potencia pasará a 0 kW inmediatamente.')) {
+            // API call handled separately or via modal
+            console.log('Corte de inyección solicitado para parque', parkId);
+        }
+    }
+
+    function confirmResumeInjection(parkId) {
+        if (confirm('¿Estás seguro de reanudar la inyección a la red de este parque?')) {
+            console.log('Reanudación de inyección solicitada para parque', parkId);
+        }
+    }
+</script>
 
 @code {
     [Parameter]

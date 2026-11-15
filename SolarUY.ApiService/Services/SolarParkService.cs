@@ -116,7 +116,8 @@ public class SolarParkService : ISolarParkService
                 p.Longitude,
                 p.MaxCapacityKw,
                 p.PowerAlertThresholdKw,
-                p.Status == SolarParkStatus.Active ? "Activo" : "Inactivo"
+                p.Status == SolarParkStatus.Active ? "Activo" : "Inactivo",
+                p.GridInjectionEnabled
             ))
             .ToList();
     }
@@ -136,7 +137,8 @@ public class SolarParkService : ISolarParkService
             park.Longitude,
             park.MaxCapacityKw,
             park.PowerAlertThresholdKw,
-            park.Status == SolarParkStatus.Active ? "Activo" : "Inactivo"
+            park.Status == SolarParkStatus.Active ? "Activo" : "Inactivo",
+            park.GridInjectionEnabled
         );
 
         return ServiceResult<SolarParkDto>.Ok(dto);

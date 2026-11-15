@@ -9,5 +9,7 @@ public record SolarNodeDto(
     string SolarParkName,
     int PanelsCount,
     string? InverterSerie,
-    string Status
+    string Status,
+    // Spec 033: estado administrativo de inyección del inversor del nodo (null cuando no tiene inversor).
+    bool? InverterGridInjectionEnabled
 );
