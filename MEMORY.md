@@ -5,7 +5,7 @@
 - **Arquitectura base**: Solución .NET 9 (todos los proyectos en `net9.0`; Aspire 13 igual necesita tener instalado el SDK de .NET 10 para compilar el AppHost) con .NET Aspire (`SolarUY.AppHost`), Web Frontend (`SolarUY.Web` - Blazor Server), API de negocio (`SolarUY.ApiService`), y librerías compartidas (`SolarUY.ServiceDefaults`).
 - **Persistencia**: PostgreSQL con EF Core (planificado soporte TimescaleDB para telemetría de series de tiempo).
 - **Autenticación**: Keycloak OIDC containerizado en Aspire (Roles: `Administrador`, `Técnico`).
-- **Fase actual**: SDD en marcha. Specs 001–025, 027 y 028 implementadas y verificadas; spec 026 con T1–T4 verificadas y T5 bloqueada por la 031; rediseño "SolarOps Clean" integrado; 316 tests en verde (uno depende de la hora, ver más abajo).
+- **Fase actual**: SDD en marcha. Specs 001–025 y 027–029 implementadas y verificadas; spec 026 con T1–T4 verificadas y T5 bloqueada por la 031; rediseño "SolarOps Clean" integrado; 340 tests (339 en verde; uno depende de la hora, ver más abajo).
 
 ---
 
@@ -29,7 +29,7 @@
 | | Asignar Panel a Nodo | Administrador | Implementada (`014`) |
 | **Mantenimiento** | Reservar Fecha / Asignar Técnico / Cancelar / Listar | Administrador | Implementadas (`021`–`024`) |
 | | Ver Mis Mantenimientos / Confirmar Mantenimiento | Técnico | `025` implementada; `026` con T5 bloqueada por la `031` |
-| **Monitoreo** | Ver Generación Tiempo Real (Parque, Nodo, Panel) | Todos (SignalR) | Borrador (`027`–`029`) |
+| **Monitoreo** | Ver Generación Tiempo Real (Parque, Nodo, Panel) | Todos (SignalR) | `027` y `028` implementadas; `029` implementada |
 | | Ver Estado de Salud de Paneles / Recibir Alerta de Falla | Todos | Borrador (`030`, `031`) |
 | **Control Inversor** | Activar / Desactivar Panel | Administrador | Borrador (`032`) |
 | | Activar / Desactivar Inyección a la Red | Administrador | Borrador (`033`) |
@@ -72,7 +72,7 @@
 | `026-confirmar-mantenimiento` | **Código completo** (T5 bloqueada) | Validación | 4 / 5 | Spec/plan/tareas ajustados (campo "estado del panel", mensajes faltantes, límite de observaciones 500→1000, RF-3 diferido a la spec 031 porque las alertas no existen; cualquier Técnico o Administrador puede confirmar cualquier orden, decisión del equipo). Verificadas T1 (campo `PanelOutcome` + migración), T2 (`ConfirmMaintenance`, 30 tests), T3 (`POST /api/maintenances/{id}/confirm`) y T4 (formulario `/mantenimientos/{id}/confirmar` y botón "Confirmar" en la lista del Administrador), esta última probada en navegador el 2026-11-11 (validaciones, confirmar, ya completado, "Cancelar", doble pestaña y vista móvil). **T5** (RF-3, resolver alertas) bloqueada por la spec 031. |
 | `027-ver-generacion-tiempo-real-parque` | **Implementada** | Completada | 5 / 5 | Spec 027 finalizada (T1–T5 completas: Hub SignalR, BackgroundService, Service de telemetría con TDD, tacómetro SVG Blazor y botón de navegación). Continuar con siguiente spec del backlog (`028-ver-generacion-tiempo-real-nodo`). |
 | 028-ver-generacion-tiempo-real-nodo | **Implementada** | Completada | 5 / 5 | T1–T5 completas (316 tests en verde). T4: `NodeMonitoring.razor` en `/nodos/{id}/monitoreo` con sparkline SVG de potencia (búfer rodante 20 puntos), 6 tarjetas eléctricas, alertas RF-3/RF-4, banner RF-5 sin conexión SignalR y ciclo de vida `IAsyncDisposable` (RF-7). T5: botón "Monitorear" en `/nodos` (visible para ambos roles). Verificada en navegador (Edge vía chrome-devtools-mcp) el 2026-11-13: desktop y móvil, actualización en vivo cada 3 s confirmada (valores cambian entre lecturas), y nodo sin inversor sin intento de conexión (no hay request a `/hubs/node-telemetry`). Corregido en el proceso: bug de cultura (SVG con decimales con coma en es-UY) y base del simulador de temperatura a 30 °C para que la RF-3 sea alcanzable. Continuar con siguiente spec del backlog (`029-ver-generacion-tiempo-real-panel`, en borrador). |
-| 029-ver-generacion-tiempo-real-panel | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
+| `029-ver-generacion-tiempo-real-panel` | **Implementada** | Completada | 5 / 5 | Aprobada y clarificada el 2026-11-15 (ruta `/paneles/{id}/monitoreo` con botón en el listado; "panel desactivado manualmente" pasa a la spec 032; "En Falla" pasa a la 037; rendimiento bajo = menos del 40 % de la potencia esperada a esa hora, con curva solar sen(π·(h−6)/14) entre 6 y 20 h). T1: `PanelTelemetryService` (24 tests, rojo y luego verde). T2: `PanelTelemetryHub` en `/hubs/panel-telemetry`. T3: `PanelTelemetryBackgroundService` (lecturas simuladas cada 3 s, solo paneles activos con nodo activo). T4: `PanelMonitoring.razor`. T5: botón "Monitorear" en paneles activos de `/paneles`. Sin migraciones. T3–T5 verificadas en navegador con Docker el 2026-11-15. |
 | 030-ver-estado-salud-paneles | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | 031-recibir-alerta-falla | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | 032-activar-desactivar-panel | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
@@ -95,7 +95,7 @@
   2. ~~Validar en navegador la T4 de la spec 011~~ — hecho (2026-11-11).
   3. Specs 015, 016 y 017 verificadas con Keycloak real.
   4. Rediseño visual "SolarOps Clean" completado e integrado en `SolarUY.Web` (2026-11-12).
-  5. Continuar con las specs 029–037 (primero aclarar y aprobar; la 027 depende de la 036) según prioridad del usuario. La 028 quedó completa: siguiente candidata `029-ver-generacion-tiempo-real-panel` (está en borrador, requiere clarificación y aprobación).
+  5. La 029 quedó completa. Siguen 030–037 (primero aclarar y aprobar). Después: 030–037 (primero aclarar y aprobar). Dependencias reales según los encabezados de cada spec: 027 → 002; 028 → 027; 029 → 028; 030 → 027; 031 → 027 y 030; 036 → 013; 037 → 031 y 036. La 026 T5 espera a la 031.
   6. Decidir si Postgres conserva los datos entre ejecuciones (`WithDataVolume()` + `ContainerLifetime.Persistent` en `SolarUY.AppHost/AppHost.cs`). Hoy el contenedor se recrea en cada arranque y se pierden parques, nodos, paneles, técnicos y reservas; Keycloak sí conserva usuarios y roles porque reimporta el realm. Es un archivo compartido: avisar al equipo.
 - **Hallazgos de la primera prueba real con Docker (2026-11-11)**:
   1. **Blazor sin interactividad**: en una PC con solo el runtime de ASP.NET Core 10, los proyectos `net9.0` con `RollForward=LatestMajor` corrían sobre el runtime 10, que ya no sirve `blazor.web.js` (404) y los formularios fallaban con "The POST request does not specify which form is being submitted". Solución: instalar los runtimes de .NET 9 (`winget install Microsoft.DotNet.AspNetCore.9` y `Microsoft.DotNet.Runtime.9`) y quitar el `RollForward` de `SolarUY.Web.csproj`. Pendiente de decisión del equipo: quitarlo también del resto o pasar todo a `net10.0` (la constitución dice .NET 9).

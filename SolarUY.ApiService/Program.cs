@@ -97,6 +97,10 @@ builder.Services.AddHostedService<SolarUY.ApiService.Services.ParkTelemetryBackg
 builder.Services.AddSingleton<SolarUY.ApiService.Services.INodeTelemetryService, SolarUY.ApiService.Services.NodeTelemetryService>();
 builder.Services.AddHostedService<SolarUY.ApiService.Services.NodeTelemetryBackgroundService>();
 
+// Telemetría en tiempo real de paneles solares (Spec 029).
+builder.Services.AddSingleton<SolarUY.ApiService.Services.IPanelTelemetryService, SolarUY.ApiService.Services.PanelTelemetryService>();
+builder.Services.AddHostedService<SolarUY.ApiService.Services.PanelTelemetryBackgroundService>();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -125,6 +129,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHub<SolarUY.ApiService.Hubs.ParkTelemetryHub>(SolarUY.ApiService.Hubs.ParkTelemetryHub.HubUrl);
 app.MapHub<SolarUY.ApiService.Hubs.NodeTelemetryHub>(SolarUY.ApiService.Hubs.NodeTelemetryHub.HubUrl);
+app.MapHub<SolarUY.ApiService.Hubs.PanelTelemetryHub>(SolarUY.ApiService.Hubs.PanelTelemetryHub.HubUrl);
 
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
 

@@ -1,0 +1,370 @@
+@page "/paneles/{id:guid}/monitoreo"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = AppRoles.Any)]
+@implements IAsyncDisposable
+@using Microsoft.AspNetCore.SignalR.Client
+@using SolarUY.ApiService.Dtos
+@using SolarUY.ApiService.Services
+@using SolarUY.Web.Security
+@inject PanelsApiClient PanelApiClient
+@inject SolarNodeApiClient NodeApiClient
+@inject IConfiguration Configuration
+@inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
+@inject AuthenticationStateProvider AuthStateProvider
+@inject KeycloakTokenService TokenService
+@inject ILogger<PanelMonitoring> Logger
+
+<PageTitle>Monitoreo en Tiempo Real — @(_panel?.SerieNumber ?? "Panel Solar") — SolarUY</PageTitle>
+
+<div class="container py-4">
+    <!-- Navegación y estado del enlace -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <a href="/paneles" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center">
+                    <span class="bi bi-arrow-left me-1"></span> Volver a Paneles
+                </a>
+                <span class="text-muted">/</span>
+                <span class="text-secondary small fw-medium">Monitoreo en Vivo</span>
+            </div>
+            <h1 class="h3 mb-0 text-primary d-flex flex-wrap align-items-center">
+                <span class="bi bi-grid-3x3-gap-fill me-2" aria-hidden="true"></span>
+                @(_panel?.SerieNumber ?? "Cargando panel...")
+                @if (_panel != null)
+                {
+                    <span class="badge bg-light text-secondary border ms-2 fs-6 fw-normal">@_panel.SolarParkName</span>
+                }
+            </h1>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            @if (!_isLive)
+            {
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="bi bi-pause-circle me-1" aria-hidden="true"></span>
+                    <span>Sin telemetría</span>
+                </span>
+            }
+            else if (_hubConnection?.State == HubConnectionState.Connected)
+            {
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="spinner-grow spinner-grow-sm me-2 text-success" role="status" aria-hidden="true"></span>
+                    <span>Conectado en vivo</span>
+                </span>
+            }
+            else if (_hubConnection?.State == HubConnectionState.Reconnecting)
+            {
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="spinner-border spinner-border-sm me-2 text-warning" role="status" aria-hidden="true"></span>
+                    <span>Reconectando con el panel...</span>
+                </span>
+            }
+            else
+            {
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill d-inline-flex align-items-center fs-6">
+                    <span class="bi bi-x-circle me-1" aria-hidden="true"></span>
+                    <span>Desconectado</span>
+                </span>
+            }
+        </div>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-content-center align-items-center py-5">
+            <div class="spinner-border text-primary me-2" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span class="text-muted">Cargando información del panel...</span>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger d-flex align-items-center justify-content-between shadow-sm" role="alert">
+            <div class="d-flex align-items-center">
+                <span class="bi bi-exclamation-triangle-fill me-2 fs-5"></span>
+                <div>@_errorMessage</div>
+            </div>
+            <a href="/paneles" class="btn btn-outline-danger btn-sm">Volver al listado</a>
+        </div>
+    }
+    else if (_panel != null)
+    {
+        @if (!string.IsNullOrEmpty(_noTelemetryMessage))
+        {
+            <!-- Panel sin lecturas en vivo: inactivo, sin nodo o con nodo inactivo -->
+            <div class="alert alert-secondary d-flex align-items-center mb-4 border-0 shadow-sm" role="alert">
+                <span class="bi bi-info-circle-fill fs-4 text-secondary me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-0">@_noTelemetryMessage</h6>
+                </div>
+            </div>
+        }
+
+        <!-- RF-3: rendimiento bajo -->
+        @if (_telemetry?.IsLowPerformance == true)
+        {
+            <div class="alert alert-warning border-warning-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
+                <span class="bi bi-cloud-sun fs-3 text-warning me-3"></span>
+                <div>
+                    <h6 class="alert-heading fw-bold mb-1">Rendimiento bajo / Posible sombreado o suciedad</h6>
+                    <p class="mb-0 small">
+                        El panel genera @($"{_telemetry.ActivePowerW:0.0} W"), menos del 40 % de los @($"{_telemetry.ExpectedPowerW:0.0} W") esperados a esta hora.
+                    </p>
+                </div>
+            </div>
+        }
+
+        <!-- RF-5: reconectando -->
+        @if (_hubConnection?.State == HubConnectionState.Reconnecting)
+        {
+            <div class="alert alert-info border-info-subtle d-flex align-items-center mb-4 shadow-sm" role="alert">
+                <span class="spinner-border spinner-border-sm text-info me-2" role="status"></span>
+                <div>
+                    Reconectando con el panel... Se mantiene visible la última lectura recibida (@(_telemetry?.TimestampUtc.ToLocalTime().ToString("HH:mm:ss") ?? "reciente")).
+                </div>
+            </div>
+        }
+
+        <div class="row g-4 mb-4">
+            <!-- Visor de generación instantánea (RF-1, RF-2) -->
+            <div class="col-12 col-lg-6">
+                <div class="card border-0 shadow-sm h-100 rounded-3">
+                    <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
+                        <h2 class="h5 mb-0 text-secondary fw-bold d-flex align-items-center">
+                            <span class="bi bi-lightning-charge-fill me-2 text-primary"></span> Generación instantánea
+                        </h2>
+                        <span class="badge bg-light text-muted border">Actualización 3s</span>
+                    </div>
+                    <div class="card-body px-4 py-4 text-center">
+                        @if (_telemetry == null)
+                        {
+                            <div class="display-5 fw-bold text-muted">— <span class="fs-4 fw-normal">W</span></div>
+                            <small class="text-muted d-block mt-2">
+                                @(_isLive ? "Aguardando lecturas del panel..." : "Sin lecturas en vivo para este panel.")
+                            </small>
+                        }
+                        else
+                        {
+                            <div class="display-4 fw-bold @(_telemetry.IsLowPerformance ? "text-warning" : "text-dark")">
+                                @($"{_telemetry.ActivePowerW:0.0}") <span class="fs-4 fw-normal text-muted">W</span>
+                            </div>
+                            <div class="progress mt-3" role="progressbar" aria-label="Porcentaje de la potencia de placa"
+                                 aria-valuenow="@((int)PercentOfNominalBar)" aria-valuemin="0" aria-valuemax="100" style="height: 14px;">
+                                <div class="progress-bar @(_telemetry.IsLowPerformance ? "bg-warning" : "bg-primary")"
+                                     style="width: @(PercentOfNominalBar.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture))%; transition: width 0.4s ease-out;"></div>
+                            </div>
+                            <div class="badge bg-primary-subtle text-primary px-3 py-1 fs-6 rounded-pill mt-3">
+                                @($"{_telemetry.PercentOfNominal:0.0}% de {_telemetry.NominalPowerW} W de placa")
+                            </div>
+                        }
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pb-3 px-4 text-center">
+                        <small class="text-muted">
+                            Última lectura: @(_telemetry != null ? _telemetry.TimestampUtc.ToLocalTime().ToString("HH:mm:ss") : "Aguardando emisión...")
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Datos de placa y métricas (RF-1, RF-2) -->
+            <div class="col-12 col-lg-6">
+                <div class="row g-3 h-100">
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <span class="text-secondary fw-semibold small text-uppercase">Esperada a esta hora</span>
+                                <h4 class="fw-bold mb-0 mt-2 text-dark">@(_telemetry != null ? $"{_telemetry.ExpectedPowerW:0.0} W" : "—")</h4>
+                                <small class="text-muted">@(_telemetry != null && _telemetry.ExpectedPowerW <= 0.0 ? "Sin sol a esta hora" : "Según la curva solar del día")</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <span class="text-secondary fw-semibold small text-uppercase">Eficiencia estimada</span>
+                                <h4 class="fw-bold mb-0 mt-2 text-dark">@(_telemetry?.EstimatedEfficiencyPercent is { } eff ? $"{eff:0.0} %" : "—")</h4>
+                                <small class="text-muted">Placa: @($"{_panel.Efficiency:0.##}") %</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <span class="text-secondary fw-semibold small text-uppercase">Potencia de placa</span>
+                                <h4 class="fw-bold mb-0 mt-2 text-dark">@($"{_panel.PowerW} W")</h4>
+                                <small class="text-muted">Dato nominal del panel</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6">
+                        <div class="card border-0 shadow-sm rounded-3 h-100">
+                            <div class="card-body p-3">
+                                <span class="text-secondary fw-semibold small text-uppercase">Ubicación</span>
+                                <h6 class="fw-bold mb-0 mt-2 text-dark text-break">@_panel.SolarParkName</h6>
+                                <small class="text-muted text-break">Nodo: @(string.IsNullOrEmpty(_panel.SolarNodeName) ? "Sin asignar" : _panel.SolarNodeName)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private SolarUY.Web.Services.SolarPanelDto? _panel;
+    private PanelTelemetryDto? _telemetry;
+    private HubConnection? _hubConnection;
+    private bool _isLoading = true;
+    private bool _isLive;
+    private string? _errorMessage;
+    private string? _noTelemetryMessage;
+
+    private double PercentOfNominalBar => Math.Clamp(_telemetry?.PercentOfNominal ?? 0.0, 0.0, 100.0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPanelAndConnectSignalRAsync();
+    }
+
+    private async Task LoadPanelAndConnectSignalRAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var panel = await PanelApiClient.GetByIdAsync(Id);
+            if (panel == null)
+            {
+                _errorMessage = "El panel solicitado no existe.";
+                return;
+            }
+
+            _panel = panel;
+
+            if (panel.Status != "Activo")
+            {
+                _noTelemetryMessage = "El panel se encuentra inactivo.";
+                return;
+            }
+
+            if (panel.SolarNodeId is not { } nodeId)
+            {
+                // RF-4: panel sin nodo, no se abre la conexión en vivo.
+                _noTelemetryMessage = "Panel no conectado a la red de un nodo.";
+                return;
+            }
+
+            var node = await NodeApiClient.GetByIdAsync(nodeId);
+            if (node.Success && node.Value != null && node.Value.Status != "Activo")
+            {
+                _noTelemetryMessage = "El nodo del panel se encuentra inactivo.";
+                return;
+            }
+
+            _isLive = true;
+            _isLoading = false;
+            await InitializeSignalRAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error cargando el panel solar {PanelId}", Id);
+            _errorMessage = $"Error al cargar los datos del panel: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task InitializeSignalRAsync()
+    {
+        try
+        {
+            var apiBaseUrl = Configuration["services:apiservice:https:0"]
+                ?? Configuration["services:apiservice:http:0"]
+                ?? "http://apiservice";
+            var hubUrl = $"{apiBaseUrl.TrimEnd('/')}/hubs/panel-telemetry";
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(hubUrl, options =>
+                {
+                    options.HttpMessageHandlerFactory = _ => HttpMessageHandlerFactory.CreateHandler();
+                    options.AccessTokenProvider = async () =>
+                    {
+                        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+                        var key = UserTokenStore.GetKey(authState.User);
+                        if (key == null) return null;
+                        return await TokenService.GetValidAccessTokenAsync(key, CancellationToken.None);
+                    };
+                })
+                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+                .Build();
+
+            _hubConnection.On<PanelTelemetryDto>("ReceivePanelTelemetry", telemetry =>
+            {
+                if (telemetry.PanelId == Id)
+                {
+                    _telemetry = telemetry;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            _hubConnection.Reconnecting += error =>
+            {
+                Logger.LogWarning(error, "SignalR reconectando para el panel {PanelId}", Id);
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnected += async connectionId =>
+            {
+                Logger.LogInformation("SignalR reconectado ({ConnectionId}). Re-suscribiendo al panel {PanelId}", connectionId, Id);
+                await _hubConnection.InvokeAsync("SubscribeToPanel", Id);
+                await InvokeAsync(StateHasChanged);
+            };
+
+            _hubConnection.Closed += error =>
+            {
+                Logger.LogWarning(error, "SignalR desconectado para el panel {PanelId}", Id);
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            await _hubConnection.StartAsync();
+            await _hubConnection.InvokeAsync("SubscribeToPanel", Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error conectando al hub SignalR de telemetría para el panel {PanelId}", Id);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_hubConnection != null)
+        {
+            try
+            {
+                if (_hubConnection.State == HubConnectionState.Connected)
+                {
+                    // RF-6: desuscribirse del grupo del panel al abandonar la pantalla.
+                    await _hubConnection.InvokeAsync("UnsubscribeFromPanel", Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Error cerrando suscripción SignalR para el panel {PanelId}", Id);
+            }
+            finally
+            {
+                await _hubConnection.DisposeAsync();
+            }
+        }
+    }
+}
