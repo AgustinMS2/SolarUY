@@ -101,6 +101,11 @@ builder.Services.AddHostedService<SolarUY.ApiService.Services.NodeTelemetryBackg
 builder.Services.AddSingleton<SolarUY.ApiService.Services.IPanelTelemetryService, SolarUY.ApiService.Services.PanelTelemetryService>();
 builder.Services.AddHostedService<SolarUY.ApiService.Services.PanelTelemetryBackgroundService>();
 
+// Mapa de salud de paneles del parque (Spec 030).
+builder.Services.AddSingleton<SolarUY.ApiService.Services.IPanelHealthService, SolarUY.ApiService.Services.PanelHealthService>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IParkHealthSnapshotBuilder, SolarUY.ApiService.Services.ParkHealthSnapshotBuilder>();
+builder.Services.AddHostedService<SolarUY.ApiService.Services.ParkHealthBackgroundService>();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -130,6 +135,7 @@ app.MapControllers();
 app.MapHub<SolarUY.ApiService.Hubs.ParkTelemetryHub>(SolarUY.ApiService.Hubs.ParkTelemetryHub.HubUrl);
 app.MapHub<SolarUY.ApiService.Hubs.NodeTelemetryHub>(SolarUY.ApiService.Hubs.NodeTelemetryHub.HubUrl);
 app.MapHub<SolarUY.ApiService.Hubs.PanelTelemetryHub>(SolarUY.ApiService.Hubs.PanelTelemetryHub.HubUrl);
+app.MapHub<SolarUY.ApiService.Hubs.ParkHealthHub>(SolarUY.ApiService.Hubs.ParkHealthHub.HubUrl);
 
 string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
 

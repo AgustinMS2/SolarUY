@@ -113,6 +113,19 @@ public class SolarParkApiClient(HttpClient httpClient)
         }
     }
 
+    /// <summary>Carga inicial del mapa de salud de paneles del parque (spec 030). Devuelve null si el parque no existe.</summary>
+    public async Task<SolarUY.ApiService.Dtos.ParkHealthSnapshotDto?> GetPanelHealthAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await httpClient.GetFromJsonAsync<SolarUY.ApiService.Dtos.ParkHealthSnapshotDto>($"/api/solar-parks/{id}/panel-health", cancellationToken);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
     private sealed record CreateSolarParkSuccessResponse(Guid Id);
     private sealed record ErrorResponse(string? Message);
 

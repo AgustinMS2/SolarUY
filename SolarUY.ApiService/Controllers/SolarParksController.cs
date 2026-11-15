@@ -12,10 +12,12 @@ namespace SolarUY.ApiService.Controllers;
 public class SolarParksController : ControllerBase
 {
     private readonly ISolarParkService _service;
+    private readonly IParkHealthSnapshotBuilder _healthSnapshotBuilder;
 
-    public SolarParksController(ISolarParkService service)
+    public SolarParksController(ISolarParkService service, IParkHealthSnapshotBuilder healthSnapshotBuilder)
     {
         _service = service;
+        _healthSnapshotBuilder = healthSnapshotBuilder;
     }
 
     [Authorize(Roles = Roles.Administrator)]
@@ -43,6 +45,22 @@ public class SolarParksController : ControllerBase
     {
         var parks = _service.GetAll();
         return Ok(parks);
+    }
+
+    /// <summary>
+    /// Carga inicial del mapa de salud de paneles del parque (spec 030, RF-1 y RF-3).
+    /// </summary>
+    [HttpGet("{id:guid}/panel-health")]
+    public ActionResult<ParkHealthSnapshotDto> GetPanelHealth(Guid id)
+    {
+        var result = _healthSnapshotBuilder.BuildSnapshot(id);
+
+        if (!result.Success)
+        {
+            return NotFound(new { message = result.ErrorMessage });
+        }
+
+        return Ok(result.Value);
     }
 
     [HttpGet("{id:guid}")]

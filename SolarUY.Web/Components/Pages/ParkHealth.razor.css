@@ -1,0 +1,56 @@
+/* Colores de la spec 030: verde, ámbar, rojo, índigo ("Sin sol") y gris. */
+.health-cell {
+    min-width: 78px;
+    height: 40px;
+    padding: 0 8px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: background-color 0.4s ease-out, transform 0.1s ease-out;
+}
+
+.health-cell:hover {
+    transform: translateY(-1px);
+}
+
+.health-cell:focus-visible,
+.health-cell.selected {
+    outline: none;
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f172a;
+}
+
+.state-normal { background-color: #16a34a; }
+.state-degraded { background-color: #f59e0b; color: #0f172a; }
+.state-critical { background-color: #dc2626; }
+.state-nosun { background-color: #6366f1; }
+.state-inactive { background-color: #94a3b8; color: #0f172a; }
+
+.legend-dot {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    margin-right: 6px;
+    vertical-align: -2px;
+}
+
+.counter-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+@media (max-width: 575.98px) {
+    .health-cell {
+        min-width: 70px;
+        height: 44px;
+    }
+}

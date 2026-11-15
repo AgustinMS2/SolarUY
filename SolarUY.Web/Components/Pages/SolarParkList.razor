@@ -116,21 +116,30 @@
                                         <span class="badge bg-secondary px-2 py-1">Inactivo</span>
                                     }
                                 </td>
-                                <td class="pe-3 text-end">
-                                    <a href="/parques/@park.Id/monitoreo" class="btn btn-sm btn-outline-info d-inline-flex align-items-center me-1" title="Monitoreo en tiempo real">
-                                        <span class="bi bi-activity me-1"></span> Monitorear
-                                    </a>
-                                    <AuthorizeView Roles="@AppRoles.Administrator">
-                                        <a href="/parques/@park.Id/editar" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
-                                            <span class="bi bi-pencil me-1"></span> Editar
+                                <td class="pe-3">
+                                    @* Una sola fila sin cortar: los botones no se parten y llevan el mismo espacio entre sí. *@
+                                    <div class="d-flex flex-nowrap justify-content-end align-items-center gap-2 text-nowrap">
+                                        <a href="/parques/@park.Id/monitoreo" class="btn btn-sm btn-outline-info d-inline-flex align-items-center" title="Monitoreo en tiempo real">
+                                            <span class="bi bi-activity me-1"></span> Monitorear
                                         </a>
                                         @if (park.Status == "Activo")
                                         {
-                                            <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center ms-1" @onclick="() => RequestDeactivate(park)">
-                                                <span class="bi bi-trash me-1"></span> Dar de baja
-                                            </button>
+                                            <a href="/parques/@park.Id/salud" class="btn btn-sm btn-outline-success d-inline-flex align-items-center" title="Mapa de salud de los paneles">
+                                                <span class="bi bi-heart-pulse me-1"></span> Salud
+                                            </a>
                                         }
-                                    </AuthorizeView>
+                                        <AuthorizeView Roles="@AppRoles.Administrator">
+                                            <a href="/parques/@park.Id/editar" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+                                                <span class="bi bi-pencil me-1"></span> Editar
+                                            </a>
+                                            @if (park.Status == "Activo")
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center" @onclick="() => RequestDeactivate(park)">
+                                                    <span class="bi bi-trash me-1"></span> Dar de baja
+                                                </button>
+                                            }
+                                        </AuthorizeView>
+                                    </div>
                                 </td>
                             </tr>
                         }

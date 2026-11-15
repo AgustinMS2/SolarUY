@@ -12,7 +12,10 @@ public class MaintenanceServiceReservationTests
     private static readonly Guid PanelId = Guid.NewGuid();
     private static readonly Guid TechnicianId = Guid.NewGuid();
 
-    private static DateTime FutureDateUtc() => DateTime.UtcNow.AddHours(24);
+    // Mañana a las 15:00 de Uruguay (18:00 UTC): una hora fija para que los tests no dependan del reloj.
+    // Con "ahora + 24 h", restarle horas cruzaba la medianoche uruguaya entre las 00:00 y las 05:00 y el
+    // "mismo día" dejaba de serlo. Siempre queda al menos 18 h en el futuro (RF-2 exige más de 1 h).
+    private static DateTime FutureDateUtc() => DateTime.UtcNow.Date.AddDays(1).AddHours(18);
 
     private static CreateMaintenanceReservationRequest ValidRequest() => new()
     {
