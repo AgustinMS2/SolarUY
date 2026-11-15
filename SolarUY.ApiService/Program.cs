@@ -33,6 +33,11 @@ builder.Services.AddHostedService<SolarUY.ApiService.Services.AlertPurgeBackgrou
 builder.Services.AddScoped<SolarUY.ApiService.Services.ITechnicianService, SolarUY.ApiService.Services.TechnicianService>();
 builder.Services.AddScoped<SolarUY.ApiService.Services.IMaintenanceService, SolarUY.ApiService.Services.MaintenanceService>();
 
+// Generación histórica (spec 034).
+builder.Services.AddScoped<SolarUY.ApiService.Repositories.IParkGenerationRepository, SolarUY.ApiService.Repositories.ParkGenerationRepository>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IParkHistoricalGenerationService, SolarUY.ApiService.Services.ParkHistoricalGenerationService>();
+builder.Services.AddScoped<SolarUY.ApiService.Services.IHistoricalGenerationSeeder, SolarUY.ApiService.Services.HistoricalGenerationSeeder>();
+
 // Access to the Keycloak Admin API for user role management (spec 017).
 builder.Services.TryAddSingleton(TimeProvider.System);
 if (builder.Environment.IsDevelopment())
@@ -127,6 +132,8 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Data.SolarUyDbContext>();
     context.Database.Migrate();
     SolarUY.ApiService.Data.DbInitializer.Seed(context);
+    var historicalSeeder = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Services.IHistoricalGenerationSeeder>();
+    historicalSeeder.SeedIfEmpty();
 }
 
 // Configure the HTTP request pipeline.

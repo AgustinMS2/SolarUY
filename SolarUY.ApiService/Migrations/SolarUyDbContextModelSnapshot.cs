@@ -227,6 +227,40 @@ namespace SolarUY.ApiService.Migrations
                     b.ToTable("PanelControlEvents", (string)null);
                 });
 
+            modelBuilder.Entity("SolarUY.ApiService.Domain.ParkHourlyGeneration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("DateLocal")
+                        .HasColumnType("date");
+
+                    b.Property<double>("EnergyGeneratedKwh")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("HourLocal")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("PeakPowerKw")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("SolarParkId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("TimestampUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SolarParkId", "DateLocal");
+
+                    b.HasIndex("SolarParkId", "DateLocal", "HourLocal")
+                        .IsUnique();
+
+                    b.ToTable("ParkHourlyGenerations", (string)null);
+                });
+
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -464,6 +498,17 @@ namespace SolarUY.ApiService.Migrations
                         .IsRequired();
 
                     b.Navigation("SolarPanel");
+                });
+
+            modelBuilder.Entity("SolarUY.ApiService.Domain.ParkHourlyGeneration", b =>
+                {
+                    b.HasOne("SolarUY.ApiService.Domain.SolarPark", "SolarPark")
+                        .WithMany()
+                        .HasForeignKey("SolarParkId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SolarPark");
                 });
 
             modelBuilder.Entity("SolarUY.ApiService.Domain.SolarNode", b =>

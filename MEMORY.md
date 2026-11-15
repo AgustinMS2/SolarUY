@@ -33,7 +33,7 @@
 | | Ver Estado de Salud de Paneles / Recibir Alerta de Falla | Todos | `030` implementada; `031` implementada |
 | **Control Inversor** | Activar / Desactivar Panel | Administrador | **Implementada** (`032`) |
 | | Activar / Desactivar Inyección a la Red | Administrador | Borrador (`033`) |
-| **Históricos** | Consultar Generación (Día, Mes, Año) | Todos | Borrador (`034`) |
+| **Históricos** | Consultar Generación (Día, Mes, Año) | Todos | **Implementada** (`034`) |
 | | Consultar en Lenguaje Natural (LLM) | Todos | Borrador (`035`) |
 | **Simulador** | Simular Lecturas del Inversor | Sistema (Background) | Borrador (`036`) |
 | | Simular Fallas de Paneles | Sistema (Mock) | Borrador (`037`) |
@@ -77,7 +77,7 @@
 | `031-recibir-alerta-falla` | **Implementada** | Completada | 8 / 8 | Alertas de falla: tabla `Alerts` (migración `AddAlerts`), deduplicado de 60 s, consolidación a la tercera detección en 5 min, purga horaria, campana con contador en vivo, avisos de 8 s (ráfagas agrupadas) y detalle con "Agendar Mantenimiento" (Administrador) y "Descartar". Hoy genera: inversor > 75 °C (028), parque bajo su umbral (027) y panel en Falla Crítica (030); **provisorio**, se amplía con las specs 037 y 033. Sin disparador de pruebas: la alerta crítica solo se probó con tests. |
 | 032-activar-desactivar-panel | **Implementada** | Completada | 8 / 8 | T1–T8 completas (477 tests en verde). Verificada en navegador el 2026-11-15 como `admin` (RF-1 a RF-4, RF-5 con PANEL-SG-002, bitácora en BD, caso panel sin nodo con PANEL-SG-005) y como `tecnico` (RF-6: sin botones). Monitoreo 029 muestra "desactivado manualmente". Continuar con siguiente spec del backlog (`033`, en borrador). |
 | 033-activar-desactivar-inyeccion-red | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
-| 034-consultar-generacion-historica | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
+| `034-consultar-generacion-historica` | **Implementada** | Completada | 6 / 6 | T1–T6 completadas (485 tests en verde). T1: Entidad `ParkHourlyGeneration` y migración; T2: `ParkHistoricalGenerationService` con 8 tests TDD (Día 24h, Mes, Año MWh, HSP, picos y comparativas); T3: precarga determinista; T4: Endpoints REST en `SolarParksController`; T5: `ParkHistoricalApiClient`, navegación en `NavMenu` y página `/historicos`; T6: gráfica interactiva SVG con tooltips y exportación a CSV UTF-8 BOM. Siguiente: **Spec 033** o **035**. |
 | 035-consulta-lenguaje-natural-llm | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | 036-simular-lecturas-inversor | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |
 | 037-simular-fallas-paneles | Pendiente | Borrador spec | 0 / 0 | Clarificación y aprobación |

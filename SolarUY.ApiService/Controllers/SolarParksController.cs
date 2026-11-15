@@ -13,11 +13,16 @@ public class SolarParksController : ControllerBase
 {
     private readonly ISolarParkService _service;
     private readonly IParkHealthSnapshotBuilder _healthSnapshotBuilder;
+    private readonly IParkHistoricalGenerationService _historicalService;
 
-    public SolarParksController(ISolarParkService service, IParkHealthSnapshotBuilder healthSnapshotBuilder)
+    public SolarParksController(
+        ISolarParkService service,
+        IParkHealthSnapshotBuilder healthSnapshotBuilder,
+        IParkHistoricalGenerationService historicalService)
     {
         _service = service;
         _healthSnapshotBuilder = healthSnapshotBuilder;
+        _historicalService = historicalService;
     }
 
     [Authorize(Roles = Roles.Administrator)]
@@ -73,6 +78,67 @@ public class SolarParksController : ControllerBase
             return NotFound(new { message = result.ErrorMessage });
         }
 
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Consulta de generación histórica diaria por horas (Spec 034, RF-2).
+    /// </summary>
+    [HttpGet("{id:guid}/history/daily")]
+    public ActionResult<HistoricalGenerationReportDto> GetDailyHistory(Guid id, [FromQuery] DateOnly? date)
+    {
+        var targetDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow.AddHours(-3));
+        var result = _historicalService.GetDailyReport(id, targetDate);
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => BadRequest(new { message = result.ErrorMessage })
+            };
+        }
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Consulta de generación histórica mensual por días (Spec 034, RF-3).
+    /// </summary>
+    [HttpGet("{id:guid}/history/monthly")]
+    public ActionResult<HistoricalGenerationReportDto> GetMonthlyHistory(Guid id, [FromQuery] int? year, [FromQuery] int? month)
+    {
+        var now = DateTime.UtcNow.AddHours(-3);
+        var targetYear = year ?? now.Year;
+        var targetMonth = month ?? now.Month;
+
+        var result = _historicalService.GetMonthlyReport(id, targetYear, targetMonth);
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => BadRequest(new { message = result.ErrorMessage })
+            };
+        }
+        return Ok(result.Value);
+    }
+
+    /// <summary>
+    /// Consulta de generación histórica anual por meses (Spec 034, RF-4).
+    /// </summary>
+    [HttpGet("{id:guid}/history/yearly")]
+    public ActionResult<HistoricalGenerationReportDto> GetYearlyHistory(Guid id, [FromQuery] int? year)
+    {
+        var targetYear = year ?? DateTime.UtcNow.AddHours(-3).Year;
+
+        var result = _historicalService.GetYearlyReport(id, targetYear);
+        if (!result.Success)
+        {
+            return result.ErrorType switch
+            {
+                ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
+                _ => BadRequest(new { message = result.ErrorMessage })
+            };
+        }
         return Ok(result.Value);
     }
 

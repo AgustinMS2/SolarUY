@@ -18,6 +18,7 @@ public class SolarUyDbContext : DbContext
     public DbSet<MaintenanceOrder> MaintenanceOrders => Set<MaintenanceOrder>();
     public DbSet<Alert> Alerts => Set<Alert>();
     public DbSet<PanelControlEvent> PanelControlEvents => Set<PanelControlEvent>();
+    public DbSet<ParkHourlyGeneration> ParkHourlyGenerations => Set<ParkHourlyGeneration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -160,6 +161,29 @@ public class SolarUyDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.SolarPanelId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Spec 034: registros históricos de generación horaria por parque.
+        modelBuilder.Entity<ParkHourlyGeneration>(entity =>
+        {
+            entity.ToTable("ParkHourlyGenerations");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TimestampUtc).IsRequired();
+            entity.Property(e => e.DateLocal).IsRequired();
+            entity.Property(e => e.HourLocal).IsRequired();
+            entity.Property(e => e.EnergyGeneratedKwh).IsRequired();
+            entity.Property(e => e.PeakPowerKw).IsRequired();
+
+            // Clave única compuesta por parque, fecha local y hora local
+            entity.HasIndex(e => new { e.SolarParkId, e.DateLocal, e.HourLocal }).IsUnique();
+
+            // Índice para acelerar filtros por rango de fechas
+            entity.HasIndex(e => new { e.SolarParkId, e.DateLocal });
+
+            entity.HasOne(e => e.SolarPark)
+                .WithMany()
+                .HasForeignKey(e => e.SolarParkId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
