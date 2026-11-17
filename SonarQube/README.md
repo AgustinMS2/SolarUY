@@ -23,7 +23,7 @@ Esta carpeta contiene la configuración necesaria para levantar un servidor de S
 4. Abre en tu navegador: **http://localhost:9000**
 5. Inicia sesión con:
    - **Usuario:** `admin`
-   - **Contraseña:** `admin`
+   - **Contraseña:** `SolarUy.42069`
 6. El sistema te pedirá cambiar la contraseña por defecto.
 
 ### 1.1 Crear el Token de Seguridad
