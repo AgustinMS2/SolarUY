@@ -5,5 +5,5 @@
   <FilesToAnalyzePath>/app/.sonarqube/conf/1/FilesToAnalyze.txt</FilesToAnalyzePath>
   <OutPath>/app/.sonarqube/out/1</OutPath>
   <ProjectType>Product</ProjectType>
-  <TargetFramework>net10.0</TargetFramework>
+  <TargetFramework>net9.0</TargetFramework>
 </SonarProjectConfig>
