@@ -23,7 +23,6 @@ public class SolarPanelService : ISolarPanelService
         ISolarPanelRepository repository,
         ISolarNodeRepository nodeRepository,
         IInverterRepository inverterRepository,
-        ILogger<SolarPanelService> logger)
         ILogger<SolarPanelService> logger,
         ISimulatedFaultRepository? simulatedFaultRepository = null,
         IAlertService? alertService = null)
