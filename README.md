@@ -1,12 +1,11 @@
-# SolarUY ☀️🇺🇾
-
+# SolarUY
 **SolarUY** es una plataforma integral para el monitoreo, gestión, control operativo y mantenimiento de parques solares fotovoltaicos, nodos de conexión, inversores y paneles solares. Proyecto desarrollado en el marco del **Taller de Programación .NET 2026**.
 
 El sistema combina telemetría en tiempo real mediante **SignalR**, un **motor único de simulación matemática determinista** adaptado al régimen solar de Uruguay (UTC−3), control de inyección a la red eléctrica, un sistema de gestión de mantenimientos para técnicos, analítica histórica y un **asistente inteligente en lenguaje natural (LLM)**.
 
 ---
 
-## 🚀 Arquitectura y Stack Tecnológico
+## Arquitectura y Stack Tecnológico
 
 | Capa / Componente | Tecnología | Descripción |
 | :--- | :--- | :--- |
@@ -36,7 +35,7 @@ graph TD
 
 ---
 
-## 🌟 Características Principales
+##  Características Principales
 
 ### 1. Gestión de Topología y Activos Fotovoltaicos
 - **Parques Solares**: Alta, baja lógica, edición, listado con búsqueda y capacidad total nominal.
@@ -83,14 +82,14 @@ graph TD
 
 ---
 
-## 📋 Requisitos Previos
+## Requisitos Previos
 
 1. **.NET 9 SDK** instalado ([Descargar .NET 9](https://dotnet.microsoft.com/download/dotnet/9.0)).
 2. **Docker Desktop** (o Docker Engine en Linux) en ejecución para que .NET Aspire inicie los contenedores de PostgreSQL y Keycloak.
 
 ---
 
-## 🛠️ Cómo Ejecutar el Proyecto
+## Cómo Ejecutar el Proyecto
 
 Clona el repositorio e inicia toda la infraestructura con un solo comando:
 
@@ -107,7 +106,7 @@ dotnet run --project SolarUY.AppHost
 - Cargar los datos semilla (*seed data*) con parques, nodos, inversores, paneles y técnicos.
 - Completar la historia de generación energética en segundo plano.
 
-### 🌐 Accesos y Servicios Expuestos
+### Accesos y Servicios Expuestos
 
 | Servicio | URL Local | Descripción |
 | :--- | :--- | :--- |
@@ -116,7 +115,7 @@ dotnet run --project SolarUY.AppHost
 | **API RESTful (Swagger)** | Asignado dinámicamente por Aspire | Endpoints de la API y documentación OpenAPI interactiva. |
 | **Keycloak Admin Console** | `http://localhost:8080` | Servidor de identidad y gestión de usuarios/roles. |
 
-### 🔑 Credenciales de Prueba Preconfiguradas
+### Credenciales de Prueba Preconfiguradas
 
 | Usuario | Contraseña | Rol Asignado | Alcance y Permisos |
 | :--- | :--- | :--- | :--- |
@@ -126,7 +125,7 @@ dotnet run --project SolarUY.AppHost
 
 ---
 
-## 🧪 Pruebas Automatizadas y Calidad
+## Pruebas Automatizadas y Calidad
 
 El proyecto fue desarrollado aplicando **TDD (Test-Driven Development)** y **Spec-Driven Development (SDD)**. La suite de pruebas cubre reglas de negocio, servicios, validaciones y arquitectura:
 
@@ -142,7 +141,7 @@ dotnet test
 
 ---
 
-## 📁 Estructura del Repositorio
+## Estructura del Repositorio
 
 ```text
 SolarUY/
@@ -169,7 +168,7 @@ SolarUY/
 
 ---
 
-## 📖 Documentación Adicional
+## Documentación Adicional
 
 - [docs/arquitectura.md](docs/arquitectura.md): Diagramas técnicos de componentes, capas, modelo de datos relacional y flujo SignalR.
 - [docs/constitution.md](docs/constitution.md): Principios de diseño innegociables y convenciones del proyecto.
