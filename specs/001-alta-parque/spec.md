@@ -34,6 +34,7 @@ Datos que asigna el sistema (no los carga el usuario): identificador, estado = *
   - Umbral ≤ 0 o mayor a la capacidad → "El umbral de alerta debe ser mayor a 0 y no puede superar la capacidad máxima."
 - **RF-3**: SI ya existe un parque (activo o inactivo) con el mismo nombre, sin distinguir mayúsculas/minúsculas y luego de quitar espacios al inicio y al final, ENTONCES EL SISTEMA no registrará el parque y mostrará "Ya existe un parque con el nombre "<nombre>"."
 - **RF-4**: CUANDO el alta sea exitosa, EL SISTEMA limpiará el formulario para permitir cargar otro parque.
+- **RF-5**: CUANDO el Administrador presione "Cancelar" en el formulario de alta, EL SISTEMA volverá al listado de parques (/parques) sin registrar nada.
 
 ## Requisitos no funcionales
 - Pantalla en español, usable en escritorio y en celular.

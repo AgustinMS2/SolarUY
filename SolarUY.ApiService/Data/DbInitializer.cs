@@ -302,8 +302,8 @@ public static class DbInitializer
         {
             Id = Guid.NewGuid(),
             FullName = "Carlos Méndez",
-            DocumentId = "4.567.890-1",
-            NormalizedDocumentId = "4.567.890-1",
+            DocumentId = "45678901",
+            NormalizedDocumentId = "45678901",
             Email = "tecnico@solaruy.local",
             NormalizedEmail = "tecnico@solaruy.local",
             PhoneNumber = "099123456",
@@ -316,8 +316,8 @@ public static class DbInitializer
         {
             Id = Guid.NewGuid(),
             FullName = "Mariana Rodríguez",
-            DocumentId = "3.890.123-4",
-            NormalizedDocumentId = "3.890.123-4",
+            DocumentId = "38901234",
+            NormalizedDocumentId = "38901234",
             Email = "mrodriguez@solaruy.local",
             NormalizedEmail = "mrodriguez@solaruy.local",
             PhoneNumber = "098654321",
@@ -330,8 +330,8 @@ public static class DbInitializer
         {
             Id = Guid.NewGuid(),
             FullName = "Gonzalo Varela",
-            DocumentId = "2.345.678-9",
-            NormalizedDocumentId = "2.345.678-9",
+            DocumentId = "23456789",
+            NormalizedDocumentId = "23456789",
             Email = "gvarela@solaruy.local",
             NormalizedEmail = "gvarela@solaruy.local",
             PhoneNumber = "091112233",

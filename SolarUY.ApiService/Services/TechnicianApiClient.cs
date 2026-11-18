@@ -35,6 +35,7 @@ public class TechnicianApiClient
             {
                 System.Net.HttpStatusCode.BadRequest => ServiceErrorType.Validation,
                 System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                System.Net.HttpStatusCode.ServiceUnavailable => ServiceErrorType.Unavailable,
                 _ => ServiceErrorType.Validation
             };
 
@@ -90,6 +91,7 @@ public class TechnicianApiClient
             {
                 System.Net.HttpStatusCode.NotFound => ServiceErrorType.NotFound,
                 System.Net.HttpStatusCode.Conflict => ServiceErrorType.Conflict,
+                System.Net.HttpStatusCode.ServiceUnavailable => ServiceErrorType.Unavailable,
                 _ => ServiceErrorType.Validation
             };
 

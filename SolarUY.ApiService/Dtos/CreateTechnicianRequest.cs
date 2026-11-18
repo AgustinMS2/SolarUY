@@ -20,5 +20,11 @@ public class CreateTechnicianRequest
     [StringLength(20, ErrorMessage = "El teléfono no puede superar los 20 caracteres.")]
     public string PhoneNumber { get; set; } = string.Empty;
 
+    [StringLength(100, ErrorMessage = "La especialidad no puede superar los 100 caracteres.")]
     public string? Specialty { get; set; }
+
+    [Required(ErrorMessage = "La contraseña es obligatoria y debe tener al menos 6 caracteres.")]
+    [MinLength(6, ErrorMessage = "La contraseña es obligatoria y debe tener al menos 6 caracteres.")]
+    [StringLength(100, ErrorMessage = "La contraseña no puede superar los 100 caracteres.")]
+    public string Password { get; set; } = string.Empty;
 }
