@@ -1,6 +1,6 @@
-﻿# Spec 023 — Cancelar Mantenimiento
+# Spec 023 — Cancelar Mantenimiento
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 021 (Reservar Mantenimiento)
 
 ## Contexto y objetivo

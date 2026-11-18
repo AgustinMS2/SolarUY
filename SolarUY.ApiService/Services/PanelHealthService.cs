@@ -120,6 +120,11 @@ public class PanelHealthService : IPanelHealthService
 
     private static string? GetNoReadingsReason(SolarPanel panel, bool hasActiveNode)
     {
+        if (panel.Status == SolarPanelStatus.Deactivated)
+        {
+            return "Panel desactivado manualmente";
+        }
+
         if (panel.Status != SolarPanelStatus.Active)
         {
             return "Panel dado de baja";

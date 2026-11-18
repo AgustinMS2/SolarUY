@@ -106,4 +106,51 @@ public class PanelServiceDeleteTests
         // El repositorio no debería tener cambios (aún está vacío)
         Assert.Empty(repo.Panels);
     }
+
+    [Fact]
+    public void DeletePanel_UnassignsNodeAndEndsActiveSimulatedFaults()
+    {
+        var panelId = Guid.NewGuid();
+        var repo = new FakeSolarPanelRepository
+        {
+            Panels =
+            {
+                new SolarPanel
+                {
+                    Id = panelId,
+                    SerieNumber = "PNL-003",
+                    NormalizedSerieNumber = "pnl-003",
+                    PowerW = 400,
+                    Efficiency = 21.0,
+                    SolarParkId = Guid.NewGuid(),
+                    SolarNodeId = Guid.NewGuid(),
+                    Status = SolarPanelStatus.Active,
+                    CreatedAtUtc = DateTime.UtcNow
+                }
+            }
+        };
+        var faultRepo = new FakeSimulatedFaultRepository();
+        faultRepo.Add(new SimulatedFault
+        {
+            Id = Guid.NewGuid(),
+            TargetType = SimulatedFaultTarget.Panel,
+            TargetId = panelId,
+            FaultType = SimulatedFaultType.OpenCircuit,
+            StartedAtUtc = DateTime.UtcNow.AddMinutes(-15)
+        });
+
+        var service = new SolarPanelService(
+            repo,
+            new FakeSolarNodeRepository(),
+            new FakeInverterRepository(),
+            NullLogger<SolarPanelService>.Instance,
+            faultRepo);
+
+        var result = service.DeletePanel(panelId);
+
+        Assert.True(result.Success);
+        Assert.Equal(SolarPanelStatus.Inactive, repo.Panels[0].Status);
+        Assert.Null(repo.Panels[0].SolarNodeId);
+        Assert.Empty(faultRepo.GetActiveByTarget(SimulatedFaultTarget.Panel, panelId));
+    }
 }

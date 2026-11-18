@@ -112,4 +112,14 @@ public class SolarUyKnowledgeAssistantTests
         Assert.Contains("500", response.Answer);
         Assert.Contains("Parque Solar Bella Unión", response.Answer);
     }
+
+    [Fact]
+    public void ProcessQuery_WithNonExistentNamedPark_InformsParkDoesNotExistAndListsAvailable()
+    {
+        var response = _assistant.ProcessQuery("¿Cuánto generó el parque Atlántida hoy?");
+
+        Assert.Contains("no existe", response.Answer, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Parque Solar Salto Grande", response.Answer);
+        Assert.Contains("Parque Solar Bella Unión", response.Answer);
+    }
 }

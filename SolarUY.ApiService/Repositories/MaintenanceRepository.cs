@@ -14,14 +14,12 @@ public class MaintenanceRepository : IMaintenanceRepository
         _context = context;
     }
 
-    // Spec 020 (RF-2): pendientes o programados en el futuro.
+    // Spec 020 (RF-2) / Spec 039 (RF-11): todas las órdenes en estado Pendiente del técnico.
     public int CountPendingByTechnician(Guid technicianId)
     {
-        var nowUtc = DateTime.UtcNow;
         return _context.MaintenanceOrders.Count(o =>
             o.TechnicianId == technicianId &&
-            o.Status == MaintenanceStatus.Pending &&
-            o.ScheduledDateUtc > nowUtc);
+            o.Status == MaintenanceStatus.Pending);
     }
 
     public void Add(MaintenanceOrder order)

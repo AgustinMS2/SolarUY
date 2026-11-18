@@ -339,4 +339,14 @@ public class PanelHealthServiceTests
     {
         Assert.Empty(_service.LatestCompletedByPanel(Array.Empty<MaintenanceOrder>()));
     }
+
+    [Fact]
+    public void ClassifyHealth_DeactivatedPanel_HasDeactivatedManuallyReason()
+    {
+        var reading = Classify(380.0, panel: CreatePanel(status: SolarPanelStatus.Deactivated));
+
+        Assert.Equal(PanelHealthState.Inactive, reading.State);
+        Assert.Equal("Panel desactivado manualmente", reading.StateReason);
+        Assert.Null(reading.ActivePowerW);
+    }
 }

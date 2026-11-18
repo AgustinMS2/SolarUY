@@ -313,4 +313,107 @@ public class MaintenanceServiceReservationTests
         Assert.True(result.Success);
         Assert.Equal(2, maintenanceRepo.PersistedOrders.Count);
     }
+
+    [Fact]
+    public void CreateReservation_WithDeactivatedPanelInActivePark_Succeeds()
+    {
+        var parkId = Guid.NewGuid();
+        var panelRepo = new FakeSolarPanelRepository();
+        panelRepo.Parks.Add(new SolarPark
+        {
+            Id = parkId,
+            Name = "Parque Salto",
+            NormalizedName = "parque salto",
+            Status = SolarParkStatus.Active
+        });
+        panelRepo.Panels.Add(new SolarPanel
+        {
+            Id = PanelId,
+            SerieNumber = "SP-001",
+            NormalizedSerieNumber = "sp-001",
+            SolarParkId = parkId,
+            PowerW = 450,
+            Efficiency = 21,
+            Status = SolarPanelStatus.Deactivated,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = TechnicianId,
+            FullName = "Test, Técnico",
+            DocumentId = "t-001",
+            NormalizedDocumentId = "t001",
+            Email = "tecnico.test@email.com",
+            NormalizedEmail = "tecnico.test@email.com",
+            PhoneNumber = "+5491112345678",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        var maintenanceRepo = new FakeMaintenanceRepository();
+        var service = new MaintenanceService(
+            maintenanceRepo,
+            panelRepo,
+            techRepo,
+            NullLogger<MaintenanceService>.Instance);
+
+        var result = service.CreateReservation(ValidRequest());
+
+        Assert.True(result.Success);
+        Assert.Single(maintenanceRepo.PersistedOrders);
+    }
+
+    [Fact]
+    public void CreateReservation_WhenPanelParkIsInactive_ReturnsValidation()
+    {
+        var parkId = Guid.NewGuid();
+        var panelRepo = new FakeSolarPanelRepository();
+        panelRepo.Parks.Add(new SolarPark
+        {
+            Id = parkId,
+            Name = "Parque Inactivo",
+            NormalizedName = "parque inactivo",
+            Status = SolarParkStatus.Inactive
+        });
+        panelRepo.Panels.Add(new SolarPanel
+        {
+            Id = PanelId,
+            SerieNumber = "SP-001",
+            NormalizedSerieNumber = "sp-001",
+            SolarParkId = parkId,
+            PowerW = 450,
+            Efficiency = 21,
+            Status = SolarPanelStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = TechnicianId,
+            FullName = "Test, Técnico",
+            DocumentId = "t-001",
+            NormalizedDocumentId = "t001",
+            Email = "tecnico.test@email.com",
+            NormalizedEmail = "tecnico.test@email.com",
+            PhoneNumber = "+5491112345678",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        var maintenanceRepo = new FakeMaintenanceRepository();
+        var service = new MaintenanceService(
+            maintenanceRepo,
+            panelRepo,
+            techRepo,
+            NullLogger<MaintenanceService>.Instance);
+
+        var result = service.CreateReservation(ValidRequest());
+
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("El parque solar del panel seleccionado se encuentra inactivo.", result.ErrorMessage);
+    }
 }

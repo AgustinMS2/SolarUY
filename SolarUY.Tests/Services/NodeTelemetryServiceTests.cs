@@ -231,4 +231,40 @@ public class NodeTelemetryServiceTests
         Assert.False(result.IsOverheating);
         Assert.False(result.IsGridFrequencyAnomaly);
     }
+
+    [Fact]
+    public void CalculateMetrics_WithInsulationFaultOnActiveNode_PreservesResidualDcVoltage()
+    {
+        var node = CreateActiveNode();
+        var inverter = CreateInverter();
+
+        var result = _service.CalculateMetrics(
+            node, inverter,
+            activePowerKw: 0.0, dcVoltage: 8.2, dcCurrent: 0.0,
+            acVoltage: 0.0, frequencyHz: 0.0, temperatureC: 24.0,
+            timestampUtc: DateTime.UtcNow,
+            fault: SimulatedFaultType.InsulationFault);
+
+        Assert.Equal(8.2, result.DcVoltage);
+        Assert.Equal(SimulatedFaultType.InsulationFault, result.Fault);
+    }
+
+    [Fact]
+    public void CalculateMetrics_WhenInverterInjectionIsCut_SuppressesActiveFault()
+    {
+        var node = CreateActiveNode();
+        var inverter = CreateInverter();
+        inverter.GridInjectionEnabled = false;
+
+        var result = _service.CalculateMetrics(
+            node, inverter,
+            activePowerKw: 0.0, dcVoltage: 8.2, dcCurrent: 0.0,
+            acVoltage: 0.0, frequencyHz: 0.0, temperatureC: 24.0,
+            timestampUtc: DateTime.UtcNow,
+            fault: SimulatedFaultType.InsulationFault);
+
+        Assert.Null(result.Fault);
+        Assert.Null(result.FaultLabel);
+        Assert.Equal(0.0, result.DcVoltage);
+    }
 }

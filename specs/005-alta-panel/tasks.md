@@ -23,5 +23,5 @@
   - RF-1, RF-2, RF-3, RF-4
   - Hecho cuando: en el navegador se puede dar de alta un panel, se ven los mensajes de error de RF-2 y RF-3, el formulario se limpia tras el alta y la pantalla se ve bien en celular.
 
-- [ ] **T7. Botón "Cancelar" en la página `/paneles/nuevo`.** RF-5
+- [x] **T7. Botón "Cancelar" en la página `/paneles/nuevo`.** RF-5
   - Hecho cuando: en el navegador el botón lleva a `/paneles` sin guardar nada y se ve bien en escritorio y celular.

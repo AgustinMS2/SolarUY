@@ -42,25 +42,25 @@
 
                         <div class="mb-3">
                             <label for="fullName" class="form-label">Nombre completo <span class="text-danger">*</span></label>
-                            <InputText id="fullName" class="form-control" @bind-Value="_formModel.FullName" required />
+                            <InputText id="fullName" class="form-control" @bind-Value="_formModel.FullName" />
                             <ValidationMessage For="@(() => _formModel.FullName)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
                             <label for="documentId" class="form-label">Documento de identidad <span class="text-danger">*</span></label>
-                            <InputText id="documentId" class="form-control" @bind-Value="_formModel.DocumentId" required />
+                            <InputText id="documentId" class="form-control" @bind-Value="_formModel.DocumentId" />
                             <ValidationMessage For="@(() => _formModel.DocumentId)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
                             <label for="email" class="form-label">Correo electrónico <span class="text-danger">*</span></label>
-                            <InputText id="email" class="form-control" @bind-Value="_formModel.Email" required />
+                            <InputText id="email" class="form-control" @bind-Value="_formModel.Email" />
                             <ValidationMessage For="@(() => _formModel.Email)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
                             <label for="phoneNumber" class="form-label">Teléfono de contacto <span class="text-danger">*</span></label>
-                            <InputText id="phoneNumber" class="form-control" @bind-Value="_formModel.PhoneNumber" required />
+                            <InputText id="phoneNumber" class="form-control" @bind-Value="_formModel.PhoneNumber" />
                             <ValidationMessage For="@(() => _formModel.PhoneNumber)" class="text-danger small mt-1" />
                         </div>
 
@@ -76,8 +76,7 @@
                                 <InputText id="password"
                                            type="@(_showPassword ? "text" : "password")"
                                            class="form-control"
-                                           @bind-Value="_formModel.Password"
-                                           required />
+                                           @bind-Value="_formModel.Password" />
                                 <button type="button"
                                         class="btn btn-outline-secondary"
                                         @onclick="TogglePasswordVisibility"
@@ -150,6 +149,13 @@
 
     private void Cancelar()
     {
+    private void Cancelar()
+    {
+        _formModel = new CreateTechnicianRequest();
+        _showPassword = false;
+        _successMessage = null;
+        _errorMessage = null;
         NavManager.NavigateTo("/tecnicos");
+    }
     }
 }

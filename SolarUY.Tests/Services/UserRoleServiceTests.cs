@@ -202,4 +202,79 @@ public class UserRoleServiceTests
 
         Assert.True(result.Success);
     }
+
+    // ---- Spec 039 RF-13: sincronización con tabla Technicians
+
+    [Fact]
+    public void ChangeRole_FromTechnicianToAdministrator_WithPendingMaintenances_ReturnsConflictAndKeepsRole()
+    {
+        _repository.Users.Add(User("1", "tecnico", Roles.Technician));
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = Guid.NewGuid(),
+            FullName = "Carlos Méndez",
+            DocumentId = "45678901",
+            NormalizedDocumentId = "45678901",
+            Email = "tecnico@solaruy.local",
+            NormalizedEmail = "tecnico@solaruy.local",
+            PhoneNumber = "099123456",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        var maintenanceRepo = new FakeMaintenanceRepository { PendingCount = 2 };
+        var service = new UserRoleService(_repository, NullLogger<UserRoleService>.Instance, techRepo, maintenanceRepo);
+
+        var result = service.ChangeRole("1", new ChangeUserRoleRequest(Roles.Administrator));
+
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Equal("No se puede cambiar el rol del técnico porque tiene 2 mantenimiento(s) pendiente(s) de resolución.", result.ErrorMessage);
+        Assert.Equal(Roles.Technician, _repository.GetById("1")!.Role);
+        Assert.Equal(TechnicianStatus.Active, techRepo.PersistedTechnicians.Single().Status);
+    }
+
+    [Fact]
+    public void ChangeRole_FromTechnicianToAdministrator_WithoutPendingMaintenances_DeactivatesTechnicianRecord()
+    {
+        _repository.Users.Add(User("1", "tecnico", Roles.Technician));
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = Guid.NewGuid(),
+            FullName = "Carlos Méndez",
+            DocumentId = "45678901",
+            NormalizedDocumentId = "45678901",
+            Email = "tecnico@solaruy.local",
+            NormalizedEmail = "tecnico@solaruy.local",
+            PhoneNumber = "099123456",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        var maintenanceRepo = new FakeMaintenanceRepository { PendingCount = 0 };
+        var service = new UserRoleService(_repository, NullLogger<UserRoleService>.Instance, techRepo, maintenanceRepo);
+
+        var result = service.ChangeRole("1", new ChangeUserRoleRequest(Roles.Administrator));
+
+        Assert.True(result.Success);
+        Assert.Equal(Roles.Administrator, _repository.GetById("1")!.Role);
+        Assert.Equal(TechnicianStatus.Inactive, techRepo.PersistedTechnicians.Single().Status);
+    }
+
+    [Fact]
+    public void ChangeRole_FromAdministratorToTechnician_CreatesOrReactivatesTechnicianRecord()
+    {
+        _repository.Users.Add(User("1", "admin", Roles.Administrator));
+        _repository.Users.Add(User("2", "admin2", Roles.Administrator));
+        var techRepo = new FakeTechnicianRepository();
+        var service = new UserRoleService(_repository, NullLogger<UserRoleService>.Instance, techRepo, new FakeMaintenanceRepository());
+
+        var result = service.ChangeRole("2", new ChangeUserRoleRequest(Roles.Technician));
+
+        Assert.True(result.Success);
+        Assert.Equal(Roles.Technician, _repository.GetById("2")!.Role);
+        var createdTech = Assert.Single(techRepo.PersistedTechnicians);
+        Assert.Equal("admin2@solaruy.local", createdTech.Email);
+        Assert.Equal(TechnicianStatus.Active, createdTech.Status);
+    }
 }

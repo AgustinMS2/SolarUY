@@ -60,21 +60,25 @@ public class ParkTelemetryBackgroundService : SimulationEmitterBackgroundService
         var invertersByPark = inverters
             .Where(i => parkByNode.ContainsKey(i.SolarNodeId))
             .GroupBy(i => parkByNode[i.SolarNodeId])
-            .ToDictionary(g => g.Key, g => g.Select(i => new SimulatedInverter(i.Id, i.NominalCapacityKw)).ToList());
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         var localTime = SolarCalendar.ToLocal(instantUtc);
 
         foreach (var park in activeParks)
         {
-            invertersByPark.TryGetValue(park.Id, out var parkInverters);
-            parkInverters ??= [];
+            invertersByPark.TryGetValue(park.Id, out var allParkInverters);
+            allParkInverters ??= [];
+            var parkInverters = allParkInverters
+                .Where(i => i.GridInjectionEnabled)
+                .Select(i => new SimulatedInverter(i.Id, i.NominalCapacityKw))
+                .ToList();
 
             var powerKw = Math.Round(_engine.ReadParkPowerKw(park.Id, parkInverters, instantUtc, faults), 1);
             var energyKwh = Math.Round(_engine.EnergyTodayKwh(park.Id, parkInverters, instantUtc, faults), 1);
 
             var telemetry = _telemetryService.CalculateMetrics(
                 park, powerKw, energyKwh, localTime,
-                hasEquipment: parkInverters.Count > 0,
+                hasEquipment: allParkInverters.Count > 0,
                 timestampUtc: instantUtc);
 
             await _hubContext.Clients

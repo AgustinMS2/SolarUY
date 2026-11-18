@@ -148,6 +148,12 @@ public class GridInjectionService : IGridInjectionService
             return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
         }
 
+        var park = _parkRepository.GetById(node.SolarParkId);
+        if (node.Status == SolarNodeStatus.Inactive || park is { Status: SolarParkStatus.Inactive })
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "No se puede operar sobre un nodo o parque inactivo.");
+        }
+
         var confirmationError = ValidateConfirmation(confirmationText);
         if (confirmationError != null)
         {
@@ -189,6 +195,12 @@ public class GridInjectionService : IGridInjectionService
         if (node == null)
         {
             return ServiceResult.Fail(ServiceErrorType.NotFound, "El nodo solicitado no existe.");
+        }
+
+        var park = _parkRepository.GetById(node.SolarParkId);
+        if (node.Status == SolarNodeStatus.Inactive || park is { Status: SolarParkStatus.Inactive })
+        {
+            return ServiceResult.Fail(ServiceErrorType.Conflict, "No se puede operar sobre un nodo o parque inactivo.");
         }
 
         var confirmationError = ValidateConfirmation(confirmationText);

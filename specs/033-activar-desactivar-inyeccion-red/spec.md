@@ -1,6 +1,6 @@
 # Spec 033 — Activar y Desactivar Inyección a la Red
 
-Estado: aprobada (aclarada y confirmada por el usuario el 2026-11-15)
+Estado: implementada (aclarada y confirmada por el usuario el 2026-11-15)
 Depende de: Spec 001 (Parques), Spec 013 (Inversores), Spec 027 y 028 (Monitoreo)
 
 ## Contexto y objetivo

@@ -1,6 +1,6 @@
-﻿# Spec 020 — Baja de Técnico
+# Spec 020 — Baja de Técnico
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 018 (Alta), Spec 019 (Listar)
 
 ## Contexto y objetivo

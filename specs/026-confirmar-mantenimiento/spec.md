@@ -1,6 +1,6 @@
-﻿# Spec 026 — Confirmar Mantenimiento
+# Spec 026 — Confirmar Mantenimiento
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 025 (Mis Mantenimientos). El RF-3 depende además de la Spec 031 (Alertas).
 
 ## Contexto y objetivo

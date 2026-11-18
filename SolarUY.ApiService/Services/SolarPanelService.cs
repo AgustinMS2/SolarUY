@@ -16,17 +16,23 @@ public class SolarPanelService : ISolarPanelService
     private readonly ISolarNodeRepository _nodeRepository;
     private readonly IInverterRepository _inverterRepository;
     private readonly ILogger<SolarPanelService> _logger;
+    private readonly ISimulatedFaultRepository? _simulatedFaultRepository;
+    private readonly IAlertService? _alertService;
 
     public SolarPanelService(
         ISolarPanelRepository repository,
         ISolarNodeRepository nodeRepository,
         IInverterRepository inverterRepository,
-        ILogger<SolarPanelService> logger)
+        ILogger<SolarPanelService> logger,
+        ISimulatedFaultRepository? simulatedFaultRepository = null,
+        IAlertService? alertService = null)
     {
         _repository = repository;
         _nodeRepository = nodeRepository;
         _inverterRepository = inverterRepository;
         _logger = logger;
+        _simulatedFaultRepository = simulatedFaultRepository;
+        _alertService = alertService;
     }
 
     private static ServiceResult? Validate(
@@ -190,6 +196,11 @@ public class SolarPanelService : ISolarPanelService
             return ServiceResult.Fail(ServiceErrorType.Conflict, $"Ya existe un panel con el número de serie \"{trimmedSerie}\".");
         }
 
+        if (panel.SolarParkId != request.SolarParkId)
+        {
+            panel.SolarNodeId = null;
+        }
+
         panel.SerieNumber = trimmedSerie;
         panel.NormalizedSerieNumber = normalizedSerie;
         panel.PowerW = request.PowerW;
@@ -218,9 +229,14 @@ public class SolarPanelService : ISolarPanelService
             return ServiceResult.Fail(ServiceErrorType.Validation, "El panel ya está inactivo.");
         }
 
-        // 3. Cambiar estado a Inactivo (baja lógica)
+        // 3. Cambiar estado a Inactivo (baja lógica), desasignar de nodo y cerrar fallas/alertas activas (Spec 039 RF-6)
+        var now = DateTime.UtcNow;
         panel.Status = SolarPanelStatus.Inactive;
-        panel.UpdatedAtUtc = DateTime.UtcNow;
+        panel.SolarNodeId = null;
+        panel.UpdatedAtUtc = now;
+
+        _simulatedFaultRepository?.EndByTarget(SimulatedFaultTarget.Panel, id, now);
+        _alertService?.AttendPanelAlerts(id);
 
         _repository.Update(panel);
         _logger.LogInformation("Solar panel deleted successfully with ID {PanelId}", panel.Id);

@@ -1,6 +1,6 @@
-﻿# Spec 008 — Baja de Panel Solar
+# Spec 008 — Baja de Panel Solar
 
-Estado: aprobada
+Estado: implementada
 
 Depende de: Spec 005 (Alta), Spec 006 (Listar) y Spec 007 (usa `GetById`)
 

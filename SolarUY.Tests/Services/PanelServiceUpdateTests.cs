@@ -269,4 +269,18 @@ public class PanelServiceUpdateTests
         Assert.Equal(ServiceErrorType.NotFound, result.ErrorType);
         Assert.Equal("El panel solicitado no existe.", result.ErrorMessage);
     }
+
+    [Fact]
+    public void Update_WhenSolarParkChanges_UnassignsPanelFromPreviousParkNode()
+    {
+        var panel = _repository.GetById(_panelId)!;
+        panel.SolarNodeId = Guid.NewGuid();
+
+        var request = new UpdateSolarPanelRequest("PNL-ORIGINAL-01", 400, 20.0, _anotherParkId);
+        var result = _service.Update(_panelId, request);
+
+        Assert.True(result.Success);
+        Assert.Equal(_anotherParkId, panel.SolarParkId);
+        Assert.Null(panel.SolarNodeId);
+    }
 }

@@ -166,21 +166,12 @@
         {
             var panels = await PanelsApiClient.GetAllAsync();
             _activePanels = panels
-                .Where(p => p.Status == "Activo")
+                .Where(p => p.Status is "Activo" or "Desactivado")
                 .OrderBy(p => p.SolarParkName)
                 .ThenBy(p => p.SerieNumber)
                 .ToList();
 
-            if (PrefilledPanelId is { } prefilledPanelId && _activePanels.Any(p => p.Id == prefilledPanelId))
-            {
-                _selectedPanelId = prefilledPanelId.ToString();
-            }
-
-            if (!string.IsNullOrWhiteSpace(PrefilledDescription))
-            {
-                var prefilled = PrefilledDescription.Trim();
-                _description = prefilled.Length > 500 ? prefilled[..500] : prefilled;
-            }
+            ApplyPrefilledQueryParameters();
 
             var techniciansResult = await TechnicianApiClient.GetAllAsync();
             if (techniciansResult.Success && techniciansResult.Value != null)
@@ -347,6 +338,29 @@
         return scheduledDateUtc;
     }
 
+    protected override void OnParametersSet()
+    {
+        ApplyPrefilledQueryParameters();
+    }
+
+    private void ApplyPrefilledQueryParameters()
+    {
+        if (PrefilledPanelId is { } prefilledPanelId && _activePanels.Any(p => p.Id == prefilledPanelId))
+        {
+            _selectedPanelId = prefilledPanelId.ToString();
+            if (string.IsNullOrEmpty(_selectedType))
+            {
+                _selectedType = "Corrective";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(PrefilledDescription))
+        {
+            var prefilled = PrefilledDescription.Trim();
+            _description = prefilled.Length > 500 ? prefilled[..500] : prefilled;
+        }
+    }
+
     private void LimpiarFormulario()
     {
         _selectedPanelId = "";
@@ -361,7 +375,13 @@
 
     private void Cancelar()
     {
+    private void Cancelar()
+    {
+        LimpiarFormulario();
+        _successMessage = null;
+        _errorMessage = null;
         NavManager.NavigateTo("/mantenimientos");
+    }
     }
 
     private void IrAListado()

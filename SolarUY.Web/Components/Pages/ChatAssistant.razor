@@ -198,17 +198,17 @@
         var messageToSend = _userInput.Trim();
         _userInput = string.Empty;
 
+        var history = _messages
+            .TakeLast(6)
+            .Select(m => new ChatMessageDto(m.Role, m.Content, m.TimestampUtc))
+            .ToList();
+
         // Agregar mensaje del usuario
         _messages.Add(new DisplayMessage("user", messageToSend, DateTime.UtcNow));
         _isGenerating = true;
 
         try
         {
-            var history = _messages
-                .TakeLast(6)
-                .Select(m => new ChatMessageDto(m.Role, m.Content, m.TimestampUtc))
-                .ToList();
-
             var request = new ChatQueryRequest(messageToSend, history);
             var response = await ChatClient.SendMessageAsync(request);
 

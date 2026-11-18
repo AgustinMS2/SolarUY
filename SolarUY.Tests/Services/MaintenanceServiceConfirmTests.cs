@@ -387,4 +387,83 @@ public class MaintenanceServiceConfirmTests
         Assert.Empty(result.Value!.AttendedAlerts);
         Assert.Equal(MaintenanceStatus.Completed, order.Status);
     }
+
+    // ---- Spec 039 RF-1 y RF-2
+
+    [Fact]
+    public void ConfirmMaintenance_WithOperationalOutcome_EndsActiveSimulatedFaultsOnPanel()
+    {
+        var order = AddOrder();
+        var faultRepo = new FakeSimulatedFaultRepository();
+        faultRepo.Add(new SimulatedFault
+        {
+            Id = Guid.NewGuid(),
+            TargetType = SimulatedFaultTarget.Panel,
+            TargetId = order.SolarPanelId,
+            FaultType = SimulatedFaultType.OpenCircuit,
+            StartedAtUtc = DateTime.UtcNow.AddMinutes(-30),
+            EndedAtUtc = null
+        });
+
+        var service = new MaintenanceService(
+            _repository,
+            new FakeSolarPanelRepository(),
+            new FakeTechnicianRepository(),
+            NullLogger<MaintenanceService>.Instance,
+            new AlertService(_alertRepository, TimeProvider.System),
+            faultRepo);
+
+        var result = service.ConfirmMaintenance(order.Id, Request(outcome: "Operational"));
+
+        Assert.True(result.Success);
+        Assert.Empty(faultRepo.GetActiveByTarget(SimulatedFaultTarget.Panel, order.SolarPanelId));
+        Assert.NotNull(faultRepo.Faults.Single().EndedAtUtc);
+    }
+
+    [Fact]
+    public void ConfirmMaintenance_WhenTechnicianIsNotAssignedToOrder_ReturnsConflictError()
+    {
+        var assignedTechId = Guid.NewGuid();
+        var otherTechId = Guid.NewGuid();
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = assignedTechId,
+            FullName = "Carlos Méndez",
+            DocumentId = "45678901",
+            NormalizedDocumentId = "45678901",
+            Email = "tecnico@solaruy.local",
+            NormalizedEmail = "tecnico@solaruy.local",
+            PhoneNumber = "099123456",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = otherTechId,
+            FullName = "Mariana Rodríguez",
+            DocumentId = "38901234",
+            NormalizedDocumentId = "38901234",
+            Email = "mrodriguez@solaruy.local",
+            NormalizedEmail = "mrodriguez@solaruy.local",
+            PhoneNumber = "098654321",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        var order = AddOrder();
+        order.TechnicianId = assignedTechId;
+
+        var service = new MaintenanceService(
+            _repository,
+            new FakeSolarPanelRepository(),
+            techRepo,
+            NullLogger<MaintenanceService>.Instance);
+
+        var result = service.ConfirmMaintenance(order.Id, Request(), callerEmail: "mrodriguez@solaruy.local", isAdmin: false);
+
+        Assert.False(result.Success);
+        Assert.Equal("No tenés permiso para confirmar un mantenimiento asignado a otro técnico.", result.ErrorMessage);
+        Assert.Equal(MaintenanceStatus.Pending, order.Status);
+    }
 }

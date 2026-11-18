@@ -1,6 +1,6 @@
-﻿# Spec 031 — Recibir Alerta de Falla
+# Spec 031 — Recibir Alerta de Falla
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 027 (Monitoreo Parque), Spec 028 (Monitoreo Nodo; temperatura del inversor), Spec 030 (Salud Paneles; falla crítica de un panel)
 Se relaciona con: Spec 021 (agendar mantenimiento) y Spec 026 (su RF-3 resuelve las alertas de un panel al completar la orden; tarea T5 pendiente de esta spec)
 

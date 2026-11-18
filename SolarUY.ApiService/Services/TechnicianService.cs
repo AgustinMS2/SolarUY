@@ -52,7 +52,11 @@ public class TechnicianService : ITechnicianService
         }
 
         // Normalizar documento (quitar puntos y guiones para validar unicidad)
-        var normalizedDocument = trimmedDocument.ToLowerInvariant().Replace(".", "").Replace("-", "");
+        var normalizedDocument = trimmedDocument.ToLowerInvariant().Replace(".", "").Replace("-", "").Trim();
+        if (string.IsNullOrEmpty(normalizedDocument))
+        {
+            return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "El documento de identidad es obligatorio.");
+        }
 
         if (_technicianRepository.ExistsByDocument(normalizedDocument))
         {
@@ -167,7 +171,8 @@ public class TechnicianService : ITechnicianService
             Email = t.Email,
             PhoneNumber = t.PhoneNumber,
             Specialty = t.Specialty,
-            Status = t.Status
+            Status = t.Status,
+            PendingMaintenancesCount = _maintenanceRepository.CountPendingByTechnician(t.Id)
         }).ToList();
 
         return ServiceResult<IReadOnlyList<TechnicianDto>>.Ok(dtoList.AsReadOnly());

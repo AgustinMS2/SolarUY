@@ -12,19 +12,22 @@ public class MaintenanceService : IMaintenanceService
     private readonly ITechnicianRepository _technicianRepository;
     private readonly ILogger<MaintenanceService> _logger;
     private readonly IAlertService? _alertService;
+    private readonly ISimulatedFaultRepository? _simulatedFaultRepository;
 
     public MaintenanceService(
         IMaintenanceRepository maintenanceRepository,
         ISolarPanelRepository panelRepository,
         ITechnicianRepository technicianRepository,
         ILogger<MaintenanceService> logger,
-        IAlertService? alertService = null)
+        IAlertService? alertService = null,
+        ISimulatedFaultRepository? simulatedFaultRepository = null)
     {
         _maintenanceRepository = maintenanceRepository;
         _panelRepository = panelRepository;
         _technicianRepository = technicianRepository;
         _logger = logger;
         _alertService = alertService;
+        _simulatedFaultRepository = simulatedFaultRepository;
     }
 
     public ServiceResult<Guid> CreateReservation(CreateMaintenanceReservationRequest request)
@@ -37,16 +40,25 @@ public class MaintenanceService : IMaintenanceService
                 "La fecha y hora del mantenimiento debe ser posterior al momento actual.");
         }
 
-        // RF-2: panel existente y activo.
+        // RF-2 / Spec 039 RF-3: panel existente y no dado de baja (se permite Activo o Desactivado remotamente).
         var panel = _panelRepository.GetById(request.SolarPanelId);
         if (panel == null)
         {
             return ServiceResult<Guid>.Fail(ServiceErrorType.NotFound, "El panel solar solicitado no existe.");
         }
 
-        if (panel.Status != SolarPanelStatus.Active)
+        if (panel.Status == SolarPanelStatus.Inactive)
         {
             return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "Debés seleccionar un panel solar activo.");
+        }
+
+        // Spec 039 RF-4: el parque solar del panel debe estar activo.
+        var park = panel.SolarPark ?? _panelRepository.GetParkById(panel.SolarParkId);
+        if (park is { Status: SolarParkStatus.Inactive })
+        {
+            return ServiceResult<Guid>.Fail(
+                ServiceErrorType.Validation,
+                "El parque solar del panel seleccionado se encuentra inactivo.");
         }
 
         // RF-2: técnico existente y activo.
@@ -263,7 +275,11 @@ public class MaintenanceService : IMaintenanceService
     }
 
     // Spec 026: el técnico (o el administrador, por contingencia) confirma una intervención realizada.
-    public ServiceResult<MaintenanceConfirmation> ConfirmMaintenance(Guid orderId, ConfirmMaintenanceRequest request)
+    public ServiceResult<MaintenanceConfirmation> ConfirmMaintenance(
+        Guid orderId,
+        ConfirmMaintenanceRequest request,
+        string? callerEmail = null,
+        bool isAdmin = true)
     {
         var order = _maintenanceRepository.GetById(orderId);
         if (order == null)
@@ -275,6 +291,20 @@ public class MaintenanceService : IMaintenanceService
         if (order.Status != MaintenanceStatus.Pending)
         {
             return ServiceResult<MaintenanceConfirmation>.Fail(ServiceErrorType.Conflict, "Este mantenimiento ya fue completado previamente.");
+        }
+
+        // Spec 039 RF-2: si quien confirma no es Administrador, la orden debe estar asignada a su técnico.
+        if (!isAdmin)
+        {
+            var callerTech = !string.IsNullOrWhiteSpace(callerEmail)
+                ? _technicianRepository.GetByEmail(callerEmail)
+                : null;
+            if (callerTech == null || callerTech.Id != order.TechnicianId)
+            {
+                return ServiceResult<MaintenanceConfirmation>.Fail(
+                    ServiceErrorType.Conflict,
+                    "No tenés permiso para confirmar un mantenimiento asignado a otro técnico.");
+            }
         }
 
         // RF-2: observaciones obligatorias, de 10 a 1000 caracteres.
@@ -324,6 +354,12 @@ public class MaintenanceService : IMaintenanceService
         order.UpdatedAtUtc = now;
         _maintenanceRepository.Update(order);
         _logger.LogInformation("Maintenance order {OrderId} confirmed as completed", orderId);
+
+        // Spec 039 RF-1: si el panel quedó Operativo, finaliza las fallas simuladas activas del panel.
+        if (outcome == MaintenancePanelOutcome.Operational)
+        {
+            _simulatedFaultRepository?.EndByTarget(SimulatedFaultTarget.Panel, order.SolarPanelId, now);
+        }
 
         // RF-3: las alertas activas del panel quedan como Atendidas (spec 031). Solo si la confirmación fue aceptada.
         var attendedAlerts = _alertService?.AttendPanelAlerts(order.SolarPanelId) ?? [];

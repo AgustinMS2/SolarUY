@@ -152,4 +152,32 @@ public class TechnicianServiceGetAllTests
         Assert.Equal("Inactivo, Tecnico", result.Value![0].FullName);
         Assert.Equal(TechnicianStatus.Inactive, result.Value![0].Status);
     }
+
+    [Fact]
+    public void GetAll_PopulatesPendingMaintenancesCountForEachTechnician()
+    {
+        var techId = Guid.NewGuid();
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(new Technician
+        {
+            Id = techId,
+            FullName = "Carlos Méndez",
+            DocumentId = "45678901",
+            NormalizedDocumentId = "45678901",
+            Email = "tecnico@solaruy.local",
+            NormalizedEmail = "tecnico@solaruy.local",
+            PhoneNumber = "099123456",
+            Status = TechnicianStatus.Active,
+            CreatedAtUtc = DateTime.UtcNow
+        });
+
+        var maintenanceRepo = new FakeMaintenanceRepository { PendingCount = 3 };
+        var service = new TechnicianService(techRepo, maintenanceRepo, logger: NullLogger<TechnicianService>.Instance);
+
+        var result = service.GetAll();
+
+        Assert.True(result.Success);
+        Assert.Single(result.Value!);
+        Assert.Equal(3, result.Value![0].PendingMaintenancesCount);
+    }
 }

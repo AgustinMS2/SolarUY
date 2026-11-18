@@ -410,12 +410,12 @@
             }
             else
             {
-                _errorMessage = result.ErrorMessage ?? "Error desconocido al cargar los nodos.";
+                _errorMessage = "No se pudo cargar el listado de nodos. Intentá nuevamente.";
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            _errorMessage = $"Ocurrió un error inesperado: {ex.Message}";
+            _errorMessage = "No se pudo cargar el listado de nodos. Intentá nuevamente.";
         }
         finally
         {

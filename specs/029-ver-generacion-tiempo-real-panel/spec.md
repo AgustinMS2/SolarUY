@@ -1,6 +1,6 @@
 # Spec 029 — Ver Generación en Tiempo Real del Panel
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 006 (Listar Panel), Spec 028 (Monitoreo Nodo)
 
 ## Contexto y objetivo

@@ -45,15 +45,18 @@ public class SolarUyDomainContextRetriever : ISolarUyDomainContextRetriever
         var alertMsgs = pendingAlerts.Take(5).Select(a => $"[{a.Severity}] {a.Description} ({a.ParkName})").ToList();
         var alertInfo = new DomainAlertInfo(pendingAlerts.Count, ackAlerts.Count, alertMsgs);
 
-        // Mantenimientos
+        // Mantenimientos (orden ascendente: los 5 más próximos primero)
         var pendingMaintenances = _maintenanceRepo.GetAll(new MaintenanceFilter { Status = MaintenanceStatus.Pending });
-        var upcoming = pendingMaintenances.Take(5).Select(m =>
-        {
-            var dateStr = m.ScheduledDateUtc.AddHours(-3).ToString("dd/MM HH:mm");
-            var tech = m.Technician != null ? m.Technician.FullName : "Sin técnico asignado";
-            var park = m.SolarPanel?.SolarPark?.Name ?? "Parque";
-            return $"Tipo: {m.Type} en {park} ({dateStr}, Técnico: {tech})";
-        }).ToList();
+        var upcoming = pendingMaintenances
+            .OrderBy(m => m.ScheduledDateUtc)
+            .Take(5)
+            .Select(m =>
+            {
+                var dateStr = m.ScheduledDateUtc.AddHours(-3).ToString("dd/MM HH:mm");
+                var tech = m.Technician != null ? m.Technician.FullName : "Sin técnico asignado";
+                var park = m.SolarPanel?.SolarPark?.Name ?? "Parque";
+                return $"Tipo: {m.Type} en {park} ({dateStr}, Técnico: {tech})";
+            }).ToList();
         var maintenanceInfo = new DomainMaintenanceInfo(pendingMaintenances.Count, upcoming);
 
         // Generaciones

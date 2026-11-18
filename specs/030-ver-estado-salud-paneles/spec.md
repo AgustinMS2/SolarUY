@@ -1,6 +1,6 @@
 # Spec 030 — Ver Estado de Salud de Paneles
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 006 (Paneles), Spec 027 (Monitoreo Parque), Spec 029 (Monitoreo Panel; enlace "Ver detalle")
 
 ## Contexto y objetivo

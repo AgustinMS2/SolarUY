@@ -1,7 +1,6 @@
 @page "/paneles/baja/{id:guid}"
 @rendermode InteractiveServer
 @attribute [Authorize(Roles = AppRoles.Administrator)]
-@using System.ComponentModel.DataAnnotations
 @using SolarUY.Web.Services
 @inject PanelsApiClient PanelsClient
 @inject NavigationManager NavManager
@@ -19,7 +18,17 @@
                     </h3>
                 </div>
                 <div class="card-body p-4">
-                    @if (_panel == null)
+                    @if (!string.IsNullOrEmpty(_errorMessage))
+                    {
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <span class="bi bi-exclamation-triangle-fill me-2"></span>
+                            <div>@_errorMessage</div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-3">
+                            <a href="/paneles" class="btn btn-outline-secondary">Volver al listado</a>
+                        </div>
+                    }
+                    else if (_panel == null)
                     {
                         <div class="alert alert-info">
                             Cargando panel...
@@ -29,11 +38,11 @@
                     {
                         <div class="alert alert-warning d-flex align-items-center" role="alert">
                             <span class="bi bi-exclamation-triangle-fill me-2"></span>
-                            <span>¿Confirmás la baja del panel "<b>@_panel.SerieNumber"</b>?</span>
+                            <span>¿Confirmás la baja del panel "<b>@_panel.SerieNumber</b>"?</span>
                         </div>
 
                         <div class="d-flex justify-content-end gap-2 mt-3">
-                            <button type="button" class="btn btn-secondary" @onclick="Cancelar">
+                            <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@_isSubmitting">
                                 <span class="bi bi-x me-1"></span>
                                 Cancelar
                             </button>
@@ -42,8 +51,7 @@
                                 Confirmar
                                 @if (_isSubmitting)
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    <span>Guardando...</span>
+                                    <span class="spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
                                 }
                             </button>
                         </div>
@@ -58,7 +66,7 @@
     [Parameter]
     public Guid Id { get; set; }
 
-    private SolarPanelDto _panel = null!;
+    private SolarPanelDto? _panel;
     private bool _isSubmitting;
     private string? _errorMessage;
 
@@ -73,15 +81,12 @@
         if (panelDto == null)
         {
             _errorMessage = "El panel solicitado no existe.";
-            NavManager.NavigateTo("/paneles");
             return;
         }
 
-        // Verificar si ya está inactivo (RF-4)
         if (panelDto.Status == "Inactivo")
         {
-            _errorMessage = "El panel ya está inactivo. No se puede dar de baja nuevamente.";
-            NavManager.NavigateTo("/paneles");
+            _errorMessage = "El panel ya está inactivo.";
             return;
         }
 
@@ -100,9 +105,7 @@
 
             if (result.Success)
             {
-                _errorMessage = "Panel dado de baja correctamente.";
-                await Task.Delay(1500);
-                NavManager.NavigateTo("/paneles", forceLoad: true);
+                NavManager.NavigateTo($"/paneles?mensaje={Uri.EscapeDataString("Panel dado de baja correctamente.")}");
             }
             else
             {
@@ -121,8 +124,7 @@
 
     private void Cancelar()
     {
-        // RF-3: Al cancelar, no hacer ningún cambio
         _errorMessage = null;
-        NavManager.NavigateTo("/paneles", forceLoad: true);
+        NavManager.NavigateTo("/paneles");
     }
 }

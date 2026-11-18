@@ -48,6 +48,13 @@ public class SolarUyKnowledgeAssistant
 
         var snapshot = _retriever.GetCurrentSnapshot();
 
+        // Caso límite Spec 035 / Spec 039 RF-20: si menciona un parque específico que no existe en el inventario.
+        var missingParkResponse = CheckNonExistentPark(message, snapshot.Parks);
+        if (missingParkResponse != null)
+        {
+            return missingParkResponse;
+        }
+
         // 4. Consultas de Alertas / Fallas (Spec 031)
         if (ContainsAny(normalized, "alerta", "falla", "anomalia", "problema", "severidad"))
         {
@@ -152,6 +159,54 @@ public class SolarUyKnowledgeAssistant
     private static bool ContainsAny(string text, params string[] terms)
     {
         return terms.Any(t => text.Contains(t, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static ChatQueryResponse? CheckNonExistentPark(string message, IReadOnlyList<DomainParkInfo> parks)
+    {
+        if (parks.Count == 0)
+        {
+            return null;
+        }
+
+        // Si el mensaje ya menciona el nombre de algún parque existente, es válido.
+        foreach (var p in parks)
+        {
+            var shortName = p.Name.Replace("Parque Solar ", "", StringComparison.OrdinalIgnoreCase).Trim();
+            if (!string.IsNullOrEmpty(shortName) && message.Contains(shortName, StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+        }
+
+        var idx = message.IndexOf("parque ", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            return null;
+        }
+
+        var after = message[(idx + "parque ".Length)..].Trim();
+        if (after.StartsWith("solar ", StringComparison.OrdinalIgnoreCase))
+        {
+            after = after["solar ".Length..].Trim();
+        }
+
+        var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "solar", "solares", "de", "del", "en", "con", "sin", "tiene", "tienen", "más", "mas",
+            "mayor", "menor", "activo", "activos", "inactivo", "inactivos", "registrado", "registrados",
+            "hoy", "ayer", "este", "mes", "año", "anio", "que", "cual", "cuál", "como", "cómo"
+        };
+
+        var firstToken = after.Split([' ', '?', '¿', ',', '.', ';', ':'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(firstToken) || stopWords.Contains(firstToken))
+        {
+            return null;
+        }
+
+        var availableNames = string.Join(", ", parks.Select(p => $"**{p.Name}**"));
+        return new ChatQueryResponse(
+            $"El parque mencionado (\"{firstToken}\") no existe en el inventario de SolarUY. Los parques registrados disponibles son: {availableNames}.",
+            "SolarUY Guardrails");
     }
 }
 

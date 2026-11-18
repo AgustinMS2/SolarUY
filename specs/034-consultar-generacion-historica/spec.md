@@ -1,6 +1,6 @@
 # Spec 034 — Consultar Generación Histórica
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 001 (Alta Parque), Spec 002 (Listar Parques), Spec 027 (Monitoreo en Tiempo Real Parque)
 
 ## Contexto y objetivo

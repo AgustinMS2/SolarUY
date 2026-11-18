@@ -34,10 +34,14 @@ public class NodeTelemetryService : INodeTelemetryService
         // (spec 033): el inversor no entrega potencia, por lo que se reportan los valores
         // eléctricos en cero y se suprimen alarmas espurias.
         // Con la falla de aislamiento (spec 037) el inversor se apagó por la protección de fuga a tierra: igual que detenido.
-        var isOperating = node.Status == SolarNodeStatus.Active
+        var isConnected = node.Status == SolarNodeStatus.Active
             && inverter is not null
-            && inverter.GridInjectionEnabled
+            && inverter.GridInjectionEnabled;
+
+        var isOperating = isConnected
             && fault != SimulatedFaultType.InsulationFault;
+
+        var activeFault = isConnected ? fault : null;
 
         return new NodeTelemetryDto
         {
@@ -46,7 +50,7 @@ public class NodeTelemetryService : INodeTelemetryService
             InverterSerieNumber = inverter?.SerieNumber ?? string.Empty,
             NominalCapacityKw = inverter?.NominalCapacityKw ?? 0.0,
             ActivePowerKw = isOperating ? activePowerKw : 0.0,
-            DcVoltage = isOperating ? dcVoltage : 0.0,
+            DcVoltage = isConnected ? dcVoltage : 0.0,
             DcCurrent = isOperating ? dcCurrent : 0.0,
             AcVoltage = isOperating ? acVoltage : 0.0,
             GridFrequencyHz = isOperating ? frequencyHz : 0.0,
@@ -54,8 +58,8 @@ public class NodeTelemetryService : INodeTelemetryService
             IsOverheating = isOperating && temperatureC > OverheatingThresholdC,
             IsGridFrequencyAnomaly = isOperating &&
                 (frequencyHz < MinGridFrequencyHz || frequencyHz > MaxGridFrequencyHz),
-            Fault = fault,
-            FaultLabel = fault.HasValue ? FaultCatalog.LabelOf(fault.Value) : null,
+            Fault = activeFault,
+            FaultLabel = activeFault.HasValue ? FaultCatalog.LabelOf(activeFault.Value) : null,
             TimestampUtc = timestampUtc
         };
     }

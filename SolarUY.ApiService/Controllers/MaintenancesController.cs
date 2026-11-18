@@ -160,7 +160,12 @@ public class MaintenancesController : ControllerBase
     [HttpPost("{id:guid}/confirm")]
     public async Task<IActionResult> ConfirmMaintenance(Guid id, [FromBody] ConfirmMaintenanceRequest request, CancellationToken cancellationToken)
     {
-        var result = _maintenanceService.ConfirmMaintenance(id, request);
+        var callerEmail = User.FindFirst("email")?.Value
+            ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+            ?? User.FindFirst("preferred_username")?.Value;
+        var isAdmin = User.IsInRole(Roles.Administrator);
+
+        var result = _maintenanceService.ConfirmMaintenance(id, request, callerEmail, isAdmin);
 
         if (!result.Success)
         {

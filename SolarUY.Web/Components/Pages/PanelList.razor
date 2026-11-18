@@ -63,7 +63,7 @@
                 <div class="mb-3 text-muted">
                     <span class="bi bi-inbox fs-1" aria-hidden="true"></span>
                 </div>
-                <h5 class="card-title text-secondary">No hay panels registrados.</h5>
+                <h5 class="card-title text-secondary">No hay paneles registrados.</h5>
                 <p class="card-text text-muted mb-4">Comienza registrando el primer panel solar al sistema.</p>
                 <AuthorizeView Roles="@AppRoles.Administrator">
                     <a href="/paneles/nuevo" class="btn btn-outline-primary">
@@ -123,9 +123,15 @@
                                         </a>
                                     }
                                     <AuthorizeView Roles="@AppRoles.Administrator">
-                                        <a href="/paneles/editar/@panel.Id" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+                                        <a href="/paneles/editar/@panel.Id" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center me-1">
                                             <span class="bi bi-pencil me-1"></span> Editar
                                         </a>
+                                        @if (panel.Status != "Inactivo")
+                                        {
+                                            <a href="/paneles/baja/@panel.Id" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center">
+                                                <span class="bi bi-trash me-1"></span> Dar de baja
+                                            </a>
+                                        }
                                     </AuthorizeView>
                                 </td>
                             </tr>
@@ -161,7 +167,7 @@
         }
         catch (Exception)
         {
-            _errorMessage = "No se pudo cargar el listado de panels. Intentá nuevamente.";
+            _errorMessage = "No se pudo cargar el listado de paneles. Intentá nuevamente.";
         }
         finally
         {

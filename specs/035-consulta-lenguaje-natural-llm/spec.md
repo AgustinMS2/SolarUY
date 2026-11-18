@@ -1,6 +1,6 @@
 # Spec 035 — Consulta en Lenguaje Natural con IA (LLM)
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 002 (Listar Parques), Spec 024 (Listar Mantenimientos), Spec 031 (Alertas), Spec 034 (Generación Histórica)
 
 ## Contexto y objetivo

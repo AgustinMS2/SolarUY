@@ -444,4 +444,29 @@ public class TechnicianServiceCreateTests
         Assert.Equal("No se pudo comunicar con el servicio de autenticación. Intentá nuevamente.", result.ErrorMessage);
         Assert.Empty(techRepo.PersistedTechnicians);
     }
+
+    [Theory]
+    [InlineData("...")]
+    [InlineData("---")]
+    [InlineData(".-.-")]
+    public void Create_WithPunctuationOnlyDocumentId_ReturnsValidationError(string documentId)
+    {
+        var techRepo = new FakeTechnicianRepository();
+        var service = new TechnicianService(techRepo, logger: NullLogger<TechnicianService>.Instance);
+        var request = new CreateTechnicianRequest
+        {
+            FullName = "Juan Pérez",
+            DocumentId = documentId,
+            Email = "juan.perez@email.com",
+            PhoneNumber = "+5491112345678",
+            Password = "Password123"
+        };
+
+        var result = service.Create(request);
+
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Validation, result.ErrorType);
+        Assert.Equal("El documento de identidad es obligatorio.", result.ErrorMessage);
+        Assert.Empty(techRepo.PersistedTechnicians);
+    }
 }

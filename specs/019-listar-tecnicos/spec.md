@@ -1,6 +1,6 @@
-﻿# Spec 019 — Listar Técnicos
+# Spec 019 — Listar Técnicos
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 018 (Alta de Técnico)
 
 ## Contexto y objetivo

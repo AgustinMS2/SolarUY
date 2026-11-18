@@ -234,6 +234,14 @@
             if (techResult.Success && techResult.Value != null)
             {
                 _technicians = techResult.Value.ToList();
+                var userEmail = user.FindFirst("email")?.Value
+                    ?? user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                if (string.IsNullOrWhiteSpace(userEmail) ||
+                    !_technicians.Any(t => string.Equals(t.Email, userEmail, StringComparison.OrdinalIgnoreCase)))
+                {
+                    _selectedAdminTechEmail = _technicians.FirstOrDefault(t => t.Status == TechnicianStatus.Active)?.Email
+                        ?? _technicians.FirstOrDefault()?.Email;
+                }
             }
         }
 

@@ -26,70 +26,25 @@
             </NavLink>
         </div>
 
-        <!-- Grupo Operación -->
-        <div class="nav-section-title px-3 pt-3 pb-1 text-uppercase">
-            <span>Operación & Campo</span>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="mis-mantenimientos" Match="NavLinkMatch.All">
-                <i class="bi bi-tools nav-icon text-warning" aria-hidden="true"></i>
-                <span class="nav-label">Mis Mantenimientos</span>
-                <span class="badge badge-accent ms-auto">Campo</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="mantenimientos" Match="NavLinkMatch.All">
-                <i class="bi bi-calendar-check-fill nav-icon" aria-hidden="true"></i>
-                <span class="nav-label">Mantenimientos</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="historicos" Match="NavLinkMatch.Prefix">
-                <i class="bi bi-bar-chart-line-fill nav-icon text-info" aria-hidden="true"></i>
-                <span class="nav-label">Generación Histórica</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="asistente-ia" Match="NavLinkMatch.All">
-                <i class="bi bi-stars nav-icon text-warning" aria-hidden="true"></i>
-                <span class="nav-label">Asistente IA</span>
-            </NavLink>
-        </div>
-
-        <!-- Grupo Infraestructura Solar -->
-        <div class="nav-section-title px-3 pt-3 pb-1 text-uppercase">
-            <span>Infraestructura</span>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="parques" Match="NavLinkMatch.All">
-                <i class="bi bi-grid-fill nav-icon" aria-hidden="true"></i>
-                <span class="nav-label">Parques Solares</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="nodos" Match="NavLinkMatch.All">
-                <i class="bi bi-diagram-3-fill nav-icon" aria-hidden="true"></i>
-                <span class="nav-label">Nodos</span>
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3 mb-1">
-            <NavLink class="nav-link" href="paneles" Match="NavLinkMatch.All">
-                <i class="bi bi-grid-3x3 nav-icon" aria-hidden="true"></i>
-                <span class="nav-label">Paneles</span>
-            </NavLink>
-        </div>
-
-        <!-- Grupo Gestión (solo Administrador) -->
-        <AuthorizeView Roles="@AppRoles.Administrator">
+        <AuthorizeView Roles="@AppRoles.Any">
+            <!-- Grupo Operación -->
             <div class="nav-section-title px-3 pt-3 pb-1 text-uppercase">
-                <span>Gestión</span>
+                <span>Operación & Campo</span>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="mis-mantenimientos" Match="NavLinkMatch.All">
+                    <i class="bi bi-tools nav-icon text-warning" aria-hidden="true"></i>
+                    <span class="nav-label">Mis Mantenimientos</span>
+                    <span class="badge badge-accent ms-auto">Campo</span>
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="mantenimientos" Match="NavLinkMatch.All">
+                    <i class="bi bi-calendar-check-fill nav-icon" aria-hidden="true"></i>
+                    <span class="nav-label">Mantenimientos</span>
+                </NavLink>
             </div>
 
             <div class="nav-item px-3 mb-1">
@@ -97,6 +52,53 @@
                     <i class="bi bi-person-badge-fill nav-icon" aria-hidden="true"></i>
                     <span class="nav-label">Técnicos</span>
                 </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="historicos" Match="NavLinkMatch.Prefix">
+                    <i class="bi bi-bar-chart-line-fill nav-icon text-info" aria-hidden="true"></i>
+                    <span class="nav-label">Generación Histórica</span>
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="asistente-ia" Match="NavLinkMatch.All">
+                    <i class="bi bi-stars nav-icon text-warning" aria-hidden="true"></i>
+                    <span class="nav-label">Asistente IA</span>
+                </NavLink>
+            </div>
+
+            <!-- Grupo Infraestructura Solar -->
+            <div class="nav-section-title px-3 pt-3 pb-1 text-uppercase">
+                <span>Infraestructura</span>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="parques" Match="NavLinkMatch.All">
+                    <i class="bi bi-grid-fill nav-icon" aria-hidden="true"></i>
+                    <span class="nav-label">Parques Solares</span>
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="nodos" Match="NavLinkMatch.All">
+                    <i class="bi bi-diagram-3-fill nav-icon" aria-hidden="true"></i>
+                    <span class="nav-label">Nodos</span>
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3 mb-1">
+                <NavLink class="nav-link" href="paneles" Match="NavLinkMatch.All">
+                    <i class="bi bi-grid-3x3 nav-icon" aria-hidden="true"></i>
+                    <span class="nav-label">Paneles</span>
+                </NavLink>
+            </div>
+        </AuthorizeView>
+
+        <!-- Grupo Gestión (solo Administrador) -->
+        <AuthorizeView Roles="@AppRoles.Administrator">
+            <div class="nav-section-title px-3 pt-3 pb-1 text-uppercase">
+                <span>Gestión</span>
             </div>
 
             <div class="nav-item px-3 mb-1">

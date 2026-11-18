@@ -1,4 +1,4 @@
-﻿# Tareas: Spec 009 — Alta de Nodo
+# Tareas: Spec 009 — Alta de Nodo
 
 - [x] **T1. Entidad SolarNode + SolarUyDbContext + migración.** RF-1
   - Hecho cuando: la migración crea la tabla SolarNodes con índice único en (SolarParkId, NormalizedName) y la solución compila.
@@ -15,5 +15,5 @@
 - [x] **T5. SolarNodeApiClient + página /nodos/nuevo.** RF-1, RF-2, RF-3
   - Hecho cuando: en el navegador se puede registrar un nodo con parque desplegable, se ven los errores inline, el formulario se limpia al guardar y la vista es responsive.
 
-- [ ] **T6. Botón "Cancelar" en la página `/nodos/nuevo`.** RF-5
+- [x] **T6. Botón "Cancelar" en la página `/nodos/nuevo`.** RF-5
   - Hecho cuando: en el navegador el botón lleva a `/nodos` sin guardar nada y se ve bien en escritorio y celular.

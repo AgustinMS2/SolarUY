@@ -1,6 +1,6 @@
 # Spec 036 — Simular Lecturas del Inversor
 
-Estado: aprobada (2026-11-15), en implementación
+Estado: implementada (2026-11-15), en implementación
 Depende de: Spec 013 (Inversor a Nodo)
 Alimenta a: Specs 027, 028, 029 y 030 (las lecturas en vivo y el horario de sol pasan a salir de este motor), Spec 034 (sus gráficos pasan a mostrar la historia horaria que se guarda aquí) y Spec 037 (inyectará fallas sobre este motor)
 

@@ -136,7 +136,7 @@ public class SimulationFaultService : ISimulationFaultService
         }
 
         var panels = _panelRepository.GetAll()
-            .Where(p => p.Status == SolarPanelStatus.Active && p.SolarNodeId is { } nodeId && activeNodes.ContainsKey(nodeId))
+            .Where(p => p.Status != SolarPanelStatus.Inactive && p.SolarNodeId is { } nodeId && activeNodes.ContainsKey(nodeId))
             .Select(p => ToDto(p.Id, p.SerieNumber, p.SolarParkId, activeNodes[p.SolarNodeId!.Value].Name))
             .OrderBy(d => d.ParkName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(d => d.SerieNumber, StringComparer.OrdinalIgnoreCase)

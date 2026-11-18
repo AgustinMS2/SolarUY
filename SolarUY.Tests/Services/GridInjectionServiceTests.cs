@@ -505,4 +505,28 @@ public class GridInjectionServiceTests
         var injectionEvent = Assert.Single(eventRepo.PersistedEvents);
         Assert.Null(injectionEvent.Reason);
     }
+
+    [Fact]
+    public void CutInverter_NodoInactivo_DevuelveConflict()
+    {
+        var parkRepo = new FakeSolarParkRepository();
+        var park = ActivePark();
+        parkRepo.Parks.Add(park);
+        var nodeRepo = new FakeSolarNodeRepository();
+        var node = NodeForPark(park.Id, "Nodo Inactivo");
+        node.Status = SolarNodeStatus.Inactive;
+        nodeRepo.PersistedNodes.Add(node);
+        var inverterRepo = new FakeInverterRepository();
+        inverterRepo.Inverters.Add(InverterForNode(node.Id, "INV-INACT-01"));
+        var eventRepo = new FakeGridInjectionEventRepository();
+        var sender = new FakeInverterCommandSender();
+        var service = CreateService(parkRepo, nodeRepo, inverterRepo, eventRepo, sender);
+
+        var result = service.CutInverterInjection(node.Id, "CONFIRMAR", "admin@solaruy.local", "10.0.0.5", null);
+
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Conflict, result.ErrorType);
+        Assert.Empty(sender.SentInjectionCutCommands);
+        Assert.Empty(eventRepo.PersistedEvents);
+    }
 }

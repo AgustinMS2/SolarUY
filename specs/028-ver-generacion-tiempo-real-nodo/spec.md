@@ -1,6 +1,6 @@
 # Spec 028 — Ver Generación en Tiempo Real del Nodo
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 010 (Listar Nodos), Spec 013 (Asignar Inversor a Nodo), Spec 027 (Monitoreo Parque), Spec 036 (Simulador)
 Actualizada el 2026-11-15 por las specs 033, 036 y 037 (ver "Cambios posteriores").
 

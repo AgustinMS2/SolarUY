@@ -1,6 +1,6 @@
-﻿# Spec 015 — Iniciar Sesión con Keycloak (OIDC)
+# Spec 015 — Iniciar Sesión con Keycloak (OIDC)
 
-Estado: aprobada
+Estado: implementada
 Depende de: Ninguna (Infraestructura base de seguridad)
 
 ## Contexto y objetivo

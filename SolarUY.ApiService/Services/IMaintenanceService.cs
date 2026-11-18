@@ -17,7 +17,11 @@ public interface IMaintenanceService
 
     ServiceResult CancelReservation(Guid orderId, CancelMaintenanceRequest request);
 
-    ServiceResult<MaintenanceConfirmation> ConfirmMaintenance(Guid orderId, ConfirmMaintenanceRequest request);
+    ServiceResult<MaintenanceConfirmation> ConfirmMaintenance(
+        Guid orderId,
+        ConfirmMaintenanceRequest request,
+        string? callerEmail = null,
+        bool isAdmin = true);
 
     ServiceResult<IReadOnlyList<MaintenanceOrderDto>> GetMyMaintenances(string technicianEmail);
 }

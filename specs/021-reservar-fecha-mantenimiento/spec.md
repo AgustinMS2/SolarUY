@@ -1,6 +1,6 @@
-﻿# Spec 021 — Reservar Fecha de Mantenimiento
+# Spec 021 — Reservar Fecha de Mantenimiento
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 005 (Paneles), Spec 018 (Técnicos)
 
 ## Contexto y objetivo

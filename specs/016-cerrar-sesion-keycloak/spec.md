@@ -1,6 +1,6 @@
-﻿# Spec 016 — Cerrar Sesión (Single Sign-Out)
+# Spec 016 — Cerrar Sesión (Single Sign-Out)
 
-Estado: aprobada
+Estado: implementada
 Depende de: Spec 015 (Iniciar Sesión con Keycloak)
 
 ## Contexto y objetivo

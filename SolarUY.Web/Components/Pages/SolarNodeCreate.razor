@@ -99,7 +99,8 @@
 
     private async Task LoadActiveParksAsync()
     {
-        _activeParks = await ParkApiClient.GetAllAsync();
+        var parks = await ParkApiClient.GetAllAsync();
+        _activeParks = parks.Where(p => p.Status == "Activo").ToList();
     }
 
     private async Task HandleSubmitAsync()
@@ -109,7 +110,7 @@
 
         if (_formModel.SelectedParkId == Guid.Empty)
         {
-            _errorMessage = "El parque solar es obligatorio.";
+            _errorMessage = "El parque solar seleccionado no existe o no está activo.";
             return;
         }
 
@@ -124,7 +125,6 @@
             {
                 _successMessage = "Nodo creado correctamente.";
                 _formModel = new SolarNodeFormModel(); // Limpiar formulario (RF-3)
-                NavManager.NavigateTo("/nodos/nuevo", forceLoad: true);
             }
             else
             {

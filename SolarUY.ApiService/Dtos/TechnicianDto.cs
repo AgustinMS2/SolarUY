@@ -26,4 +26,6 @@ public class TechnicianDto
     public string? Specialty { get; set; }
 
     public TechnicianStatus Status { get; set; }
+
+    public int PendingMaintenancesCount { get; set; }
 }

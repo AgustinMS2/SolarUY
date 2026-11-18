@@ -79,6 +79,7 @@
                                         <th scope="col">Correo electrónico</th>
                                         <th scope="col">Teléfono</th>
                                         <th scope="col">Especialidad</th>
+                                        <th scope="col" class="text-center">Mantenimientos asignados en curso</th>
                                         <th scope="col" class="text-end pe-3">Estado</th>
                                         <th scope="col" class="text-end pe-3">Acciones</th>
                                     </tr>
@@ -92,6 +93,11 @@
                                             <td>@tech.Email</td>
                                             <td>@tech.PhoneNumber</td>
                                             <td>@(string.IsNullOrWhiteSpace(tech.Specialty) ? "Sin especialidad" : tech.Specialty)</td>
+                                            <td class="text-center">
+                                                <span class="badge @(tech.PendingMaintenancesCount > 0 ? "bg-info text-dark" : "bg-light text-secondary border")">
+                                                    @($"{tech.PendingMaintenancesCount} asignados")
+                                                </span>
+                                            </td>
                                             <td class="text-end pe-3">
                                                 <span class="badge bg-@(tech.Status == TechnicianStatus.Active ? "success" : "secondary") fs-sm">
                                                     @(tech.Status == TechnicianStatus.Active ? "Activo" : "Inactivo")
@@ -156,13 +162,21 @@
     private TechnicianDto? _technicianToDeactivate;
     private bool _isDeactivating;
 
-    private IEnumerable<TechnicianDto> _filteredTechnicians =>
-        _technicians.Where(t =>
-            (string.IsNullOrWhiteSpace(_searchTerm) ||
-             t.FullName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
-             t.DocumentId.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrEmpty(_stateFilter) ||
-             t.Status.ToString() == _stateFilter));
+    private IEnumerable<TechnicianDto> _filteredTechnicians
+    {
+        get
+        {
+            var normalizedSearch = _searchTerm.Trim().Replace(".", "").Replace("-", "");
+            return _technicians.Where(t =>
+                (string.IsNullOrWhiteSpace(_searchTerm) ||
+                 t.FullName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                 t.DocumentId.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                 (!string.IsNullOrEmpty(normalizedSearch) &&
+                  t.DocumentId.Replace(".", "").Replace("-", "").Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase))) &&
+                (string.IsNullOrEmpty(_stateFilter) ||
+                 t.Status.ToString() == _stateFilter));
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
