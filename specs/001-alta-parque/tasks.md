@@ -17,3 +17,6 @@
 
 - [x] **T6. `SolarParkApiClient` + página `/parques/nuevo`.** RF-1, RF-2, RF-3, RF-4
   - Hecho cuando: en el navegador se puede dar de alta un parque, se ven los mensajes de error de RF-2 y RF-3, el formulario se limpia tras el alta y la pantalla se ve bien en celular.
+
+- [ ] **T7. Botón "Cancelar" en la página `/parques/nuevo`.** RF-5
+  - Hecho cuando: en el navegador el botón lleva a `/parques` sin guardar nada y se ve bien en escritorio y celular.

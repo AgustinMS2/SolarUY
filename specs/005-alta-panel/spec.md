@@ -35,6 +35,7 @@ Datos que asigna el sistema (no los carga el usuario): identificador, estado = *
   - Parque solar inexistente o inactivo → "El parque solar seleccionado no existe o no está activo."
 - **RF-3**: CUANDO el alta sea exitosa, EL SISTEMA limpiará el formulario para permitir cargar otro panel.
 - **RF-4**: SI ya existe un panel (activo o inactivo) con el mismo número de serie, sin distinguir mayúsculas/minúsculas y luego de quitar espacios al inicio y al final, ENTONCES EL SISTEMA no registrará el panel y mostrará "Ya existe un panel con el número de serie "<serie>"."
+- **RF-5**: CUANDO el Administrador presione "Cancelar" en el formulario de alta, EL SISTEMA volverá al listado de paneles (/paneles) sin registrar nada.
 
 ## Requisitos no funcionales
 

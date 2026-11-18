@@ -29,7 +29,7 @@
                 </div>
                 <div class="card-body p-4">
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        <select class="form-select" @bind="_selectedParkId">
+                        <select class="form-select" data-testid="park-filter" @bind="_selectedParkId" @bind:after="CargarNodosAsync">
                             <option value="">-- Todos los parques --</option>
                             @foreach (var park in _activeParks)
                             {
@@ -390,6 +390,13 @@
 
     private async Task CargarDatosAsync()
     {
+        await CargarNodosAsync();
+        await CargarParquesAsync();
+    }
+
+    // RF-3 (spec 010): también se invoca al cambiar el selector de parque, para recargar solo los nodos.
+    private async Task CargarNodosAsync()
+    {
         _isLoading = true;
         _errorMessage = null;
 
@@ -414,8 +421,6 @@
         {
             _isLoading = false;
         }
-
-        await CargarParquesAsync();
     }
 
     private async Task CargarParquesAsync()

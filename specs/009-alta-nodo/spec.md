@@ -34,6 +34,7 @@ Datos asignados por el sistema: Identificador (GUID), Estado (**Activo**), Fecha
   - Parque solar inexistente o inactivo → "El parque solar seleccionado no existe o no está activo."
 - **RF-3**: CUANDO el alta sea exitosa, EL SISTEMA limpiará el formulario para permitir registrar otro nodo.
 - **RF-4**: SI ya existe un nodo (activo o inactivo) con el mismo nombre en el mismo parque (sin distinguir mayúsculas/minúsculas), ENTONCES EL SISTEMA rechazará el alta y mostrará "Ya existe un nodo con el nombre \"<nombre>\" en este parque solar."
+- **RF-5**: CUANDO el Administrador presione "Cancelar" en el formulario de alta, EL SISTEMA volverá al listado de nodos (/nodos) sin registrar nada.
 
 ## Requisitos no funcionales
 - Interfaz en español, responsive para escritorio y celular.
