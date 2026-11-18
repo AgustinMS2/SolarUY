@@ -30,6 +30,7 @@ public class TechniciansController : ControllerBase
             {
                 ServiceErrorType.Validation => BadRequest(new { message = result.ErrorMessage }),
                 ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                ServiceErrorType.Unavailable => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.ErrorMessage }),
                 _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
             };
         }
@@ -67,6 +68,7 @@ public class TechniciansController : ControllerBase
             {
                 ServiceErrorType.NotFound => NotFound(new { message = result.ErrorMessage }),
                 ServiceErrorType.Conflict => Conflict(new { message = result.ErrorMessage }),
+                ServiceErrorType.Unavailable => StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = result.ErrorMessage }),
                 _ => StatusCode(StatusCodes.Status500InternalServerError, new { message = result.ErrorMessage })
             };
         }

@@ -14,7 +14,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-primary text-white py-3">
                     <h3 class="card-title h5 mb-0 d-flex align-items-center">
-                        <span class="bi bi-person-meet me-2" aria-hidden="true"></span>
+                        <span class="bi bi-person-plus-fill me-2" aria-hidden="true"></span>
                         Registrar Técnico
                     </h3>
                 </div>
@@ -41,37 +41,63 @@
                         <DataAnnotationsValidator />
 
                         <div class="mb-3">
-                            <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+                            <label for="fullName" class="form-label">Nombre completo <span class="text-danger">*</span></label>
                             <InputText id="fullName" class="form-control" @bind-Value="_formModel.FullName" required />
                             <ValidationMessage For="@(() => _formModel.FullName)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Documento de identidad <span class="text-danger">*</span></label>
+                            <label for="documentId" class="form-label">Documento de identidad <span class="text-danger">*</span></label>
                             <InputText id="documentId" class="form-control" @bind-Value="_formModel.DocumentId" required />
                             <ValidationMessage For="@(() => _formModel.DocumentId)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Correo electrónico <span class="text-danger">*</span></label>
+                            <label for="email" class="form-label">Correo electrónico <span class="text-danger">*</span></label>
                             <InputText id="email" class="form-control" @bind-Value="_formModel.Email" required />
                             <ValidationMessage For="@(() => _formModel.Email)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Teléfono de contacto <span class="text-danger">*</span></label>
+                            <label for="phoneNumber" class="form-label">Teléfono de contacto <span class="text-danger">*</span></label>
                             <InputText id="phoneNumber" class="form-control" @bind-Value="_formModel.PhoneNumber" required />
                             <ValidationMessage For="@(() => _formModel.PhoneNumber)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Especialidad (opcional)</label>
+                            <label for="specialty" class="form-label">Especialidad (opcional)</label>
                             <InputText id="specialty" class="form-control" @bind-Value="_formModel.Specialty" />
+                            <ValidationMessage For="@(() => _formModel.Specialty)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Contraseña de acceso <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <InputText id="password"
+                                           type="@(_showPassword ? "text" : "password")"
+                                           class="form-control"
+                                           @bind-Value="_formModel.Password"
+                                           required />
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        @onclick="TogglePasswordVisibility"
+                                        aria-label="@(_showPassword ? "Ocultar contraseña" : "Mostrar contraseña")">
+                                    <span class="bi @(_showPassword ? "bi-eye-slash" : "bi-eye")" aria-hidden="true"></span>
+                                </button>
+                            </div>
+                            <div class="form-text">Mínimo 6 caracteres. El técnico iniciará sesión con su correo electrónico y esta contraseña.</div>
+                            <ValidationMessage For="@(() => _formModel.Password)" class="text-danger small mt-1" />
                         </div>
 
                         <div class="d-flex justify-content-end mt-3">
-                            <button type="submit" class="btn btn-primary">Registrar Técnico</button>
-                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="Cancelar">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_isSubmitting">
+                                @if (_isSubmitting)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                }
+                                Registrar Técnico
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary ms-2" @onclick="Cancelar" disabled="@_isSubmitting">Cancelar</button>
                         </div>
                     </EditForm>
                 </div>
@@ -84,20 +110,28 @@
     private CreateTechnicianRequest _formModel = new();
     private string? _successMessage;
     private string? _errorMessage;
+    private bool _showPassword;
+    private bool _isSubmitting;
+
+    private void TogglePasswordVisibility()
+    {
+        _showPassword = !_showPassword;
+    }
 
     private async Task HandleSubmitAsync()
     {
         try
         {
+            _isSubmitting = true;
             _errorMessage = null;
+            _successMessage = null;
             var result = await TechnicianApiClient.CreateAsync(_formModel);
 
             if (result.Success)
             {
                 _successMessage = "Técnico registrado correctamente.";
                 _formModel = new CreateTechnicianRequest();
-                // Navigate back to technician list
-                // NavManager.NavigateTo("/tecnicos", forceLoad: true);
+                _showPassword = false;
             }
             else
             {
@@ -108,11 +142,16 @@
         {
             _errorMessage = $"Error inesperado: {ex.Message}";
         }
+        finally
+        {
+            _isSubmitting = false;
+        }
     }
 
     private void Cancelar()
     {
         _formModel = new CreateTechnicianRequest();
+        _showPassword = false;
         _successMessage = null;
         _errorMessage = null;
     }

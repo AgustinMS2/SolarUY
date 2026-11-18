@@ -107,6 +107,93 @@ public class KeycloakUserRepository : IKeycloakUserRepository
         _logger.LogInformation("System role of user {UserId} replaced by {Role} in Keycloak", id, role);
     }
 
+    public bool ExistsByEmail(string email)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        var byEmail = Read<List<UserRepresentation>>(
+            Send(HttpMethod.Get, $"users?email={Uri.EscapeDataString(normalized)}&exact=true")) ?? [];
+        if (byEmail.Any(u => string.Equals(u.Email, normalized, StringComparison.OrdinalIgnoreCase)
+                          || string.Equals(u.Username, normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var byUsername = Read<List<UserRepresentation>>(
+            Send(HttpMethod.Get, $"users?username={Uri.EscapeDataString(normalized)}&exact=true")) ?? [];
+        return byUsername.Any(u => string.Equals(u.Username, normalized, StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(u.Email, normalized, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public string CreateTechnicianUser(string email, string fullName, string password)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var trimmedName = fullName.Trim();
+        var spaceIndex = trimmedName.IndexOf(' ');
+        var firstName = spaceIndex >= 0 ? trimmedName[..spaceIndex].Trim() : trimmedName;
+        var lastName = spaceIndex >= 0 ? trimmedName[(spaceIndex + 1)..].Trim() : string.Empty;
+
+        var payload = new CreateUserRepresentation(
+            Username: normalizedEmail,
+            Email: normalizedEmail,
+            FirstName: firstName,
+            LastName: lastName,
+            Enabled: true,
+            EmailVerified: true,
+            Credentials: [new CredentialRepresentation("password", password, false)]);
+
+        string? userId = null;
+        using (var createResponse = Send(HttpMethod.Post, "users", payload))
+        {
+            var location = createResponse.Headers.Location?.ToString();
+            if (!string.IsNullOrEmpty(location))
+            {
+                var lastSlash = location.LastIndexOf('/');
+                if (lastSlash >= 0 && lastSlash < location.Length - 1)
+                {
+                    userId = Uri.UnescapeDataString(location[(lastSlash + 1)..]);
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            var createdUsers = Read<List<UserRepresentation>>(
+                Send(HttpMethod.Get, $"users?username={Uri.EscapeDataString(normalizedEmail)}&exact=true")) ?? [];
+            userId = createdUsers.FirstOrDefault()?.Id
+                ?? throw new AuthenticationServiceUnavailableException("Keycloak created the user but did not return its ID.");
+        }
+
+        var technicianRole = GetRole(Roles.Technician);
+        Send(HttpMethod.Post, $"users/{Uri.EscapeDataString(userId)}/role-mappings/realm", new[] { technicianRole }).Dispose();
+
+        _logger.LogInformation("Technician user {Email} created in Keycloak with ID {UserId} and role {Role}", normalizedEmail, userId, Roles.Technician);
+        return userId;
+    }
+
+    public void DisableByEmail(string email)
+    {
+        var normalized = email.Trim().ToLowerInvariant();
+        var matches = Read<List<UserRepresentation>>(
+            Send(HttpMethod.Get, $"users?email={Uri.EscapeDataString(normalized)}&exact=true")) ?? [];
+        var user = matches.FirstOrDefault(u => string.Equals(u.Email, normalized, StringComparison.OrdinalIgnoreCase));
+
+        if (user == null)
+        {
+            var byUsername = Read<List<UserRepresentation>>(
+                Send(HttpMethod.Get, $"users?username={Uri.EscapeDataString(normalized)}&exact=true")) ?? [];
+            user = byUsername.FirstOrDefault(u => string.Equals(u.Username, normalized, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (user == null)
+        {
+            return;
+        }
+
+        var updated = user with { Enabled = false };
+        Send(HttpMethod.Put, $"users/{Uri.EscapeDataString(user.Id)}", updated).Dispose();
+        _logger.LogInformation("Keycloak user {UserId} ({Email}) disabled", user.Id, normalized);
+    }
+
     private RoleRepresentation GetRole(string name)
     {
         return Read<RoleRepresentation>(Send(HttpMethod.Get, $"roles/{Uri.EscapeDataString(name)}"))
@@ -226,6 +313,20 @@ public class KeycloakUserRepository : IKeycloakUserRepository
         string? LastName,
         string? Email,
         bool Enabled);
+
+    internal sealed record CreateUserRepresentation(
+        string Username,
+        string Email,
+        string FirstName,
+        string LastName,
+        bool Enabled,
+        bool EmailVerified,
+        IReadOnlyList<CredentialRepresentation> Credentials);
+
+    internal sealed record CredentialRepresentation(
+        string Type,
+        string Value,
+        bool Temporary);
 
     internal sealed record RoleRepresentation(string Id, string Name);
 

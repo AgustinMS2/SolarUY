@@ -1,9 +1,11 @@
 # Entorno SonarQube Local para .NET
 
-# Usuario: ´admin´
-# Contraseña: ´SolarUy.42069´
-# Token: squ_9dc864593ac0b42c2d579841114c7a5fe9d9678b
-# Comando a ejecutar para analizar todo: .\analizar.ps1 "C:\Users\Chorizo-Cosmico\source\repos\SolarUY" SI O SI hay que estar parado en C:\Users\Chorizo-Cosmico\Source\Repos\SolarUY\SonarQube
+# Credenciales iniciales (por defecto):
+# Usuario: `admin`
+# Contraseña: `admin`
+# (Al ingresar por primera vez, el sistema solicitará cambiar la contraseña; se sugiere usar: `SolarUy.42069`)
+# Token: Generar uno nuevo en My Account > Security si la base de datos es nueva.
+# Comando a ejecutar para analizar: .\analizar.ps1 [RutaAlProyecto] desde la carpeta SonarQube
 
 Esta carpeta contiene la configuración necesaria para levantar un servidor de SonarQube local y analizar proyectos en C#/.NET sin necesidad de instalar SDKs de manera global en tu máquina host. Todo corre mediante Docker.
 
@@ -23,8 +25,8 @@ Esta carpeta contiene la configuración necesaria para levantar un servidor de S
 4. Abre en tu navegador: **http://localhost:9000**
 5. Inicia sesión con:
    - **Usuario:** `admin`
-   - **Contraseña:** `SolarUy.42069`
-6. El sistema te pedirá cambiar la contraseña por defecto.
+   - **Contraseña:** `admin`
+6. El sistema te pedirá cambiar la contraseña por defecto (puedes establecer `SolarUy.42069`).
 
 ### 1.1 Crear el Token de Seguridad
 Para que el analizador se comunique con el servidor, necesita un Token:

@@ -147,8 +147,44 @@
       "enabled": true,
       "emailVerified": true,
       "email": "tecnico@solaruy.local",
-      "firstName": "Tecnico",
-      "lastName": "SolarUY",
+      "firstName": "Carlos",
+      "lastName": "Méndez",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tecnico123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Técnico"
+      ]
+    },
+    {
+      "username": "mrodriguez@solaruy.local",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "mrodriguez@solaruy.local",
+      "firstName": "Mariana",
+      "lastName": "Rodríguez",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tecnico123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "Técnico"
+      ]
+    },
+    {
+      "username": "gvarela@solaruy.local",
+      "enabled": false,
+      "emailVerified": true,
+      "email": "gvarela@solaruy.local",
+      "firstName": "Gonzalo",
+      "lastName": "Varela",
       "credentials": [
         {
           "type": "password",

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using SolarUY.ApiService.Domain;
+using SolarUY.ApiService.Security;
 using SolarUY.ApiService.Services;
 using SolarUY.Tests.Fakes;
 using Xunit;
@@ -24,23 +25,34 @@ public class TechnicianServiceDeactivateTests
 
     private static TechnicianService CreateService(
         FakeTechnicianRepository techRepo,
-        FakeMaintenanceRepository maintenanceRepo)
+        FakeMaintenanceRepository maintenanceRepo,
+        FakeKeycloakUserRepository? keycloakRepo = null)
     {
         return new TechnicianService(
             techRepo,
             maintenanceRepo,
+            keycloakRepo,
             NullLogger<TechnicianService>.Instance);
     }
 
     [Fact]
-    public void Deactivate_ActiveTechnicianWithoutPendingTasks_PassesToInactive()
+    public void Deactivate_ActiveTechnicianWithoutPendingTasks_PassesToInactiveAndDisablesKeycloakUser()
     {
         // Arrange
         var techId = Guid.NewGuid();
         var techRepo = new FakeTechnicianRepository();
         techRepo.PersistedTechnicians.Add(CreateActiveTechnician(techId));
         var maintenanceRepo = new FakeMaintenanceRepository { PendingCount = 0 };
-        var service = CreateService(techRepo, maintenanceRepo);
+        var keycloakRepo = new FakeKeycloakUserRepository();
+        keycloakRepo.Users.Add(new KeycloakUser(
+            Id: "kc-tech-1",
+            Username: "tecnico.test@email.com",
+            FullName: "Test Técnico",
+            Email: "tecnico.test@email.com",
+            Enabled: true,
+            Role: Roles.Technician));
+
+        var service = CreateService(techRepo, maintenanceRepo, keycloakRepo);
 
         // Act
         var result = service.Deactivate(techId);
@@ -49,6 +61,31 @@ public class TechnicianServiceDeactivateTests
         Assert.True(result.Success);
         var savedTech = techRepo.PersistedTechnicians.Single(t => t.Id == techId);
         Assert.Equal(TechnicianStatus.Inactive, savedTech.Status);
+        Assert.False(keycloakRepo.Users.Single().Enabled);
+        Assert.Equal(1, keycloakRepo.DisableCalls);
+    }
+
+    [Fact]
+    public void Deactivate_WhenKeycloakUnavailable_ReturnsUnavailableAndKeepsActive()
+    {
+        // Arrange
+        var techId = Guid.NewGuid();
+        var techRepo = new FakeTechnicianRepository();
+        techRepo.PersistedTechnicians.Add(CreateActiveTechnician(techId));
+        var maintenanceRepo = new FakeMaintenanceRepository { PendingCount = 0 };
+        var keycloakRepo = new FakeKeycloakUserRepository { IsUnavailable = true };
+
+        var service = CreateService(techRepo, maintenanceRepo, keycloakRepo);
+
+        // Act
+        var result = service.Deactivate(techId);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(ServiceErrorType.Unavailable, result.ErrorType);
+        Assert.Equal("No se pudo comunicar con el servicio de autenticación. Intentá nuevamente.", result.ErrorMessage);
+        var savedTech = techRepo.PersistedTechnicians.Single(t => t.Id == techId);
+        Assert.Equal(TechnicianStatus.Active, savedTech.Status);
     }
 
     [Fact]

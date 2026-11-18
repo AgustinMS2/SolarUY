@@ -10,15 +10,18 @@ public class TechnicianService : ITechnicianService
 {
     private readonly ITechnicianRepository _technicianRepository;
     private readonly IMaintenanceRepository _maintenanceRepository;
+    private readonly IKeycloakUserRepository? _keycloakUserRepository;
     private readonly ILogger<TechnicianService> _logger;
 
     public TechnicianService(
         ITechnicianRepository technicianRepository,
         IMaintenanceRepository? maintenanceRepository = null,
+        IKeycloakUserRepository? keycloakUserRepository = null,
         ILogger<TechnicianService>? logger = null)
     {
         _technicianRepository = technicianRepository;
         _maintenanceRepository = maintenanceRepository ?? new EmptyMaintenanceRepository();
+        _keycloakUserRepository = keycloakUserRepository;
         _logger = logger ?? NullLogger<TechnicianService>.Instance;
     }
 
@@ -92,6 +95,45 @@ public class TechnicianService : ITechnicianService
             return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "El teléfono de contacto es obligatorio y debe tener un formato válido.");
         }
 
+        // Validar especialidad (opcional, máx. 100 caracteres)
+        var trimmedSpecialty = string.IsNullOrWhiteSpace(request.Specialty) ? null : request.Specialty.Trim();
+        if (trimmedSpecialty != null && trimmedSpecialty.Length > 100)
+        {
+            return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "La especialidad no puede superar los 100 caracteres.");
+        }
+
+        // Validar contraseña (obligatoria, 6 a 100 caracteres)
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Trim().Length < 6)
+        {
+            return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "La contraseña es obligatoria y debe tener al menos 6 caracteres.");
+        }
+
+        if (request.Password.Length > 100)
+        {
+            return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "La contraseña no puede superar los 100 caracteres.");
+        }
+
+        // Provisión sincronizada en Keycloak (Spec 038)
+        if (_keycloakUserRepository != null)
+        {
+            try
+            {
+                if (_keycloakUserRepository.ExistsByEmail(normalizedEmail))
+                {
+                    return ServiceResult<Guid>.Fail(ServiceErrorType.Conflict, $"El correo electrónico \"{trimmedEmail}\" ya se encuentra registrado.");
+                }
+
+                _keycloakUserRepository.CreateTechnicianUser(normalizedEmail, trimmedName, request.Password);
+            }
+            catch (AuthenticationServiceUnavailableException ex)
+            {
+                _logger.LogWarning(ex, "No se pudo comunicar con Keycloak al registrar al técnico {Email}", normalizedEmail);
+                return ServiceResult<Guid>.Fail(
+                    ServiceErrorType.Unavailable,
+                    "No se pudo comunicar con el servicio de autenticación. Intentá nuevamente.");
+            }
+        }
+
         // Crear el técnico
         var technician = new Technician
         {
@@ -102,7 +144,7 @@ public class TechnicianService : ITechnicianService
             Email = trimmedEmail,
             NormalizedEmail = normalizedEmail,
             PhoneNumber = trimmedPhone,
-            Specialty = request.Specialty,
+            Specialty = trimmedSpecialty,
             Status = TechnicianStatus.Active,
             CreatedAtUtc = DateTime.UtcNow
         };
@@ -150,6 +192,21 @@ public class TechnicianService : ITechnicianService
             return ServiceResult.Fail(
                 ServiceErrorType.Conflict,
                 $"No se puede dar de baja al técnico porque tiene {pendingCount} mantenimiento(s) pendiente(s) de resolución. Reasigna o cancela esos mantenimientos previamente.");
+        }
+
+        if (_keycloakUserRepository != null)
+        {
+            try
+            {
+                _keycloakUserRepository.DisableByEmail(technician.NormalizedEmail);
+            }
+            catch (AuthenticationServiceUnavailableException ex)
+            {
+                _logger.LogWarning(ex, "No se pudo comunicar con Keycloak al deshabilitar al técnico {TechnicianId}", id);
+                return ServiceResult.Fail(
+                    ServiceErrorType.Unavailable,
+                    "No se pudo comunicar con el servicio de autenticación. Intentá nuevamente.");
+            }
         }
 
         technician.Status = TechnicianStatus.Inactive;
