@@ -61,3 +61,6 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+# Scripts de shell: siempre LF (si no, Docker/Linux falla con "no such file or directory")
+*.sh text eol=lf

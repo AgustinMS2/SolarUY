@@ -1,0 +1,4 @@
+# Las migraciones las genera EF Core: no se les aplican reglas de estilo ni de rendimiento.
+[*.cs]
+generated_code = true
+dotnet_diagnostic.CA1861.severity = none

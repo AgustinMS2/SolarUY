@@ -1,6 +1,8 @@
+using System.Text.Json.Serialization;
+
 namespace SolarUY.ApiService.Dtos;
 
 public record CreateSolarNodeRequest(
     string Name,
-    Guid SolarParkId
+    [property: JsonRequired] Guid SolarParkId
 );

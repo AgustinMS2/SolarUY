@@ -131,11 +131,7 @@ public class SolarPanelAssignNodeTests
         Assert.Equal("Seleccioná al menos un panel.", result.ErrorMessage);
     }
 
-    public static IEnumerable<object?[]> EmptySelections()
-    {
-        yield return [null];
-        yield return [new List<Guid>()];
-    }
+    public static TheoryData<IReadOnlyList<Guid>?> EmptySelections() => new() { null, new List<Guid>() };
 
     [Fact]
     public void AssignPanelsToNode_WithMoreThan50Panels_ReturnsValidationAndChangesNothing()

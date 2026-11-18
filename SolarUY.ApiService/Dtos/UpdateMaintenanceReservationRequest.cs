@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace SolarUY.ApiService.Dtos;
 
@@ -7,8 +8,10 @@ namespace SolarUY.ApiService.Dtos;
 public class UpdateMaintenanceReservationRequest
 {
     [Required(ErrorMessage = "Debés seleccionar un técnico activo.")]
+    [JsonRequired]
     public Guid TechnicianId { get; set; }
 
+    [JsonRequired]
     public DateTime ScheduledDateUtc { get; set; }
 
     [Required(ErrorMessage = "La descripción del trabajo debe contener al menos 5 caracteres.")]

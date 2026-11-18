@@ -15,14 +15,16 @@ public class SolarUyKnowledgeAssistantTests
                 new(Guid.NewGuid(), "Parque Solar Bella Unión", 300.0, "Activo")
             };
 
+            string[] recentAlertMessages = ["[Critical] Inversor > 75 °C (Parque Solar Salto Grande)"];
             var alerts = new DomainAlertInfo(
                 PendingCount: 2,
                 AcknowledgedCount: 1,
-                RecentAlertMessages: new[] { "[Critical] Inversor > 75 °C (Parque Solar Salto Grande)" });
+                RecentAlertMessages: recentAlertMessages);
 
+            string[] upcomingOrders = ["Tipo: Correctivo en Parque Solar Salto Grande (15/11 10:00, Técnico: Carlos Pérez)"];
             var maintenances = new DomainMaintenanceInfo(
                 PendingCount: 1,
-                UpcomingOrders: new[] { "Tipo: Correctivo en Parque Solar Salto Grande (15/11 10:00, Técnico: Carlos Pérez)" });
+                UpcomingOrders: upcomingOrders);
 
             var generations = new List<DomainGenerationInfo>
             {

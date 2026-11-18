@@ -1,8 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace SolarUY.ApiService.Dtos;
 
 public record CreateSolarPanelRequest(
     string? SerieNumber,
-    int PowerW,
-    double Efficiency,
-    Guid SolarParkId
+    [property: JsonRequired] int PowerW,
+    [property: JsonRequired] double Efficiency,
+    [property: JsonRequired] Guid SolarParkId
 );

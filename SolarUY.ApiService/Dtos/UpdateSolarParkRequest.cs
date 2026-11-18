@@ -1,9 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace SolarUY.ApiService.Dtos;
 
 public record UpdateSolarParkRequest(
     string Name,
-    double Latitude,
-    double Longitude,
-    double MaxCapacityKw,
-    double PowerAlertThresholdKw
+    [property: JsonRequired] double Latitude,
+    [property: JsonRequired] double Longitude,
+    [property: JsonRequired] double MaxCapacityKw,
+    [property: JsonRequired] double PowerAlertThresholdKw
 );

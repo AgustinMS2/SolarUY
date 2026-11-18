@@ -23,6 +23,18 @@ echo "Iniciando análisis de SonarQube para: $PROJECT_KEY"
 echo "Servidor: $SONAR_HOST_URL"
 echo "========================================="
 
+# 0. Trabajar sobre una COPIA del código (sin bin/, obj/ ni .git).
+#    Así el análisis no choca con binarios en uso en la máquina host (por ejemplo,
+#    la aplicación corriendo con Aspire) ni deja artefactos de Linux en bin/ y obj/.
+WORK_DIR=/work
+rm -rf "$WORK_DIR" && mkdir -p "$WORK_DIR"
+tar -C /app \
+  --exclude=./bin --exclude=./obj \
+  --exclude='*/bin' --exclude='*/obj' \
+  --exclude=.git --exclude=.sonarqube --exclude=.vs --exclude=node_modules \
+  -cf - . | tar -C "$WORK_DIR" -xf -
+cd "$WORK_DIR"
+
 # 1. Iniciar el escáner
 dotnet sonarscanner begin \
   /k:"$PROJECT_KEY" \
@@ -31,7 +43,10 @@ dotnet sonarscanner begin \
 
 # 2. Compilar el proyecto
 echo "Construyendo proyecto..."
-dotnet build
+#    Sin servidores de compilación residentes: en máquinas con poca memoria para
+#    Docker (~3 GB) el servidor de SonarQube terminaba muerto por falta de RAM al subir el reporte.
+dotnet build -nodeReuse:false -p:UseSharedCompilation=false
+dotnet build-server shutdown >/dev/null 2>&1 || true
 
 # 3. Finalizar el análisis y enviar resultados
 echo "Finalizando análisis y enviando resultados..."

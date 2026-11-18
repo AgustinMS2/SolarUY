@@ -15,26 +15,25 @@ builder.Services.AddOutputCache();
 
 builder.AddKeycloakAuthentication();
 
-builder.Services.AddHttpClient<WeatherApiClient>(client => client.BaseAddress = new("http://apiservice"));
-builder.Services.AddHttpClient<SolarUY.Web.Services.SolarParkApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.SolarParkApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.PanelsApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.PanelsApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.UsersApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.UsersApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.ApiService.Services.SolarNodeApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.ApiService.Services.SolarNodeApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.ApiService.Services.TechnicianApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.ApiService.Services.TechnicianApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.MaintenanceApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.MaintenanceApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.AlertsApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.AlertsApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.ParkHistoricalApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.ParkHistoricalApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.ChatApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.ChatApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
-builder.Services.AddHttpClient<SolarUY.Web.Services.SimulationFaultApiClient>(client => client.BaseAddress = new("http://apiservice"))
+builder.Services.AddHttpClient<SolarUY.Web.Services.SimulationFaultApiClient>(client => client.BaseAddress = new(ApiServiceEndpoint.BaseAddress))
     .AddHttpMessageHandler<BearerTokenHandler>();
 
 var app = builder.Build();
@@ -61,4 +60,4 @@ app.MapRazorComponents<App>()
 
 app.MapDefaultEndpoints();
 
-app.Run();
+await app.RunAsync();

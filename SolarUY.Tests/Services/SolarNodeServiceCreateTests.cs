@@ -122,9 +122,8 @@ public class SolarNodeServiceCreateTests
         Assert.Empty(nodeRepo.PersistedNodes);
     }
 
-    [Theory]
-    [InlineData("NONEXISTENT-PARK")]
-    public void Create_WithNonExistentPark_ReturnsError(string nonExistentParkName)
+    [Fact]
+    public void Create_WithNonExistentPark_ReturnsError()
     {
         // Arrange: Sin parques en el repositorio (park inexistente)
         var parkRepo = new FakeSolarParkRepository(); // Sin parques añadidos

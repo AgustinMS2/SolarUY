@@ -66,7 +66,10 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddHttpClient("keycloak-admin")
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
+            // Solo en Development: el Keycloak local usa un certificado autofirmado. En otros entornos se valida.
+#pragma warning disable S4830 // Server certificates should be verified (acotado a Development)
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+#pragma warning restore S4830
         });
 }
 else
@@ -89,7 +92,10 @@ builder.Services
         {
             options.BackchannelHttpHandler = new HttpClientHandler
             {
+                // Solo en Development: el Keycloak local usa un certificado autofirmado. En otros entornos se valida.
+#pragma warning disable S4830 // Server certificates should be verified (acotado a Development)
                 ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+#pragma warning restore S4830
             };
         }
 
@@ -151,7 +157,7 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<SolarUY.ApiService.Data.SolarUyDbContext>();
-    context.Database.Migrate();
+    await context.Database.MigrateAsync();
     SolarUY.ApiService.Data.DbInitializer.Seed(context);
 }
 
@@ -173,32 +179,11 @@ app.MapHub<SolarUY.ApiService.Hubs.PanelTelemetryHub>(SolarUY.ApiService.Hubs.Pa
 app.MapHub<SolarUY.ApiService.Hubs.ParkHealthHub>(SolarUY.ApiService.Hubs.ParkHealthHub.HubUrl);
 app.MapHub<SolarUY.ApiService.Hubs.AlertsHub>(SolarUY.ApiService.Hubs.AlertsHub.HubUrl);
 
-string[] summaries = ["Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"];
-
-app.MapGet("/", () => "API service is running. Navigate to /weatherforecast to see sample data.");
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapGet("/", () => "API service is running.");
 
 app.MapDefaultEndpoints();
 
-app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+await app.RunAsync();
 
 public partial class Program { }
 

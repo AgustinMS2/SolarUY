@@ -26,4 +26,4 @@ builder.AddProject<Projects.SolarUY_Web>("webfrontend")
     .WaitFor(apiService)
     .WaitFor(keycloak);
 
-builder.Build().Run();
+await builder.Build().RunAsync();

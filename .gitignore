@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 # JetBrains Rider
 .idea/
+
+# SonarQube: archivos temporales que genera el escáner en cada análisis
+.sonarqube/

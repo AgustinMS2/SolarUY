@@ -561,7 +561,7 @@
         {
             var apiBaseUrl = Configuration["services:apiservice:https:0"]
                 ?? Configuration["services:apiservice:http:0"]
-                ?? "http://apiservice";
+                ?? SolarUY.Web.ApiServiceEndpoint.BaseAddress;
             var hubUrl = $"{apiBaseUrl.TrimEnd('/')}/hubs/node-telemetry";
 
             _hubConnection = new HubConnectionBuilder()

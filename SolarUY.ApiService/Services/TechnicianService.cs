@@ -65,7 +65,7 @@ public class TechnicianService : ITechnicianService
         var trimmedEmail = request.Email.Trim();
 
         // Validar formato de email simple
-        if (!trimmedEmail.Contains("@") || !trimmedEmail.Contains("."))
+        if (!trimmedEmail.Contains('@') || !trimmedEmail.Contains('.'))
         {
             return ServiceResult<Guid>.Fail(ServiceErrorType.Validation, "El formato del correo electrónico no es válido.");
         }
