@@ -23,6 +23,7 @@ public class SolarPanelService : ISolarPanelService
         ISolarPanelRepository repository,
         ISolarNodeRepository nodeRepository,
         IInverterRepository inverterRepository,
+        ILogger<SolarPanelService> logger)
         ILogger<SolarPanelService> logger,
         ISimulatedFaultRepository? simulatedFaultRepository = null,
         IAlertService? alertService = null)
@@ -229,9 +230,11 @@ public class SolarPanelService : ISolarPanelService
             return ServiceResult.Fail(ServiceErrorType.Validation, "El panel ya está inactivo.");
         }
 
+        // 3. Cambiar estado a Inactivo (baja lógica)
         // 3. Cambiar estado a Inactivo (baja lógica), desasignar de nodo y cerrar fallas/alertas activas (Spec 039 RF-6)
         var now = DateTime.UtcNow;
         panel.Status = SolarPanelStatus.Inactive;
+        panel.UpdatedAtUtc = DateTime.UtcNow;
         panel.SolarNodeId = null;
         panel.UpdatedAtUtc = now;
 
