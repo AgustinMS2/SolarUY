@@ -9,6 +9,8 @@ namespace SolarUY.ApiService.Services;
 
 public class SolarNodeApiClient
 {
+    private static readonly JsonSerializerOptions CaseInsensitiveJson = new() { PropertyNameCaseInsensitive = true };
+
     private readonly HttpClient _http;
 
     public SolarNodeApiClient(HttpClient http)
@@ -64,7 +66,7 @@ public class SolarNodeApiClient
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
-            var dtoList = JsonSerializer.Deserialize<IReadOnlyList<SolarNodeDto>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            var dtoList = JsonSerializer.Deserialize<IReadOnlyList<SolarNodeDto>>(content, CaseInsensitiveJson);
             return ServiceResult<IReadOnlyList<SolarNodeDto>>.Ok(dtoList ?? new List<SolarNodeDto>());
         }
 

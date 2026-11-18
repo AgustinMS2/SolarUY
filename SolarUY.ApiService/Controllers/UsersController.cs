@@ -45,7 +45,7 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
-    private IActionResult ToErrorResponse(ServiceResult result)
+    private ObjectResult ToErrorResponse(ServiceResult result)
     {
         return result.ErrorType switch
         {

@@ -55,7 +55,10 @@ public static class KeycloakAuthenticationExtensions
                 {
                     options.BackchannelHttpHandler = new HttpClientHandler
                     {
+                        // Solo en Development: el Keycloak local usa un certificado autofirmado. En otros entornos se valida.
+#pragma warning disable S4830 // Server certificates should be verified (acotado a Development)
                         ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+#pragma warning restore S4830
                     };
                 }
 
@@ -121,7 +124,10 @@ public static class KeycloakAuthenticationExtensions
             builder.Services.AddHttpClient("keycloak")
                 .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
                 {
+                    // Solo en Development: el Keycloak local usa un certificado autofirmado. En otros entornos se valida.
+#pragma warning disable S4830 // Server certificates should be verified (acotado a Development)
                     ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+#pragma warning restore S4830
                 });
         }
         else

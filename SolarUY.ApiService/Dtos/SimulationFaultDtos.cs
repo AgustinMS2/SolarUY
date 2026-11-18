@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using SolarUY.ApiService.Domain;
 
 namespace SolarUY.ApiService.Dtos;
@@ -6,7 +7,7 @@ namespace SolarUY.ApiService.Dtos;
 /// Petición para inyectar una falla simulada (spec 037). <c>TargetType</c> es "Panel" o "Inverter" y <c>FaultType</c> uno de
 /// los nombres de <see cref="SimulatedFaultType"/>.
 /// </summary>
-public record InjectSimulatedFaultRequest(string TargetType, Guid TargetId, string FaultType);
+public record InjectSimulatedFaultRequest(string TargetType, [property: JsonRequired] Guid TargetId, string FaultType);
 
 /// <summary>Un equipo que emite lecturas, con su falla simulada vigente (la de mayor severidad), para la pantalla de fallas.</summary>
 public record SimulationFaultTargetDto(

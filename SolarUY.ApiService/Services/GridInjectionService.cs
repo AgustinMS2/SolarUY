@@ -245,7 +245,7 @@ public class GridInjectionService : IGridInjectionService
     }
 
     // Envía la orden a cada inversor y aborta ante la primera pérdida de comunicación.
-    private ServiceResult? SendOrders(IReadOnlyList<Inverter> inverters, Func<string, string?, bool> send)
+    private static ServiceResult? SendOrders(IReadOnlyList<Inverter> inverters, Func<string, string?, bool> send)
     {
         foreach (var inverter in inverters)
         {

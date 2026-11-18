@@ -5,7 +5,7 @@
 # =========================================================================
 
 # 1. Pega aquí el Token que generaste en SonarQube
-SONAR_TOKEN="pega_tu_token_aqui"
+SONAR_TOKEN="sqa_4cada978b271bfed3106bdbff9a9140bc49d0502"
 
 # 2. PROJECT_KEY (opcional): Si lo dejas vacío o como "auto", se derivará automáticamente
 #    del nombre de la carpeta del proyecto. También puedes pasarlo como 2º parámetro.

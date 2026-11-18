@@ -7,7 +7,9 @@ namespace SolarUY.ApiService.Repositories;
 public class HistoryCatchUpLock : IHistoryCatchUpLock
 {
     // Clave arbitraria y fija para toda la aplicación ("036" de la spec).
-    private const long LockKey = 3600001;
+    // Texto SQL constante: la clave (3600001) es un literal fijo, nunca entrada de usuario.
+    private const string TryLockSql = "SELECT pg_try_advisory_lock(3600001)";
+    private const string UnlockSql = "SELECT pg_advisory_unlock(3600001)";
 
     private readonly SolarUyDbContext _context;
 
@@ -23,7 +25,7 @@ public class HistoryCatchUpLock : IHistoryCatchUpLock
         try
         {
             using var command = _context.Database.GetDbConnection().CreateCommand();
-            command.CommandText = $"SELECT pg_try_advisory_lock({LockKey})";
+            command.CommandText = TryLockSql;
             if (command.ExecuteScalar() is true)
             {
                 return new Releaser(_context);
@@ -46,7 +48,7 @@ public class HistoryCatchUpLock : IHistoryCatchUpLock
             try
             {
                 using var command = context.Database.GetDbConnection().CreateCommand();
-                command.CommandText = $"SELECT pg_advisory_unlock({LockKey})";
+                command.CommandText = UnlockSql;
                 command.ExecuteScalar();
             }
             finally
